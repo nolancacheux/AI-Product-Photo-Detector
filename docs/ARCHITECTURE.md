@@ -2,142 +2,243 @@
 
 ## System Overview
 
-The AI Product Photo Detector is a production-grade MLOps system for detecting AI-generated product images in e-commerce contexts.
+The AI Product Photo Detector is a production-grade MLOps system for detecting AI-generated product images in e-commerce listings.
 
-## Components
-
-### 1. Training Pipeline (`src/training/`)
-
-**Purpose**: Train and evaluate the detection model.
-
-**Components**:
-- `model.py`: EfficientNet-B0 based binary classifier
-- `dataset.py`: PyTorch Dataset and DataLoader utilities
-- `train.py`: Main training script with MLflow integration
-
-**Flow**:
 ```
-Raw Images → Preprocessing → Augmentation → Model Training → MLflow Logging → Checkpoint
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Client Layer                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Web UI (Streamlit)  │  REST API Clients  │  Batch Processing Jobs          │
+└──────────┬───────────────────┬────────────────────────┬────────────────────┘
+           │                   │                        │
+           ▼                   ▼                        ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            API Gateway Layer                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • Rate Limiting (slowapi)                                                   │
+│  • Authentication (API Key / JWT)                                           │
+│  • Request Validation                                                        │
+│  • Response Caching (Redis/Memory)                                          │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Application Layer                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  FastAPI Application                                                         │
+│  ├── /predict      - Single image classification                            │
+│  ├── /predict/batch - Batch processing (up to 20 images)                    │
+│  ├── /explain      - GradCAM visualization                                  │
+│  ├── /health       - Health check                                           │
+│  └── /metrics      - Prometheus metrics                                     │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           ML Inference Layer                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Predictor                                                                   │
+│  ├── Model Loading (EfficientNet-B0)                                        │
+│  ├── Image Preprocessing                                                     │
+│  ├── Inference                                                               │
+│  ├── Probability Calibration                                                │
+│  └── Explainability (GradCAM)                                               │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          Observability Layer                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • Structured Logging (structlog)                                           │
+│  • Metrics (Prometheus)                                                      │
+│  • Distributed Tracing (Request IDs)                                        │
+│  • Drift Detection                                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2. Inference API (`src/inference/`)
+## Component Details
 
-**Purpose**: Serve predictions via REST API.
+### 1. API Layer (`src/inference/`)
 
-**Components**:
-- `api.py`: FastAPI application with endpoints
-- `predictor.py`: Model loading and prediction logic
-- `schemas.py`: Pydantic request/response models
+#### API Server (`api.py`)
+- FastAPI application with lifespan management
+- CORS middleware for cross-origin requests
+- Rate limiting per endpoint
+- Authentication middleware
 
-**Endpoints**:
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/predict` | POST | Classify image |
-| `/health` | GET | Health check |
-| `/metrics` | GET | Prometheus metrics |
+#### Authentication (`auth.py`)
+- API Key authentication (X-API-Key header)
+- JWT Bearer token authentication
+- Scope-based permissions (predict, batch, explain)
+- Optional: disabled when no API_KEYS configured
 
-### 3. Web UI (`src/ui/`)
+#### Input Validation (`validation.py`)
+- Magic bytes detection for MIME type verification
+- Image dimension validation
+- File size limits
+- Path traversal prevention
+- Content hash generation
 
-**Purpose**: User-friendly interface for testing.
+#### Response Caching (`cache.py`)
+- In-memory LRU cache with TTL
+- Redis backend (optional)
+- Content-hash based cache keys
+- Model version aware caching
 
-**Components**:
-- `app.py`: Streamlit application
+### 2. Inference Engine (`src/inference/`)
 
-### 4. Utilities (`src/utils/`)
+#### Predictor (`predictor.py`)
+- Model loading from checkpoints
+- Auto-device selection (CUDA/MPS/CPU)
+- Configurable thresholds
+- Confidence level calculation
 
-**Purpose**: Shared functionality.
+#### Explainability (`explainability.py`)
+- GradCAM heatmap generation
+- Customizable overlay transparency
+- Supports multiple colormap options
 
-**Components**:
-- `config.py`: Configuration management
-- `logger.py`: Structured logging setup
+### 3. Training Pipeline (`src/training/`)
+
+#### Data Augmentation (`augmentation.py`)
+- CutMix: Spatial region mixing
+- MixUp: Linear interpolation
+- RandAugment: Automated augmentation
+- GridMask: Grid-based dropout
+
+#### Hyperparameter Optimization (`hyperopt.py`)
+- Optuna integration
+- TPE sampler with median pruner
+- MLflow experiment tracking
+- Auto-config generation
+
+#### Model Calibration (`calibration.py`)
+- Temperature scaling
+- Platt scaling
+- Isotonic regression
+- ECE/MCE metrics
+
+### 4. Monitoring (`src/monitoring/`)
+
+#### Metrics (`metrics.py`)
+- Prediction counters by class/confidence
+- Latency histograms
+- Batch size tracking
+- Cache hit rates
+- Error counting
+
+#### Drift Detection (`drift.py`)
+- Input distribution monitoring
+- Prediction distribution tracking
+- Alert thresholds
+
+### 5. User Interface (`src/ui/`)
+
+#### Streamlit App (`app.py`)
+- Single image analysis
+- Batch upload processing
+- GradCAM visualization
+- Prediction history
+- Export functionality
 
 ## Data Flow
 
+### Single Prediction Flow
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Client    │────▶│   FastAPI   │────▶│  Predictor  │
-│  (Upload)   │     │   (API)     │     │  (Model)    │
-└─────────────┘     └─────────────┘     └─────────────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │  Response   │
-                    │  (JSON)     │
-                    └─────────────┘
+1. Client uploads image
+2. Rate limiter checks request count
+3. Authenticator validates credentials
+4. Validator checks image format/size
+5. Cache checks for existing prediction
+6. If cache miss:
+   a. Predictor preprocesses image
+   b. Model runs inference
+   c. Calibrator adjusts probability
+   d. Result cached
+7. Response returned with metrics
 ```
 
-## Model Architecture
-
+### Batch Prediction Flow
 ```
-Input (224x224x3)
-       │
-       ▼
-┌──────────────────┐
-│  EfficientNet-B0 │ (Pretrained ImageNet)
-│  Feature Extract │
-└────────┬─────────┘
-         │ (1280 features)
-         ▼
-┌──────────────────┐
-│  Linear(1280→512)│
-│  ReLU + Dropout  │
-│  Linear(512→1)   │
-│  Sigmoid         │
-└────────┬─────────┘
-         │
-         ▼
-   Probability [0,1]
+1. Client uploads multiple images
+2. Rate limiter (stricter limits)
+3. Authenticator validates
+4. For each image:
+   a. Validate independently
+   b. Check cache
+   c. Run prediction if needed
+   d. Collect result
+5. Aggregate results returned
 ```
 
 ## Deployment Architecture
 
-### Docker Compose Stack
-
+### Kubernetes Deployment
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Docker Network                     │
-├─────────────┬─────────────┬─────────────────────────┤
-│    API      │     UI      │        MLflow           │
-│   :8000     │   :8501     │        :5000            │
-├─────────────┴─────────────┴─────────────────────────┤
-│              Prometheus :9090                        │
-├─────────────────────────────────────────────────────┤
-│              Grafana :3000                           │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Kubernetes Cluster                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                       │
+│  │   API Pod    │  │   API Pod    │  │   API Pod    │  (HPA: 2-10)         │
+│  │ Port: 8000   │  │ Port: 8000   │  │ Port: 8000   │                       │
+│  └──────────────┘  └──────────────┘  └──────────────┘                       │
+│         │                 │                 │                                │
+│         └─────────────────┼─────────────────┘                                │
+│                           │                                                  │
+│                    ┌──────┴──────┐                                          │
+│                    │   Service   │                                          │
+│                    │  ClusterIP  │                                          │
+│                    └──────┬──────┘                                          │
+│                           │                                                  │
+│  ┌──────────────┐  ┌──────┴──────┐  ┌──────────────┐                       │
+│  │   UI Pod     │  │   Ingress   │  │    Redis     │  (Optional)           │
+│  │ Port: 8501   │  │   nginx     │  │  Cache Pod   │                       │
+│  └──────────────┘  └─────────────┘  └──────────────┘                       │
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                              PVC                                      │   │
+│  │                         Model Storage                                 │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### CI/CD Pipeline
+```
+┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
+│  Push   │───▶│  Lint   │───▶│  Test   │───▶│  Build  │───▶│  Push   │
+│  Code   │    │  Ruff   │    │ Pytest  │    │ Docker  │    │  GHCR   │
+└─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘
+                                                                 │
+                                                                 ▼
+┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
+│ Notify  │◀───│ Verify  │◀───│ Deploy  │◀───│  Helm   │◀───│ Staging │
+│ Slack   │    │ Health  │    │  Prod   │    │ Upgrade │    │  First  │
+└─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘
 ```
 
 ## Security Considerations
 
-1. **Input Validation**: All inputs validated via Pydantic
-2. **File Size Limits**: Max 10MB per image
-3. **Content Type Checks**: Only JPEG, PNG, WebP accepted
-4. **Non-root Containers**: Docker images run as `appuser`
-5. **No Secrets in Images**: Configuration via environment variables
+1. **Input Validation**: All uploads verified via magic bytes
+2. **Authentication**: Optional API key/JWT for production
+3. **Rate Limiting**: Per-IP limits prevent abuse
+4. **CORS**: Configurable allowed origins
+5. **Secrets**: Environment variables, never in code
+6. **Container Security**: Non-root user, minimal base image
 
-## Observability
+## Performance Optimizations
 
-### Metrics (Prometheus)
-- `predictions_total`: Counter by status and result
-- `prediction_latency_seconds`: Histogram of inference times
-
-### Logging (structlog)
-- JSON format for production
-- Structured fields: timestamp, level, message, context
-
-### Dashboards (Grafana)
-- Request rate and latency
-- Error rates
-- Model performance trends
-
-## Scalability
-
-- **Horizontal**: Stateless API allows multiple replicas
-- **Vertical**: GPU support for faster inference
-- **Caching**: Consider Redis for repeated predictions
+1. **Caching**: SHA256-based content deduplication
+2. **Batch Processing**: Up to 20 images per request
+3. **Model Loading**: Singleton pattern, loaded once
+4. **Async I/O**: FastAPI async endpoints
+5. **Connection Pooling**: Redis connection pool
+6. **HPA**: Auto-scaling based on CPU/memory
 
 ## Future Improvements
 
-1. Model versioning with A/B testing
-2. Automated retraining pipeline
-3. Drift detection dashboard
-4. Multi-region deployment
+- [ ] GPU inference support (NVIDIA Triton)
+- [ ] A/B testing framework
+- [ ] Online learning pipeline
+- [ ] Feature store integration
+- [ ] Model ensemble serving
