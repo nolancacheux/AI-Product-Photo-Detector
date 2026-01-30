@@ -1,13 +1,12 @@
 """FastAPI application for AI Product Photo Detector."""
 
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncGenerator
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram, generate_latest
 from starlette.responses import Response
 
@@ -43,32 +42,32 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler."""
     global predictor, start_time
-    
+
     # Startup
     setup_logging(level="INFO", json_format=True)
     logger.info("Starting AI Product Photo Detector API")
-    
+
     # Load config
     settings = get_settings()
     config_path = Path("configs/inference_config.yaml")
-    
+
     if config_path.exists():
         config = load_yaml_config(config_path)
         model_path = config.get("model", {}).get("path", settings.model_path)
     else:
         model_path = settings.model_path
-    
+
     # Initialize predictor
     predictor = Predictor(model_path=model_path)
     start_time = time.time()
-    
+
     if predictor.is_ready():
         logger.info("Model loaded successfully")
     else:
         logger.warning("Model not loaded - predictions will fail")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down API")
 
@@ -98,15 +97,15 @@ ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check() -> HealthResponse:
     """Check API health status.
-    
+
     Returns:
         Health status with model info.
     """
     global predictor, start_time
-    
+
     uptime = time.time() - start_time if start_time > 0 else 0.0
     model_loaded = predictor is not None and predictor.is_ready()
-    
+
     return HealthResponse(
         status=HealthStatus.HEALTHY if model_loaded else HealthStatus.UNHEALTHY,
         model_loaded=model_loaded,
@@ -129,14 +128,14 @@ async def predict(
     file: UploadFile = File(..., description="Image file to analyze"),
 ) -> PredictResponse:
     """Predict if an image is AI-generated.
-    
+
     Accepts JPEG, PNG, or WebP images up to 10MB.
-    
+
     Returns:
         Prediction with probability score and confidence level.
     """
     global predictor
-    
+
     # Check if model is loaded
     if predictor is None or not predictor.is_ready():
         REQUEST_COUNT.labels(status="error", prediction="none").inc()
@@ -144,7 +143,7 @@ async def predict(
             status_code=503,
             detail={"error": "Service unavailable", "detail": "Model not loaded"},
         )
-    
+
     # Validate content type
     if file.content_type not in ALLOWED_TYPES:
         REQUEST_COUNT.labels(status="error", prediction="none").inc()
@@ -155,10 +154,10 @@ async def predict(
                 "detail": f"Supported formats: JPEG, PNG, WebP. Got: {file.content_type}",
             },
         )
-    
+
     # Read file
     contents = await file.read()
-    
+
     # Check file size
     if len(contents) > MAX_FILE_SIZE:
         REQUEST_COUNT.labels(status="error", prediction="none").inc()
@@ -166,38 +165,38 @@ async def predict(
             status_code=413,
             detail={
                 "error": "File too large",
-                "detail": f"Maximum file size: {MAX_FILE_SIZE // (1024*1024)}MB",
+                "detail": f"Maximum file size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
             },
         )
-    
+
     # Make prediction
     try:
         with REQUEST_LATENCY.time():
             result = predictor.predict_from_bytes(contents)
-        
+
         REQUEST_COUNT.labels(status="success", prediction=result.prediction.value).inc()
-        
+
         logger.info(
             "Prediction complete",
             prediction=result.prediction.value,
             probability=result.probability,
             inference_time_ms=result.inference_time_ms,
         )
-        
+
         return result
-        
+
     except ValueError as e:
         REQUEST_COUNT.labels(status="error", prediction="none").inc()
         raise HTTPException(
             status_code=400,
             detail={"error": "Processing error", "detail": str(e)},
-        )
+        ) from e
 
 
 @app.get("/metrics", tags=["Monitoring"])
 async def metrics() -> Response:
     """Expose Prometheus metrics.
-    
+
     Returns:
         Prometheus-formatted metrics.
     """
@@ -210,7 +209,7 @@ async def metrics() -> Response:
 @app.get("/", tags=["Info"])
 async def root() -> dict:
     """API root endpoint.
-    
+
     Returns:
         Basic API information.
     """
@@ -225,9 +224,9 @@ async def root() -> dict:
 def main() -> None:
     """Run the API server."""
     import uvicorn
-    
+
     settings = get_settings()
-    
+
     uvicorn.run(
         "src.inference.api:app",
         host="0.0.0.0",

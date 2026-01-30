@@ -92,7 +92,7 @@ PRODUCT_EXAMPLES = {
 
 def generate_prompt() -> str:
     """Generate a random product prompt.
-    
+
     Returns:
         Product photo prompt string.
     """
@@ -109,13 +109,13 @@ def generate_images_diffusers(
     device: str = "auto",
 ) -> int:
     """Generate AI images using Hugging Face Diffusers.
-    
+
     Args:
         output_dir: Output directory for images.
         num_images: Number of images to generate.
         model_id: Hugging Face model ID.
         device: Device to use (auto, cpu, cuda, mps).
-        
+
     Returns:
         Number of images generated.
     """
@@ -125,9 +125,9 @@ def generate_images_diffusers(
     except ImportError:
         logger.error("Please install diffusers: pip install diffusers transformers accelerate")
         return 0
-    
+
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Determine device
     if device == "auto":
         if torch.cuda.is_available():
@@ -136,42 +136,42 @@ def generate_images_diffusers(
             device = "mps"
         else:
             device = "cpu"
-    
+
     logger.info(f"Loading model {model_id} on {device}")
-    
+
     # Load pipeline
     pipe = StableDiffusionPipeline.from_pretrained(
         model_id,
         torch_dtype=torch.float16 if device == "cuda" else torch.float32,
     )
     pipe = pipe.to(device)
-    
+
     # Enable memory optimization
     if device == "cuda":
         pipe.enable_attention_slicing()
-    
+
     generated = 0
     for i in tqdm(range(num_images), desc="Generating AI images"):
         prompt = generate_prompt()
-        
+
         try:
             image = pipe(
                 prompt,
                 num_inference_steps=30,
                 guidance_scale=7.5,
             ).images[0]
-            
+
             # Resize to 224x224
             image = image.resize((224, 224))
-            
+
             # Save
             filename = f"ai_generated_{i:04d}.jpg"
             image.save(output_dir / filename, "JPEG", quality=95)
             generated += 1
-            
+
         except Exception as e:
             logger.warning(f"Failed to generate image {i}: {e}")
-    
+
     logger.info(f"Generated {generated} AI images in {output_dir}")
     return generated
 
@@ -182,27 +182,27 @@ def generate_images_api(
     api_url: str = "http://localhost:7860",
 ) -> int:
     """Generate AI images using local Stable Diffusion WebUI API.
-    
+
     Args:
         output_dir: Output directory for images.
         num_images: Number of images to generate.
         api_url: Automatic1111 WebUI API URL.
-        
+
     Returns:
         Number of images generated.
     """
     import base64
     import io
-    
+
     import httpx
     from PIL import Image
-    
+
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     generated = 0
     for i in tqdm(range(num_images), desc="Generating via API"):
         prompt = generate_prompt()
-        
+
         payload = {
             "prompt": prompt,
             "negative_prompt": "blurry, low quality, distorted",
@@ -211,7 +211,7 @@ def generate_images_api(
             "height": 512,
             "cfg_scale": 7.5,
         }
-        
+
         try:
             response = httpx.post(
                 f"{api_url}/sdapi/v1/txt2img",
@@ -219,23 +219,23 @@ def generate_images_api(
                 timeout=120,
             )
             response.raise_for_status()
-            
+
             data = response.json()
             image_b64 = data["images"][0]
             image_bytes = base64.b64decode(image_b64)
             image = Image.open(io.BytesIO(image_bytes))
-            
+
             # Resize to 224x224
             image = image.resize((224, 224))
-            
+
             # Save
             filename = f"ai_generated_{i:04d}.jpg"
             image.save(output_dir / filename, "JPEG", quality=95)
             generated += 1
-            
+
         except Exception as e:
             logger.warning(f"Failed to generate image {i}: {e}")
-    
+
     logger.info(f"Generated {generated} AI images in {output_dir}")
     return generated
 
@@ -274,10 +274,10 @@ def main() -> None:
         help="Device (auto, cpu, cuda, mps)",
     )
     args = parser.parse_args()
-    
+
     setup_logging(level="INFO", json_format=False)
     output_dir = Path(args.output)
-    
+
     if args.method == "diffusers":
         generate_images_diffusers(
             output_dir=output_dir,
