@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ai-detector-models
+  labels:
+    app: ai-detector
+spec:
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-detector-config
+  labels:
+    app: ai-detector
+data:
+  inference_config.yaml: |
+    model:
+      path: /app/models/checkpoints/best_model.pt
+      device: auto
+      threshold: 0.5
+    
+    api:
+      max_file_size_mb: 10
+      allowed_types:
+        - image/jpeg
+        - image/png
+        - image/webp
+      rate_limits:
+        predict: "60/minute"
+        batch: "10/minute"
+        explain: "30/minute"
+    
+    cache:
+      backend: auto
+      ttl: 3600
+      max_memory_size: 1000
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-detector-secrets
+  labels:
+    app: ai-detector
+type: Opaque
+stringData:
+  # Uncomment and set these in your deployment
+  # API_KEYS: "key1,key2,key3"
+  # JWT_SECRET: "your-jwt-secret"
+  # REDIS_URL: "redis://redis:6379/0"
+  PLACEHOLDER: "replace-with-real-secrets"

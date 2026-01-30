@@ -1,0 +1,57 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-detector-api
+  labels:
+    app: ai-detector
+    component: api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  selector:
+    app: ai-detector
+    component: api
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-detector-ui
+  labels:
+    app: ai-detector
+    component: ui
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8501
+      targetPort: 8501
+      protocol: TCP
+      name: http
+  selector:
+    app: ai-detector
+    component: ui
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-detector-api-metrics
+  labels:
+    app: ai-detector
+    component: api
+    monitoring: prometheus
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: metrics
+  selector:
+    app: ai-detector
+    component: api

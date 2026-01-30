@@ -1,0 +1,125 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-detector-api
+  labels:
+    app: ai-detector
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-detector
+      component: api
+  template:
+    metadata:
+      labels:
+        app: ai-detector
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/nolancacheux/ai-detector:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: SERVICE_NAME
+              value: "ai-photo-detector"
+            - name: SERVICE_VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['version']
+          envFrom:
+            - secretRef:
+                name: ai-detector-secrets
+                optional: true
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: model-storage
+              mountPath: /app/models
+              readOnly: true
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: ai-detector-models
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-detector-ui
+  labels:
+    app: ai-detector
+    component: ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-detector
+      component: ui
+  template:
+    metadata:
+      labels:
+        app: ai-detector
+        component: ui
+    spec:
+      containers:
+        - name: ui
+          image: ghcr.io/nolancacheux/ai-detector-ui:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8501
+              name: http
+          env:
+            - name: API_URL
+              value: "http://ai-detector-api:8000"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8501
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8501
+            initialDelaySeconds: 5
+            periodSeconds: 5
