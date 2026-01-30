@@ -70,6 +70,7 @@ data/processed/
 !data/.gitkeep
 !data/**/.gitkeep
 *.dvc
+!.dvc
 
 # MLflow local artifacts
 mlruns/
