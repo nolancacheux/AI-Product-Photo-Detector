@@ -1,0 +1,131 @@
+# Default values for ai-detector
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  imageRegistry: ghcr.io
+  imagePullSecrets: []
+
+# API deployment settings
+api:
+  replicaCount: 2
+
+  image:
+    repository: nolancacheux/ai-detector
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  env:
+    LOG_LEVEL: "INFO"
+    SERVICE_NAME: "ai-photo-detector"
+
+  # Extra environment variables from secrets
+  envFromSecrets:
+    - ai-detector-secrets
+
+# UI deployment settings
+ui:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: nolancacheux/ai-detector-ui
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 8501
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  env:
+    API_URL: "http://ai-detector-api:8000"
+
+# Ingress settings
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+  hosts:
+    - host: ai-detector.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: api
+        - path: /
+          pathType: Prefix
+          service: ui
+  tls:
+    - secretName: ai-detector-tls
+      hosts:
+        - ai-detector.example.com
+
+# Model storage
+persistence:
+  enabled: true
+  storageClass: standard
+  accessMode: ReadOnlyMany
+  size: 1Gi
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+# Redis cache (optional)
+redis:
+  enabled: false
+  # If enabled, uses Bitnami Redis chart
+  auth:
+    enabled: false
+  architecture: standalone
+  master:
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+
+# Secrets (create manually or use external secrets)
+secrets:
+  create: false
+  # apiKeys: ""
+  # jwtSecret: ""
