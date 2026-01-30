@@ -29,6 +29,7 @@ dependencies = [
     "uvicorn[standard]>=0.23.0",
     "python-multipart>=0.0.6",
     "slowapi>=0.1.9",
+    "pyjwt>=2.8.0",
     
     # MLOps
     "mlflow>=2.8.0",

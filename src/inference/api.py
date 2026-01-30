@@ -5,7 +5,9 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import Counter, Histogram, generate_latest
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -22,6 +24,7 @@ from src.inference.schemas import (
     HealthStatus,
     PredictResponse,
 )
+from src.inference.auth import require_scope, verify_auth
 from src.utils.config import get_settings, load_yaml_config
 from src.utils.logger import get_logger, setup_logging
 
@@ -154,10 +157,12 @@ async def health_check() -> HealthResponse:
 async def predict(
     request: Request,
     file: UploadFile = File(..., description="Image file to analyze"),
+    auth: Annotated[dict, Depends(require_scope("predict"))] = None,
 ) -> PredictResponse:
     """Predict if an image is AI-generated.
 
     Accepts JPEG, PNG, or WebP images up to 10MB.
+    Requires authentication when API_KEYS or REQUIRE_AUTH is configured.
 
     Returns:
         Prediction with probability score and confidence level.
@@ -239,11 +244,13 @@ MAX_BATCH_SIZE = 20
 async def predict_batch(
     request: Request,
     files: list[UploadFile] = File(..., description="Image files to analyze (max 20)"),
+    auth: Annotated[dict, Depends(require_scope("batch"))] = None,
 ) -> BatchPredictResponse:
     """Predict if multiple images are AI-generated.
 
     Accepts up to 20 JPEG, PNG, or WebP images.
     Each image must be under 10MB.
+    Requires authentication when API_KEYS or REQUIRE_AUTH is configured.
 
     Returns:
         Batch prediction results with individual results for each image.
@@ -405,11 +412,13 @@ async def explain(
     request: Request,
     file: UploadFile = File(..., description="Image file to analyze and explain"),
     alpha: float = 0.5,
+    auth: Annotated[dict, Depends(require_scope("explain"))] = None,
 ) -> Response:
     """Generate GradCAM explanation for prediction.
 
     Returns the image with a heatmap overlay showing which regions
     the model focused on for its prediction.
+    Requires authentication when API_KEYS or REQUIRE_AUTH is configured.
 
     Args:
         file: Image file to analyze.
