@@ -1,0 +1,60 @@
+# Training Configuration
+# AI Product Photo Detector
+
+# Reproducibility
+seed: 42
+
+# Data
+data:
+  train_dir: "data/processed/train"
+  val_dir: "data/processed/val"
+  test_dir: "data/processed/test"
+  image_size: 224
+  batch_size: 32
+  num_workers: 4
+
+# Model
+model:
+  name: "efficientnet_b0"
+  pretrained: true
+  num_classes: 1  # Binary classification (sigmoid output)
+  dropout: 0.3
+
+# Training
+training:
+  epochs: 20
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  scheduler: "cosine"
+  warmup_epochs: 2
+  early_stopping_patience: 5
+  
+# Augmentation
+augmentation:
+  horizontal_flip: true
+  rotation_degrees: 15
+  color_jitter:
+    brightness: 0.2
+    contrast: 0.2
+    saturation: 0.1
+    hue: 0.05
+  random_crop: true
+
+# MLflow
+mlflow:
+  experiment_name: "ai-product-detector"
+  tracking_uri: "http://localhost:5000"
+  log_models: true
+  
+# Checkpoints
+checkpoint:
+  save_dir: "models/checkpoints"
+  save_best_only: true
+  monitor: "val_accuracy"
+  mode: "max"
+
+# Thresholds
+thresholds:
+  classification: 0.5
+  high_confidence: 0.8
+  low_confidence: 0.3

@@ -1,0 +1,47 @@
+# Inference Configuration
+# AI Product Photo Detector
+
+# Server
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 1
+  reload: false
+
+# Model
+model:
+  path: "models/best_model.pt"
+  device: "auto"  # auto, cpu, cuda
+  
+# Image Processing
+image:
+  max_size_mb: 10
+  supported_formats: ["jpeg", "jpg", "png", "webp"]
+  resize_to: 224
+  
+# Thresholds
+thresholds:
+  classification: 0.5
+  high_confidence: 0.8
+  low_confidence: 0.3
+
+# Rate Limiting
+rate_limit:
+  enabled: true
+  requests_per_minute: 100
+  
+# Logging
+logging:
+  level: "INFO"
+  format: "json"
+  
+# Metrics
+metrics:
+  enabled: true
+  port: 9090
+  path: "/metrics"
+  
+# Health Check
+health:
+  path: "/health"
+  include_model_info: true
