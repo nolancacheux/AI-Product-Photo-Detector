@@ -10,8 +10,8 @@ data:
   val_dir: "data/processed/val"
   test_dir: "data/processed/test"
   image_size: 224
-  batch_size: 32
-  num_workers: 4
+  batch_size: 8  # Reduced for CPU
+  num_workers: 0  # Avoid memory issues
 
 # Model
 model:
@@ -22,7 +22,7 @@ model:
 
 # Training
 training:
-  epochs: 20
+  epochs: 3  # Reduced for CPU demo
   learning_rate: 0.001
   weight_decay: 0.0001
   scheduler: "cosine"
@@ -43,7 +43,7 @@ augmentation:
 # MLflow
 mlflow:
   experiment_name: "ai-product-detector"
-  tracking_uri: "http://localhost:5000"
+  tracking_uri: "mlruns"  # Local file storage
   log_models: true
   
 # Checkpoints
