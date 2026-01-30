@@ -2,8 +2,6 @@
 
 import hashlib
 import io
-import struct
-from typing import Literal
 
 from PIL import Image
 

@@ -1,11 +1,10 @@
 """Advanced data augmentation techniques."""
 
 import random
-from typing import Callable
 
 import numpy as np
 import torch
-from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+from PIL import Image, ImageEnhance, ImageOps
 from torchvision import transforms
 
 
@@ -310,13 +309,13 @@ class GridMask:
 
         _, h, w = img.shape
         d = random.randint(self.d1, self.d2)
-        l = int(d * self.ratio)
+        mask_size = int(d * self.ratio)
 
         mask = torch.ones(h, w)
         for i in range(-d, h, d):
             for j in range(-d, w, d):
                 x1, y1 = max(0, i), max(0, j)
-                x2, y2 = min(h, i + l), min(w, j + l)
+                x2, y2 = min(h, i + mask_size), min(w, j + mask_size)
                 mask[x1:x2, y1:y2] = 0
 
         return img * mask.unsqueeze(0)
@@ -348,14 +347,16 @@ def get_advanced_train_transforms(
     if use_randaugment:
         transform_list.append(RandAugment(num_ops=randaugment_n, magnitude=randaugment_m))
 
-    transform_list.extend([
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225],
-        ),
-        transforms.RandomErasing(p=0.25, scale=(0.02, 0.2)),
-    ])
+    transform_list.extend(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225],
+            ),
+            transforms.RandomErasing(p=0.25, scale=(0.02, 0.2)),
+        ]
+    )
 
     return transforms.Compose(transform_list)
 

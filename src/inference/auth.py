@@ -1,10 +1,9 @@
 """Authentication middleware for API security."""
 
 import hashlib
-import hmac
 import os
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import jwt
@@ -53,7 +52,7 @@ class APIKeyManager:
                     self._keys[key_hash] = {
                         "name": f"key_{len(self._keys)}",
                         "scopes": ["predict", "batch", "explain"],
-                        "created": datetime.now(timezone.utc),
+                        "created": datetime.now(UTC),
                     }
             logger.info(f"Loaded {len(self._keys)} API keys from environment")
 
@@ -96,7 +95,7 @@ class APIKeyManager:
         self._keys[key_hash] = {
             "name": name,
             "scopes": scopes or ["predict"],
-            "created": datetime.now(timezone.utc),
+            "created": datetime.now(UTC),
         }
         return key
 
@@ -120,7 +119,7 @@ def create_jwt_token(subject: str, scopes: list[str] | None = None) -> str:
     Returns:
         Encoded JWT token.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": subject,
         "exp": now + timedelta(hours=JWT_EXPIRATION_HOURS),
@@ -143,8 +142,8 @@ def decode_jwt_token(token: str) -> TokenData | None:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return TokenData(
             sub=payload["sub"],
-            exp=datetime.fromtimestamp(payload["exp"], tz=timezone.utc),
-            iat=datetime.fromtimestamp(payload["iat"], tz=timezone.utc),
+            exp=datetime.fromtimestamp(payload["exp"], tz=UTC),
+            iat=datetime.fromtimestamp(payload["iat"], tz=UTC),
             scopes=payload.get("scopes", []),
         )
     except jwt.ExpiredSignatureError:

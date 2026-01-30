@@ -65,10 +65,7 @@ class InMemoryCache(CacheBackend):
     def _evict_expired(self) -> None:
         """Remove expired entries."""
         now = time.time()
-        expired = [
-            k for k, (_, expiry) in self._cache.items()
-            if expiry > 0 and now > expiry
-        ]
+        expired = [k for k, (_, expiry) in self._cache.items() if expiry > 0 and now > expiry]
         for key in expired:
             del self._cache[key]
 
@@ -166,6 +163,7 @@ class RedisCache(CacheBackend):
         """Connect to Redis."""
         try:
             import redis
+
             self._client = redis.from_url(self._url)
             self._client.ping()
             logger.info("Connected to Redis", url=self._url)

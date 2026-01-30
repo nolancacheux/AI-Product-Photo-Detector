@@ -1,7 +1,6 @@
 """Streamlit web interface for AI Product Photo Detector."""
 
 import io
-import json
 import os
 from datetime import datetime
 
@@ -46,7 +45,9 @@ def check_api_health() -> dict | None:
     return None
 
 
-def get_explanation(image_bytes: bytes, filename: str, alpha: float = 0.5) -> tuple[Image.Image | None, float | None]:
+def get_explanation(
+    image_bytes: bytes, filename: str, alpha: float = 0.5
+) -> tuple[Image.Image | None, float | None]:
     """Get GradCAM explanation from API.
 
     Args:
@@ -83,14 +84,16 @@ def add_to_history(filename: str, result: dict) -> None:
         filename: Image filename.
         result: Prediction result.
     """
-    st.session_state.history.append({
-        "timestamp": datetime.now().isoformat(),
-        "filename": filename,
-        "prediction": result.get("prediction", "unknown"),
-        "probability": result.get("probability", 0),
-        "confidence": result.get("confidence", "unknown"),
-        "inference_time_ms": result.get("inference_time_ms", 0),
-    })
+    st.session_state.history.append(
+        {
+            "timestamp": datetime.now().isoformat(),
+            "filename": filename,
+            "prediction": result.get("prediction", "unknown"),
+            "probability": result.get("probability", 0),
+            "confidence": result.get("confidence", "unknown"),
+            "inference_time_ms": result.get("inference_time_ms", 0),
+        }
+    )
 
     # Keep only last 50 entries
     if len(st.session_state.history) > 50:
@@ -205,9 +208,16 @@ def display_history() -> None:
 
     # History table
     st.dataframe(
-        df[["timestamp", "filename", "prediction", "probability", "confidence", "inference_time_ms"]].sort_values(
-            "timestamp", ascending=False
-        ),
+        df[
+            [
+                "timestamp",
+                "filename",
+                "prediction",
+                "probability",
+                "confidence",
+                "inference_time_ms",
+            ]
+        ].sort_values("timestamp", ascending=False),
         use_container_width=True,
         hide_index=True,
     )
@@ -260,20 +270,24 @@ def batch_upload_page() -> None:
                     )
                     if response.status_code == 200:
                         result = response.json()
-                        results.append({
-                            "filename": file.name,
-                            "prediction": result["prediction"],
-                            "probability": result["probability"],
-                            "confidence": result["confidence"],
-                        })
+                        results.append(
+                            {
+                                "filename": file.name,
+                                "prediction": result["prediction"],
+                                "probability": result["probability"],
+                                "confidence": result["confidence"],
+                            }
+                        )
                         add_to_history(file.name, result)
                 except Exception as e:
-                    results.append({
-                        "filename": file.name,
-                        "prediction": "error",
-                        "probability": 0,
-                        "confidence": str(e),
-                    })
+                    results.append(
+                        {
+                            "filename": file.name,
+                            "prediction": "error",
+                            "probability": 0,
+                            "confidence": str(e),
+                        }
+                    )
 
                 progress_bar.progress((i + 1) / len(uploaded_files))
 

@@ -129,9 +129,7 @@ def create_objective(
         best_val_accuracy = 0.0
 
         for epoch in range(n_epochs):
-            train_loss, train_acc = train_epoch(
-                model, train_loader, criterion, optimizer, device
-            )
+            train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, device)
             val_loss, val_acc, val_precision, val_recall = validate(
                 model, val_loader, criterion, device
             )
@@ -334,6 +332,7 @@ def main() -> None:
     best_config = get_best_config(study)
 
     import yaml
+
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 

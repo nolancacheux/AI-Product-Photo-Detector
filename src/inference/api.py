@@ -4,7 +4,6 @@ import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
@@ -15,6 +14,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.responses import Response
 
+from src.inference.auth import require_scope
 from src.inference.predictor import Predictor
 from src.inference.schemas import (
     BatchItemResult,
@@ -24,7 +24,6 @@ from src.inference.schemas import (
     HealthStatus,
     PredictResponse,
 )
-from src.inference.auth import require_scope, verify_auth
 from src.utils.config import get_settings, load_yaml_config
 from src.utils.logger import get_logger, setup_logging
 
@@ -471,9 +470,7 @@ async def explain(
             )
 
         # Generate explanation
-        overlay_bytes, probability = explainable_predictor.explain_to_bytes(
-            contents, alpha=alpha
-        )
+        overlay_bytes, probability = explainable_predictor.explain_to_bytes(contents, alpha=alpha)
 
         logger.info(
             "Explanation generated",

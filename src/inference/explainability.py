@@ -29,9 +29,7 @@ class GradCAM:
     def _register_hooks(self) -> None:
         """Register forward and backward hooks on target layer."""
 
-        def forward_hook(
-            module: torch.nn.Module, input: Any, output: torch.Tensor
-        ) -> None:
+        def forward_hook(module: torch.nn.Module, input: Any, output: torch.Tensor) -> None:
             self.activations = output.detach()
 
         def backward_hook(

@@ -134,10 +134,12 @@ def set_app_info(version: str, environment: str = "production") -> None:
         version: Application version.
         environment: Deployment environment.
     """
-    APP_INFO.info({
-        "version": version,
-        "environment": environment,
-    })
+    APP_INFO.info(
+        {
+            "version": version,
+            "environment": environment,
+        }
+    )
 
 
 def set_model_info(
@@ -154,12 +156,14 @@ def set_model_info(
         architecture: Model architecture.
         parameters: Number of parameters.
     """
-    MODEL_INFO.info({
-        "name": name,
-        "version": version,
-        "architecture": architecture,
-        "parameters": str(parameters),
-    })
+    MODEL_INFO.info(
+        {
+            "name": name,
+            "version": version,
+            "architecture": architecture,
+            "parameters": str(parameters),
+        }
+    )
 
 
 def record_prediction(

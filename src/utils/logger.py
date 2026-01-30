@@ -180,6 +180,7 @@ class LoggingMiddleware:
         client = scope.get("client", ("unknown", 0))
 
         import time
+
         start_time = time.time()
 
         # Track response status

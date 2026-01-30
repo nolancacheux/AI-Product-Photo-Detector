@@ -92,9 +92,7 @@ class BatchItemResult(BaseModel):
     probability: float | None = Field(
         default=None, ge=0.0, le=1.0, description="Probability of being AI-generated"
     )
-    confidence: ConfidenceLevel | None = Field(
-        default=None, description="Confidence level"
-    )
+    confidence: ConfidenceLevel | None = Field(default=None, description="Confidence level")
     error: str | None = Field(default=None, description="Error message if processing failed")
 
 
@@ -105,9 +103,7 @@ class BatchPredictResponse(BaseModel):
     total: int = Field(description="Total number of images processed")
     successful: int = Field(description="Number of successful predictions")
     failed: int = Field(description="Number of failed predictions")
-    total_inference_time_ms: float = Field(
-        ge=0, description="Total inference time in milliseconds"
-    )
+    total_inference_time_ms: float = Field(ge=0, description="Total inference time in milliseconds")
     model_version: str = Field(description="Model version used for predictions")
 
     class Config:

@@ -52,9 +52,7 @@ class TemperatureScaling:
             scaled_logits = logits / t
             probs = 1 / (1 + np.exp(-scaled_logits))
             probs = np.clip(probs, 1e-10, 1 - 1e-10)
-            loss = -np.mean(
-                labels * np.log(probs) + (1 - labels) * np.log(1 - probs)
-            )
+            loss = -np.mean(labels * np.log(probs) + (1 - labels) * np.log(1 - probs))
             return loss
 
         # Optimize temperature
