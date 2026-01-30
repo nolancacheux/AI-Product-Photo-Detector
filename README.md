@@ -94,17 +94,30 @@ python -m venv .venv
 source .venv/bin/activate  # Linux/Mac
 # .venv\Scripts\activate   # Windows
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (with dev tools)
+pip install -e ".[dev,ui]"
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Create Sample Dataset
+
+```bash
+# Generate synthetic sample data for testing
+python scripts/create_sample_data.py --output data/processed
+
+# Validate dataset
+python -m src.data.prepare validate --data-dir data/processed
 ```
 
 ### Training
 
 ```bash
-# Pull dataset (DVC)
-dvc pull
+# Train model (uses configs/train_config.yaml)
+make train
 
-# Train model
+# Or manually:
 python -m src.training.train --config configs/train_config.yaml
 
 # Model is automatically logged to MLflow
@@ -114,7 +127,10 @@ python -m src.training.train --config configs/train_config.yaml
 
 ```bash
 # Start API server
-uvicorn src.inference.api:app --host 0.0.0.0 --port 8000
+make serve
+
+# Or manually:
+uvicorn src.inference.api:app --host 0.0.0.0 --port 8000 --reload
 
 # Test prediction
 curl -X POST "http://localhost:8000/predict" \
@@ -122,14 +138,38 @@ curl -X POST "http://localhost:8000/predict" \
   -F "file=@test_image.jpg"
 ```
 
-### Docker
+### Web UI
 
 ```bash
-# Build images
-docker build -f docker/serve.Dockerfile -t ai-product-detector:latest .
+# Start Streamlit interface
+make ui
 
-# Run inference server
-docker run -p 8000:8000 ai-product-detector:latest
+# Or manually:
+streamlit run src/ui/app.py --server.port 8501
+```
+
+### Docker (Full Stack)
+
+```bash
+# Build all images
+make docker-build
+
+# Start all services (API, UI, MLflow, Prometheus, Grafana)
+make docker-up
+
+# Stop all services
+make docker-down
+```
+
+### Available Makefile Commands
+
+```bash
+make help      # Show all available commands
+make install   # Install production dependencies
+make dev       # Install dev dependencies + pre-commit
+make lint      # Run linting (ruff + mypy)
+make format    # Format code
+make test      # Run tests with coverage
 ```
 
 ## 📊 Model Performance
