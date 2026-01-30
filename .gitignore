@@ -1,0 +1,106 @@
+# AI Product Photo Detector - .gitignore
+
+# ========== Python ==========
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ========== Virtual Environments ==========
+.venv/
+venv/
+ENV/
+env/
+
+# ========== IDE ==========
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# ========== Jupyter ==========
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ========== Testing ==========
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# ========== ML/Data ==========
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.joblib
+*.pt
+*.pth
+*.onnx
+*.bin
+
+# Model artifacts (except tracked ones)
+models/
+!models/.gitkeep
+
+# Dataset (tracked by DVC)
+data/raw/
+data/processed/
+!data/.gitkeep
+!data/**/.gitkeep
+*.dvc
+
+# MLflow local artifacts
+mlruns/
+mlartifacts/
+
+# ========== Docker ==========
+*.log
+docker-compose.override.yml
+
+# ========== Environment & Secrets ==========
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ========== OS ==========
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ========== Misc ==========
+*.bak
+*.tmp
+*.temp
+.cache/
+*.parquet
+*.csv
+!data/sample/*.csv
