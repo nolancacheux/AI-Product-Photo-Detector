@@ -82,3 +82,57 @@ class ErrorResponse(BaseModel):
                 "detail": "Supported formats: JPEG, PNG, WebP",
             }
         }
+
+
+class BatchItemResult(BaseModel):
+    """Result for a single item in batch prediction."""
+
+    filename: str = Field(description="Original filename")
+    prediction: PredictionResult | None = Field(description="Classification result")
+    probability: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Probability of being AI-generated"
+    )
+    confidence: ConfidenceLevel | None = Field(
+        default=None, description="Confidence level"
+    )
+    error: str | None = Field(default=None, description="Error message if processing failed")
+
+
+class BatchPredictResponse(BaseModel):
+    """Response schema for /predict/batch endpoint."""
+
+    results: list[BatchItemResult] = Field(description="Prediction results for each image")
+    total: int = Field(description="Total number of images processed")
+    successful: int = Field(description="Number of successful predictions")
+    failed: int = Field(description="Number of failed predictions")
+    total_inference_time_ms: float = Field(
+        ge=0, description="Total inference time in milliseconds"
+    )
+    model_version: str = Field(description="Model version used for predictions")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "results": [
+                    {
+                        "filename": "product1.jpg",
+                        "prediction": "ai_generated",
+                        "probability": 0.87,
+                        "confidence": "high",
+                        "error": None,
+                    },
+                    {
+                        "filename": "product2.jpg",
+                        "prediction": "real",
+                        "probability": 0.12,
+                        "confidence": "high",
+                        "error": None,
+                    },
+                ],
+                "total": 2,
+                "successful": 2,
+                "failed": 0,
+                "total_inference_time_ms": 89.5,
+                "model_version": "1.0.0",
+            }
+        }

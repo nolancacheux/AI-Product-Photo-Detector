@@ -12,6 +12,8 @@ from starlette.responses import Response
 
 from src.inference.predictor import Predictor
 from src.inference.schemas import (
+    BatchItemResult,
+    BatchPredictResponse,
     ErrorResponse,
     HealthResponse,
     HealthStatus,
@@ -33,6 +35,16 @@ REQUEST_LATENCY = Histogram(
     "prediction_latency_seconds",
     "Prediction latency in seconds",
     buckets=[0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5],
+)
+BATCH_SIZE = Histogram(
+    "batch_size",
+    "Number of images in batch requests",
+    buckets=[1, 2, 5, 10, 20, 50],
+)
+BATCH_LATENCY = Histogram(
+    "batch_latency_seconds",
+    "Batch prediction latency in seconds",
+    buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0],
 )
 
 # Global state
@@ -194,6 +206,144 @@ async def predict(
             status_code=400,
             detail={"error": "Processing error", "detail": str(e)},
         ) from e
+
+
+MAX_BATCH_SIZE = 20
+
+
+@app.post(
+    "/predict/batch",
+    response_model=BatchPredictResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        413: {"model": ErrorResponse},
+        503: {"model": ErrorResponse},
+    },
+    tags=["Prediction"],
+)
+async def predict_batch(
+    files: list[UploadFile] = File(..., description="Image files to analyze (max 20)"),
+) -> BatchPredictResponse:
+    """Predict if multiple images are AI-generated.
+
+    Accepts up to 20 JPEG, PNG, or WebP images.
+    Each image must be under 10MB.
+
+    Returns:
+        Batch prediction results with individual results for each image.
+    """
+    global predictor
+
+    # Check if model is loaded
+    if predictor is None or not predictor.is_ready():
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Service unavailable", "detail": "Model not loaded"},
+        )
+
+    # Check batch size
+    if len(files) > MAX_BATCH_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Batch too large",
+                "detail": f"Maximum batch size: {MAX_BATCH_SIZE}. Got: {len(files)}",
+            },
+        )
+
+    if len(files) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "Empty batch", "detail": "No files provided"},
+        )
+
+    BATCH_SIZE.observe(len(files))
+    results: list[BatchItemResult] = []
+    successful = 0
+    failed = 0
+    start_time = time.time()
+
+    for file in files:
+        # Validate content type
+        if file.content_type not in ALLOWED_TYPES:
+            results.append(
+                BatchItemResult(
+                    filename=file.filename or "unknown",
+                    prediction=None,
+                    probability=None,
+                    confidence=None,
+                    error=f"Invalid format: {file.content_type}. Supported: JPEG, PNG, WebP",
+                )
+            )
+            failed += 1
+            REQUEST_COUNT.labels(status="error", prediction="none").inc()
+            continue
+
+        # Read file
+        contents = await file.read()
+
+        # Check file size
+        if len(contents) > MAX_FILE_SIZE:
+            results.append(
+                BatchItemResult(
+                    filename=file.filename or "unknown",
+                    prediction=None,
+                    probability=None,
+                    confidence=None,
+                    error=f"File too large: {len(contents) / (1024 * 1024):.1f}MB. Max: 10MB",
+                )
+            )
+            failed += 1
+            REQUEST_COUNT.labels(status="error", prediction="none").inc()
+            continue
+
+        # Make prediction
+        try:
+            result = predictor.predict_from_bytes(contents)
+            results.append(
+                BatchItemResult(
+                    filename=file.filename or "unknown",
+                    prediction=result.prediction,
+                    probability=result.probability,
+                    confidence=result.confidence,
+                    error=None,
+                )
+            )
+            successful += 1
+            REQUEST_COUNT.labels(status="success", prediction=result.prediction.value).inc()
+
+        except Exception as e:
+            results.append(
+                BatchItemResult(
+                    filename=file.filename or "unknown",
+                    prediction=None,
+                    probability=None,
+                    confidence=None,
+                    error=str(e),
+                )
+            )
+            failed += 1
+            REQUEST_COUNT.labels(status="error", prediction="none").inc()
+
+    total_time = (time.time() - start_time) * 1000
+    BATCH_LATENCY.observe(total_time / 1000)
+
+    logger.info(
+        "Batch prediction complete",
+        total=len(files),
+        successful=successful,
+        failed=failed,
+        total_time_ms=total_time,
+    )
+
+    return BatchPredictResponse(
+        results=results,
+        total=len(files),
+        successful=successful,
+        failed=failed,
+        total_inference_time_ms=round(total_time, 2),
+        model_version=predictor.model_version,
+    )
 
 
 @app.get("/metrics", tags=["Monitoring"])
