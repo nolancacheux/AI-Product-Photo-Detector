@@ -5,9 +5,12 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import Counter, Histogram, generate_latest
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from starlette.responses import Response
 
 from src.inference.predictor import Predictor
@@ -24,6 +27,9 @@ from src.utils.logger import get_logger, setup_logging
 
 # Explainability (lazy loaded)
 explainable_predictor = None
+
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
 
 # Metrics
 REQUEST_COUNT = Counter(
@@ -95,6 +101,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -135,11 +145,14 @@ async def health_check() -> HealthResponse:
     responses={
         400: {"model": ErrorResponse},
         413: {"model": ErrorResponse},
+        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
         503: {"model": ErrorResponse},
     },
     tags=["Prediction"],
 )
+@limiter.limit("60/minute")
 async def predict(
+    request: Request,
     file: UploadFile = File(..., description="Image file to analyze"),
 ) -> PredictResponse:
     """Predict if an image is AI-generated.
@@ -217,11 +230,14 @@ MAX_BATCH_SIZE = 20
     responses={
         400: {"model": ErrorResponse},
         413: {"model": ErrorResponse},
+        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
         503: {"model": ErrorResponse},
     },
     tags=["Prediction"],
 )
+@limiter.limit("10/minute")
 async def predict_batch(
+    request: Request,
     files: list[UploadFile] = File(..., description="Image files to analyze (max 20)"),
 ) -> BatchPredictResponse:
     """Predict if multiple images are AI-generated.
@@ -379,11 +395,14 @@ async def root() -> dict:
     responses={
         400: {"model": ErrorResponse},
         413: {"model": ErrorResponse},
+        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
         503: {"model": ErrorResponse},
     },
     tags=["Explainability"],
 )
+@limiter.limit("30/minute")
 async def explain(
+    request: Request,
     file: UploadFile = File(..., description="Image file to analyze and explain"),
     alpha: float = 0.5,
 ) -> Response:
