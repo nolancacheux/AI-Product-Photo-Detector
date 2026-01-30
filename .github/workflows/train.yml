@@ -1,0 +1,249 @@
+# Model Training Pipeline
+# AI Product Photo Detector
+
+name: Train Model
+
+on:
+  workflow_dispatch:
+    inputs:
+      epochs:
+        description: 'Number of training epochs'
+        required: false
+        default: '20'
+      batch_size:
+        description: 'Batch size'
+        required: false
+        default: '32'
+      learning_rate:
+        description: 'Learning rate'
+        required: false
+        default: '0.001'
+      run_hyperopt:
+        description: 'Run hyperparameter optimization first'
+        type: boolean
+        default: false
+      hyperopt_trials:
+        description: 'Number of hyperopt trials (if enabled)'
+        required: false
+        default: '20'
+  schedule:
+    # Weekly retraining on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+
+env:
+  PYTHON_VERSION: '3.11'
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+
+jobs:
+  prepare-data:
+    name: Prepare Data
+    runs-on: ubuntu-latest
+    outputs:
+      data-version: ${{ steps.dvc.outputs.version }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install dvc[s3]
+      
+      - name: Configure DVC
+        run: |
+          dvc remote modify --local myremote access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          dvc remote modify --local myremote secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      
+      - name: Pull data
+        run: dvc pull
+      
+      - name: Get data version
+        id: dvc
+        run: |
+          VERSION=$(dvc version --json | jq -r '.dvc')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  hyperopt:
+    name: Hyperparameter Optimization
+    runs-on: ubuntu-latest
+    needs: prepare-data
+    if: github.event.inputs.run_hyperopt == 'true'
+    outputs:
+      best-config: ${{ steps.hyperopt.outputs.config }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+          pip install dvc[s3]
+      
+      - name: Pull data
+        run: dvc pull
+      
+      - name: Run hyperparameter optimization
+        id: hyperopt
+        run: |
+          python -m src.training.hyperopt \
+            --config configs/train_config.yaml \
+            --n-trials ${{ github.event.inputs.hyperopt_trials }} \
+            --output configs/best_config.yaml
+          
+          echo "config=configs/best_config.yaml" >> $GITHUB_OUTPUT
+      
+      - name: Upload best config
+        uses: actions/upload-artifact@v4
+        with:
+          name: best-config
+          path: configs/best_config.yaml
+
+  train:
+    name: Train Model
+    runs-on: ubuntu-latest
+    needs: [prepare-data, hyperopt]
+    if: always() && needs.prepare-data.result == 'success'
+    outputs:
+      model-version: ${{ steps.train.outputs.version }}
+      model-accuracy: ${{ steps.train.outputs.accuracy }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+          pip install dvc[s3]
+      
+      - name: Pull data
+        run: dvc pull
+      
+      - name: Download best config (if hyperopt ran)
+        if: needs.hyperopt.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: best-config
+          path: configs/
+      
+      - name: Prepare training config
+        run: |
+          if [ -f configs/best_config.yaml ]; then
+            CONFIG=configs/best_config.yaml
+          else
+            CONFIG=configs/train_config.yaml
+          fi
+          
+          # Override with workflow inputs
+          yq -i ".training.epochs = ${{ github.event.inputs.epochs || '20' }}" $CONFIG
+          yq -i ".data.batch_size = ${{ github.event.inputs.batch_size || '32' }}" $CONFIG
+          yq -i ".training.learning_rate = ${{ github.event.inputs.learning_rate || '0.001' }}" $CONFIG
+      
+      - name: Train model
+        id: train
+        env:
+          MLFLOW_TRACKING_URI: ${{ env.MLFLOW_TRACKING_URI }}
+        run: |
+          python -m src.training.train --config configs/train_config.yaml
+          
+          # Extract metrics from MLflow
+          VERSION=$(date +%Y%m%d-%H%M%S)
+          ACCURACY=$(cat models/checkpoints/metrics.json | jq -r '.val_accuracy')
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "accuracy=$ACCURACY" >> $GITHUB_OUTPUT
+      
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-${{ steps.train.outputs.version }}
+          path: |
+            models/checkpoints/best_model.pt
+            models/checkpoints/metrics.json
+          retention-days: 30
+
+  evaluate:
+    name: Evaluate Model
+    runs-on: ubuntu-latest
+    needs: train
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      
+      - name: Download model
+        uses: actions/download-artifact@v4
+        with:
+          name: model-${{ needs.train.outputs.model-version }}
+          path: models/checkpoints/
+      
+      - name: Run evaluation
+        run: |
+          echo "Model accuracy: ${{ needs.train.outputs.model-accuracy }}"
+          # Add additional evaluation scripts here
+
+  register:
+    name: Register Model
+    runs-on: ubuntu-latest
+    needs: [train, evaluate]
+    if: needs.train.outputs.model-accuracy > 0.80
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download model
+        uses: actions/download-artifact@v4
+        with:
+          name: model-${{ needs.train.outputs.model-version }}
+          path: models/checkpoints/
+      
+      - name: Register model to MLflow
+        env:
+          MLFLOW_TRACKING_URI: ${{ env.MLFLOW_TRACKING_URI }}
+        run: |
+          pip install mlflow
+          
+          mlflow models log-model \
+            --model-uri models/checkpoints/best_model.pt \
+            --registered-model-name ai-product-detector \
+            --run-id ${{ github.run_id }}
+          
+          echo "✅ Model registered with version ${{ needs.train.outputs.model-version }}"
+
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [train, evaluate, register]
+    if: always()
+    
+    steps:
+      - name: Training Summary
+        run: |
+          echo "## Training Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Version**: ${{ needs.train.outputs.model-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Accuracy**: ${{ needs.train.outputs.model-accuracy }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registered**: ${{ needs.register.result == 'success' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
