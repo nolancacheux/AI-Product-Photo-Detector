@@ -6,73 +6,43 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Detect AI-generated product photos in e-commerce listings with production-grade MLOps.**
+> **Detect AI-generated product photos in e-commerce listings.**
 
-An end-to-end MLOps project that classifies product images as **real** or **AI-generated**, helping e-commerce platforms fight fraudulent listings.
+A MLOps project that classifies product images as **real** or **AI-generated**, helping e-commerce platforms fight fraudulent listings.
 
-## 🎯 Problem Statement
+## 🎯 Problem
 
-E-commerce platforms face a growing threat: **AI-generated fake product images**. Scammers use tools like Stable Diffusion and Flux to create convincing product photos for items that don't exist, leading to:
-- Customer fraud and chargebacks
-- Platform reputation damage
-- Regulatory compliance issues
+E-commerce platforms face a growing threat: **AI-generated fake product images**. Scammers use tools like Stable Diffusion to create convincing product photos for items that don't exist.
 
-This project provides a **production-ready API** to detect these fake images in real-time.
+This project provides an **API to detect these fake images**.
 
 ## ✨ Features
 
-### Core Capabilities
 - **Binary Classification**: Real vs AI-generated product images
-- **Probability Score**: Calibrated confidence score (0.0 - 1.0)
-- **Multi-Generator Detection**: Trained on Stable Diffusion & Flux outputs
-- **Explainability**: GradCAM heatmaps for prediction interpretation
-
-### API Features
-- **REST API**: Production-ready FastAPI with OpenAPI docs
-- **Batch Processing**: Process up to 20 images in one request
-- **Rate Limiting**: Configurable per-endpoint limits
-- **Authentication**: API key and JWT token support
-- **Response Caching**: Redis or in-memory caching
-- **Input Validation**: Comprehensive security checks
-
-### MLOps Features
-- **Model Versioning**: MLflow experiment tracking
-- **Hyperparameter Tuning**: Optuna optimization
-- **Data Augmentation**: CutMix, MixUp, RandAugment
-- **Model Calibration**: Temperature scaling for reliable probabilities
-- **Drift Detection**: Monitor input distribution shifts
-
-### Deployment
-- **Docker**: Multi-stage builds for API and UI
-- **Kubernetes**: Helm charts with HPA autoscaling
-- **CI/CD**: GitHub Actions for testing and deployment
-- **Observability**: Prometheus metrics, structured logging
+- **REST API**: FastAPI with `/predict` and `/predict/batch` endpoints
+- **Web UI**: Streamlit interface for easy testing
+- **MLflow Tracking**: Experiment tracking and model versioning
+- **Docker**: Ready for deployment
+- **CI/CD**: GitHub Actions for automated testing
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                         Clients                              │
-│  Web UI (Streamlit)  │  REST API  │  Batch Jobs             │
+│         Web UI (Streamlit)  │  REST API                     │
 └──────────────────────────┬──────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    FastAPI Application                       │
-│  Rate Limiting → Auth → Validation → Cache → Inference      │
+│  Rate Limiting → Validation → Inference                     │
 ├─────────────────────────────────────────────────────────────┤
 │  Endpoints:                                                  │
 │  • POST /predict         - Single image                     │
 │  • POST /predict/batch   - Batch (up to 20)                 │
-│  • POST /explain         - GradCAM visualization            │
 │  • GET  /health          - Health check                     │
 │  • GET  /metrics         - Prometheus metrics               │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    ML Inference Engine                       │
-│  EfficientNet-B0 → Calibration → Explainability             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -83,36 +53,25 @@ This project provides a **production-ready API** to detect these fake images in 
 | **ML Framework** | PyTorch + timm (EfficientNet-B0) |
 | **API** | FastAPI + Uvicorn |
 | **Web UI** | Streamlit |
-| **MLOps** | MLflow + DVC + Optuna |
-| **Containerization** | Docker + Kubernetes |
+| **MLOps** | MLflow + DVC |
+| **Containerization** | Docker |
 | **CI/CD** | GitHub Actions |
-| **Observability** | Prometheus + Grafana + structlog |
 
 ## 🚀 Quick Start
-
-### Prerequisites
-
-- Python 3.11+
-- Docker & Docker Compose (optional)
-- CUDA-capable GPU (optional, for faster inference)
 
 ### Installation
 
 ```bash
-# Clone the repository
+# Clone
 git clone https://github.com/nolancacheux/mlops_project.git
 cd mlops_project
 
-# Create virtual environment
+# Create venv
 python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate   # Windows
+source .venv/bin/activate
 
-# Install dependencies
+# Install
 pip install -e ".[dev,ui]"
-
-# Install pre-commit hooks
-pre-commit install
 ```
 
 ### Training
@@ -123,124 +82,63 @@ python scripts/create_sample_data.py --output data/processed
 
 # Train model
 python -m src.training.train --config configs/train_config.yaml
-
-# Run hyperparameter optimization (optional)
-python -m src.training.hyperopt --config configs/train_config.yaml --n-trials 50
 ```
 
-### Inference
+### Run API
 
 ```bash
-# Start API server
-uvicorn src.inference.api:app --host 0.0.0.0 --port 8000 --reload
+# Start server
+uvicorn src.inference.api:app --host 0.0.0.0 --port 8000
 
-# Test prediction
-curl -X POST "http://localhost:8000/predict" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@test_image.jpg"
-
-# Batch prediction
-curl -X POST "http://localhost:8000/predict/batch" \
-  -F "files=@image1.jpg" \
-  -F "files=@image2.jpg"
-
-# Get explanation (GradCAM)
-curl -X POST "http://localhost:8000/explain?alpha=0.5" \
-  -F "file=@test_image.jpg" \
-  --output explanation.png
+# Test
+curl -X POST "http://localhost:8000/predict" -F "file=@image.jpg"
 ```
 
-### Web UI
+### Run UI
 
 ```bash
-# Start Streamlit interface
-streamlit run src/ui/app.py --server.port 8501
+streamlit run src/ui/app.py
 ```
 
 ### Docker
 
 ```bash
-# Build and start all services
 docker-compose up -d
-
-# Access:
-# - API: http://localhost:8000
-# - UI: http://localhost:8501
-# - MLflow: http://localhost:5000
-```
-
-### Kubernetes (Helm)
-
-```bash
-# Deploy with Helm
-helm install ai-detector ./helm/ai-detector \
-  --namespace ai-detector \
-  --create-namespace
-
-# Or with Kustomize
-kubectl apply -k k8s/
+# API: http://localhost:8000
+# UI: http://localhost:8501
 ```
 
 ## 📊 API Reference
 
 ### POST /predict
-Classify a single image.
 
-**Request:**
 ```bash
-curl -X POST "http://localhost:8000/predict" \
-  -H "X-API-Key: your-api-key" \
-  -F "file=@image.jpg"
+curl -X POST "http://localhost:8000/predict" -F "file=@image.jpg"
 ```
 
-**Response:**
+Response:
 ```json
 {
   "prediction": "ai_generated",
   "probability": 0.87,
   "confidence": "high",
   "inference_time_ms": 45.2,
-  "model_version": "1.0.5"
+  "model_version": "1.0.0"
 }
 ```
 
 ### POST /predict/batch
-Classify multiple images (max 20).
 
-**Response:**
-```json
-{
-  "results": [
-    {"filename": "img1.jpg", "prediction": "real", "probability": 0.12},
-    {"filename": "img2.jpg", "prediction": "ai_generated", "probability": 0.94}
-  ],
-  "total": 2,
-  "successful": 2,
-  "failed": 0,
-  "total_inference_time_ms": 89.5
-}
+Process multiple images (max 20):
+```bash
+curl -X POST "http://localhost:8000/predict/batch" \
+  -F "files=@img1.jpg" -F "files=@img2.jpg"
 ```
-
-### POST /explain
-Get GradCAM heatmap overlay.
-
-**Query Parameters:**
-- `alpha` (float): Heatmap transparency (0.1-0.9, default 0.5)
-
-**Response:** PNG image with heatmap overlay
 
 ## 📁 Project Structure
 
 ```
 mlops_project/
-├── .github/workflows/     # CI/CD pipelines
-├── configs/               # Training & deployment configs
-├── data/                  # Datasets (DVC tracked)
-├── docker/                # Dockerfiles
-├── docs/                  # Documentation
-├── helm/                  # Helm charts
-├── k8s/                   # Kubernetes manifests
-├── notebooks/             # Exploration notebooks
 ├── src/
 │   ├── data/             # Data processing
 │   ├── inference/        # API & prediction
@@ -248,77 +146,34 @@ mlops_project/
 │   ├── training/         # Training pipeline
 │   ├── ui/               # Streamlit app
 │   └── utils/            # Shared utilities
-└── tests/                 # Unit & integration tests
+├── tests/                # Unit tests
+├── docker/               # Dockerfiles
+├── configs/              # Configuration files
+└── docs/                 # Documentation
 ```
 
-## 🔧 Configuration
+## 🧪 Testing
 
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `API_KEYS` | Comma-separated API keys | (auth disabled) |
-| `JWT_SECRET` | JWT signing secret | (auto-generated) |
-| `REDIS_URL` | Redis connection URL | (memory cache) |
-| `LOG_LEVEL` | Logging level | INFO |
-| `REQUIRE_AUTH` | Force authentication | false |
-
-### Rate Limits
-
-| Endpoint | Limit |
-|----------|-------|
-| `/predict` | 60/minute |
-| `/predict/batch` | 10/minute |
-| `/explain` | 30/minute |
+```bash
+pytest tests/ -v --cov=src
+```
 
 ## 📈 Model Performance
 
 | Metric | Value |
 |--------|-------|
-| Accuracy | 83% |
-| Precision | 82% |
-| Recall | 84% |
-| F1-Score | 83% |
-| Inference Latency | ~50ms |
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ -v --cov=src --cov-report=html
-
-# Run specific test file
-pytest tests/test_api.py -v
-```
-
-## 📖 Documentation
-
-- [Architecture Documentation](docs/ARCHITECTURE.md)
-- [Product Requirements (PRD)](docs/PRD.md)
-- [API Documentation](http://localhost:8000/docs) (when running)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feat/amazing-feature`)
-3. Commit changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to branch (`git push origin feat/amazing-feature`)
-5. Open a Pull Request
+| Accuracy | ~83% |
+| Inference | ~50ms |
 
 ## 👤 Author
 
 **Nolan Cacheux**
-- LinkedIn: [nolancacheux](https://linkedin.com/in/nolancacheux)
 - GitHub: [nolancacheux](https://github.com/nolancacheux)
-- Email: cachnolan@gmail.com
+- LinkedIn: [nolancacheux](https://linkedin.com/in/nolancacheux)
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE)
 
 ---
-
-*Built as part of M2 MLOps course - JUNIA 2026*
+*M2 MLOps - JUNIA 2026*
