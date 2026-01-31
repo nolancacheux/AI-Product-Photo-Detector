@@ -29,12 +29,10 @@ dependencies = [
     "uvicorn[standard]>=0.23.0",
     "python-multipart>=0.0.6",
     "slowapi>=0.1.9",
-    "pyjwt>=2.8.0",
     
     # MLOps
     "mlflow>=2.8.0",
     "dvc>=3.30.0",
-    "optuna>=3.4.0",
     
     # Observability
     "structlog>=23.1.0",
