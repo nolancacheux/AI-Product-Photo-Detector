@@ -14,7 +14,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.responses import Response
 
-from src.inference.auth import require_scope
+from src.inference.auth import verify_api_key
 from src.inference.predictor import Predictor
 from src.inference.schemas import (
     BatchItemResult,
@@ -156,7 +156,7 @@ async def health_check() -> HealthResponse:
 async def predict(
     request: Request,
     file: UploadFile = File(..., description="Image file to analyze"),
-    auth: Annotated[dict, Depends(require_scope("predict"))] = None,
+    _: Annotated[bool, Depends(verify_api_key)] = True,
 ) -> PredictResponse:
     """Predict if an image is AI-generated.
 
@@ -243,7 +243,7 @@ MAX_BATCH_SIZE = 20
 async def predict_batch(
     request: Request,
     files: list[UploadFile] = File(..., description="Image files to analyze (max 20)"),
-    auth: Annotated[dict, Depends(require_scope("batch"))] = None,
+    _: Annotated[bool, Depends(verify_api_key)] = True,
 ) -> BatchPredictResponse:
     """Predict if multiple images are AI-generated.
 
@@ -411,7 +411,7 @@ async def explain(
     request: Request,
     file: UploadFile = File(..., description="Image file to analyze and explain"),
     alpha: float = 0.5,
-    auth: Annotated[dict, Depends(require_scope("explain"))] = None,
+    _: Annotated[bool, Depends(verify_api_key)] = True,
 ) -> Response:
     """Generate GradCAM explanation for prediction.
 
