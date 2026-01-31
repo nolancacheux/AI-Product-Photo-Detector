@@ -27,9 +27,6 @@ from src.inference.schemas import (
 from src.utils.config import get_settings, load_yaml_config
 from src.utils.logger import get_logger, setup_logging
 
-# Explainability (lazy loaded)
-explainable_predictor = None
-
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address)
 
@@ -394,105 +391,6 @@ async def root() -> dict:
         "docs": "/docs",
         "health": "/health",
     }
-
-
-@app.post(
-    "/explain",
-    responses={
-        400: {"model": ErrorResponse},
-        413: {"model": ErrorResponse},
-        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
-        503: {"model": ErrorResponse},
-    },
-    tags=["Explainability"],
-)
-@limiter.limit("30/minute")
-async def explain(
-    request: Request,
-    file: UploadFile = File(..., description="Image file to analyze and explain"),
-    alpha: float = 0.5,
-    _: Annotated[bool, Depends(verify_api_key)] = True,
-) -> Response:
-    """Generate GradCAM explanation for prediction.
-
-    Returns the image with a heatmap overlay showing which regions
-    the model focused on for its prediction.
-    Requires authentication when API_KEYS or REQUIRE_AUTH is configured.
-
-    Args:
-        file: Image file to analyze.
-        alpha: Heatmap overlay transparency (0-1). Default 0.5.
-
-    Returns:
-        PNG image with GradCAM heatmap overlay.
-    """
-    global predictor, explainable_predictor
-
-    # Check if model is loaded
-    if predictor is None or not predictor.is_ready():
-        raise HTTPException(
-            status_code=503,
-            detail={"error": "Service unavailable", "detail": "Model not loaded"},
-        )
-
-    # Validate content type
-    if file.content_type not in ALLOWED_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "Invalid image format",
-                "detail": f"Supported formats: JPEG, PNG, WebP. Got: {file.content_type}",
-            },
-        )
-
-    # Read file
-    contents = await file.read()
-
-    # Check file size
-    if len(contents) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail={
-                "error": "File too large",
-                "detail": f"Maximum file size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
-            },
-        )
-
-    try:
-        # Lazy load explainability module
-        if explainable_predictor is None:
-            from src.inference.explainability import ExplainablePredictor
-
-            explainable_predictor = ExplainablePredictor(
-                model=predictor.model,
-                device=predictor.device,
-                transform=predictor.transform,
-            )
-
-        # Generate explanation
-        overlay_bytes, probability = explainable_predictor.explain_to_bytes(contents, alpha=alpha)
-
-        logger.info(
-            "Explanation generated",
-            probability=probability,
-            alpha=alpha,
-        )
-
-        return Response(
-            content=overlay_bytes,
-            media_type="image/png",
-            headers={
-                "X-Prediction-Probability": str(round(probability, 4)),
-                "X-Prediction-Class": "ai_generated" if probability > 0.5 else "real",
-            },
-        )
-
-    except Exception as e:
-        logger.error(f"Explanation failed: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "Processing error", "detail": str(e)},
-        ) from e
 
 
 def main() -> None:
