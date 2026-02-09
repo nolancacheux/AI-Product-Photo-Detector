@@ -20,8 +20,8 @@ E-commerce platforms face a growing threat: **AI-generated fake product images**
 - Drift detection endpoint for monitoring model degradation
 - Web UI (Streamlit) for interactive testing
 - MLflow experiment tracking and model versioning
-- Prometheus metrics and Grafana dashboards
-- Docker Compose deployment with all services
+- Prometheus-compatible metrics endpoint
+- Docker Compose deployment (API + MLflow + Streamlit)
 
 ## Architecture
 
@@ -57,7 +57,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed component document
 | Web UI | Streamlit |
 | Experiment Tracking | MLflow |
 | Containerization | Docker + Docker Compose |
-| Monitoring | Prometheus + Grafana |
+| Monitoring | prometheus_client + structlog |
 
 ## Quick Start
 
@@ -118,8 +118,6 @@ docker-compose up -d
 # API:        http://localhost:8000
 # UI:         http://localhost:8501
 # MLflow:     http://localhost:5000
-# Prometheus: http://localhost:9090
-# Grafana:    http://localhost:3000
 ```
 
 ## MLflow
@@ -189,7 +187,7 @@ mlops_project/
 │   │   ├── auth.py       # Optional API key auth
 │   │   └── validation.py # Input validation
 │   ├── monitoring/       # Metrics & drift detection
-│   │   ├── metrics.py    # Prometheus metrics
+│   │   ├── metrics.py    # Prometheus-compatible metrics
 │   │   └── drift.py      # Drift detector
 │   ├── training/         # Training pipeline
 │   │   ├── train.py      # Training loop (MLflow tracked)
@@ -199,7 +197,7 @@ mlops_project/
 │   ├── ui/               # Streamlit app
 │   └── utils/            # Config & logging
 ├── tests/                # Unit tests
-├── configs/              # Train/inference/Prometheus configs
+├── configs/              # Train/inference configs
 ├── docker/               # Dockerfiles
 ├── docs/                 # Documentation
 ├── models/               # Saved model checkpoints
