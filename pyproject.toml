@@ -1,6 +1,6 @@
 [project]
 name = "ai-product-photo-detector"
-version = "0.1.0"
+version = "1.0.0"
 description = "Detect AI-generated product photos in e-commerce listings"
 readme = "README.md"
 license = { text = "MIT" }

@@ -1,6 +1,6 @@
 # 🔍 AI Product Photo Detector
 
-[![CI](https://github.com/nolancacheux/mlops_project/actions/workflows/ci.yml/badge.svg)](https://github.com/nolancacheux/mlops_project/actions/workflows/ci.yml)
+[![CI](https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/ci.yml/badge.svg)](https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/ci.yml)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
