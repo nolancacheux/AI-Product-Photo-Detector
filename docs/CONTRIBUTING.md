@@ -143,8 +143,7 @@ mlops_project/
 ├── tests/            # Unit tests
 ├── configs/          # Configuration files
 ├── docker/           # Dockerfiles
-├── docs/             # Documentation
-└── notebooks/        # Jupyter notebooks
+└── docs/             # Documentation
 ```
 
 ## Documentation

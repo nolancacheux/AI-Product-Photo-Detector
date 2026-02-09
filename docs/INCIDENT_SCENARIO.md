@@ -221,7 +221,7 @@ A monthly retraining pipeline was established:
 
 ```
 ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
-│  Collect  │───▶│ Validate │───▶│ Retrain  │───▶│  Deploy  │
+│  Collect  │--->│ Validate │--->│ Retrain  │--->│  Deploy  │
 │   Data    │    │   Data   │    │  Model   │    │  (A/B)   │
 └──────────┘    └──────────┘    └──────────┘    └──────────┘
      DVC            pytest         MLflow        Canary 10%

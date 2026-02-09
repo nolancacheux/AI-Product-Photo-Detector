@@ -21,7 +21,7 @@ def init_page() -> None:
     """Initialize Streamlit page configuration."""
     st.set_page_config(
         page_title="AI Product Photo Detector",
-        page_icon="🔍",
+        page_icon="search",
         layout="centered",
         initial_sidebar_state="expanded",
     )
@@ -75,11 +75,11 @@ def display_result(result: dict) -> None:
 
     if prediction == "ai_generated":
         color = "red"
-        icon = "🤖"
+        icon = "[AI]"
         label = "AI-Generated"
     else:
         color = "green"
-        icon = "📸"
+        icon = "[Real]"
         label = "Real Photo"
 
     st.markdown(
@@ -110,21 +110,21 @@ def main() -> None:
     """Main Streamlit application."""
     init_page()
 
-    st.title("🔍 AI Product Photo Detector")
+    st.title("AI Product Photo Detector")
     st.markdown("Upload a product image to check if it's **AI-generated** or a **real photo**.")
 
     # Sidebar
     with st.sidebar:
-        st.header("⚙️ Status")
+        st.header("Status")
         health = check_api_health()
         if health and health.get("status") == "healthy":
-            st.success("🟢 API Online")
+            st.success("API Online")
             st.caption(f"Model: {health.get('model_version', 'unknown')}")
         else:
-            st.error("🔴 API Offline")
+            st.error("API Offline")
 
         st.markdown("---")
-        st.header("ℹ️ About")
+        st.header("About")
         st.markdown("""
         Detects AI-generated product photos using deep learning.
 
@@ -138,7 +138,7 @@ def main() -> None:
 
     # File upload
     uploaded_file = st.file_uploader(
-        "📁 Upload an image",
+        "Upload an image",
         type=["jpg", "jpeg", "png", "webp"],
     )
 
@@ -151,14 +151,14 @@ def main() -> None:
         col1, col2 = st.columns([1, 1])
 
         with col1:
-            st.subheader("📷 Uploaded Image")
+            st.subheader("Uploaded Image")
             image = Image.open(uploaded_file)
             st.image(image, use_container_width=True)
             st.caption(f"Size: {image.size[0]}x{image.size[1]} | {file_size_mb:.2f}MB")
 
         with col2:
-            st.subheader("🔮 Result")
-            if st.button("🔍 Analyze Image", type="primary", use_container_width=True):
+            st.subheader("Result")
+            if st.button("Analyze Image", type="primary", use_container_width=True):
                 with st.spinner("Analyzing..."):
                     uploaded_file.seek(0)
                     image_bytes = uploaded_file.read()
@@ -167,12 +167,12 @@ def main() -> None:
                         display_result(result)
                         add_to_history(uploaded_file.name, result)
             else:
-                st.info("👆 Click the button above to analyze")
+                st.info("Click the button above to analyze")
 
     # History
     if st.session_state.history:
         st.markdown("---")
-        st.subheader("📊 Recent Predictions")
+        st.subheader("Recent Predictions")
         df = pd.DataFrame(st.session_state.history[-10:])
         st.dataframe(df[["filename", "prediction", "probability", "confidence"]], hide_index=True)
 

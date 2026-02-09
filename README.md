@@ -85,7 +85,10 @@ pip install -e ".[dev,ui]"
 ### Training
 
 ```bash
-# Create sample dataset
+# Download real dataset (CIFAKE - CIFAR-10 real vs Stable Diffusion AI)
+python scripts/download_cifake.py --max-per-class 2500
+
+# Or use synthetic data for quick testing
 python scripts/create_sample_data.py --output data/processed
 
 # Train model

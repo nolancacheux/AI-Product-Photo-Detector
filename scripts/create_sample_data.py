@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Create sample dataset for testing.
+"""Create synthetic placeholder images for CI/testing only.
+
+For real data, use scripts/download_cifake.py instead.
 
 This script creates synthetic colored images to test the training pipeline
-without requiring real data or GPU for generation.
+without requiring real data download or GPU for generation.
 """
 
 import random

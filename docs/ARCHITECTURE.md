@@ -18,7 +18,6 @@ The AI Product Photo Detector is a MLOps system for detecting AI-generated produ
 │  • Rate Limiting (slowapi)                                                   │
 │  • Optional API Key Auth                                                     │
 │  • Input Validation                                                          │
-│  • Response Caching (in-memory)                                             │
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                    │
                                    ▼
@@ -43,7 +42,6 @@ The AI Product Photo Detector is a MLOps system for detecting AI-generated produ
 | `schemas.py` | Pydantic models for request/response |
 | `auth.py` | Optional API key authentication |
 | `validation.py` | Input validation (file type, size) |
-| `cache.py` | In-memory response caching |
 
 ### 2. Training Pipeline (`src/training/`)
 
@@ -76,12 +74,10 @@ The AI Product Photo Detector is a MLOps system for detecting AI-generated produ
 2. Rate limiter checks request count
 3. (Optional) API key validated
 4. Image validated (format, size)
-5. Check cache for existing prediction
-6. If cache miss:
-   a. Preprocess image (resize to 224x224, normalize)
-   b. Run EfficientNet-B0 inference
-   c. Cache result
-7. Return prediction with confidence
+5. Preprocess image (resize to 224x224, normalize)
+6. Run EfficientNet-B0 inference
+7. Record prediction for drift monitoring
+8. Return prediction with confidence
 ```
 
 ## API Endpoints

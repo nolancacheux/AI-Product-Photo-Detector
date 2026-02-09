@@ -48,6 +48,9 @@ dependencies = [
     "httpx>=0.24.0",
     "tqdm>=4.65.0",
     "rich>=13.0.0",
+    
+    # Data
+    "datasets>=2.14.0",
 ]
 
 [project.optional-dependencies]
