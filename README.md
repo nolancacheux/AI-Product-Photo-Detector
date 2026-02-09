@@ -1,4 +1,4 @@
-# 🔍 AI Product Photo Detector
+# AI Product Photo Detector
 
 [![CI](https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/ci.yml/badge.svg)](https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/ci.yml)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
@@ -6,71 +6,79 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Detect AI-generated product photos in e-commerce listings.**
+A MLOps system that classifies product images as **real** or **AI-generated**, helping e-commerce platforms detect fraudulent listings.
 
-A MLOps project that classifies product images as **real** or **AI-generated**, helping e-commerce platforms fight fraudulent listings.
+**Version:** 1.0.0
 
-## 🎯 Problem
+## Problem
 
-E-commerce platforms face a growing threat: **AI-generated fake product images**. Scammers use tools like Stable Diffusion to create convincing product photos for items that don't exist.
+E-commerce platforms face a growing threat: **AI-generated fake product images**. Scammers use generative models to create convincing product photos for items that don't exist. This project provides an API to detect these fake images.
 
-This project provides an **API to detect these fake images**.
+## Features
 
-## ✨ Features
+- Binary classification: real vs AI-generated product images
+- REST API with single and batch prediction endpoints
+- Drift detection endpoint for monitoring model degradation
+- Web UI (Streamlit) for interactive testing
+- MLflow experiment tracking and model versioning
+- Prometheus metrics and Grafana dashboards
+- Docker Compose deployment with all services
+- CI/CD via GitHub Actions
 
-- **Binary Classification**: Real vs AI-generated product images
-- **REST API**: FastAPI with `/predict` and `/predict/batch` endpoints
-- **Web UI**: Streamlit interface for easy testing
-- **MLflow Tracking**: Experiment tracking and model versioning
-- **Docker**: Ready for deployment
-- **CI/CD**: GitHub Actions for automated testing
-
-## 🏗️ Architecture
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         Clients                              │
-│         Web UI (Streamlit)  │  REST API                     │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    FastAPI Application                       │
-│  Rate Limiting → Validation → Inference                     │
-├─────────────────────────────────────────────────────────────┤
-│  Endpoints:                                                  │
-│  • POST /predict         - Single image                     │
-│  • POST /predict/batch   - Batch (up to 20)                 │
-│  • GET  /health          - Health check                     │
-│  • GET  /metrics         - Prometheus metrics               │
-└─────────────────────────────────────────────────────────────┘
++-----------------------------------------------------------------+
+|                          Clients                                 |
+|         Web UI (Streamlit)    |    REST API Clients              |
++-------------------------------+---------------------------------+
+                                |
+                                v
++-----------------------------------------------------------------+
+|                     FastAPI Application                          |
+|   Rate Limiting -> Validation -> Inference -> Drift Tracking    |
++-----------------------------------------------------------------+
+|  Endpoints:                                                      |
+|  POST /predict         - Single image classification            |
+|  POST /predict/batch   - Batch classification (up to 20)        |
+|  GET  /health          - Health check                           |
+|  GET  /metrics         - Prometheus metrics                     |
+|  GET  /drift           - Drift detection status                 |
+|  GET  /                - API info                               |
++-----------------------------------------------------------------+
 ```
 
-## 🛠️ Tech Stack
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed component documentation.
+
+## Tech Stack
 
 | Category | Technology |
 |----------|------------|
-| **ML Framework** | PyTorch + timm (EfficientNet-B0) |
-| **API** | FastAPI + Uvicorn |
-| **Web UI** | Streamlit |
-| **MLOps** | MLflow + DVC |
-| **Containerization** | Docker |
-| **CI/CD** | GitHub Actions |
+| ML Framework | PyTorch + timm (EfficientNet-B0) |
+| API | FastAPI + Uvicorn |
+| Web UI | Streamlit |
+| Experiment Tracking | MLflow |
+| Containerization | Docker + Docker Compose |
+| CI/CD | GitHub Actions |
+| Monitoring | Prometheus + Grafana |
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 
 ```bash
 # Clone
-git clone https://github.com/nolancacheux/mlops_project.git
+git clone https://github.com/nolancacheux/AI-Product-Photo-Detector.git
 cd mlops_project
 
-# Create venv
+# With uv (recommended)
+uv venv
+source .venv/bin/activate
+uv pip install -e ".[dev,ui]"
+
+# Or with pip
 python -m venv .venv
 source .venv/bin/activate
-
-# Install
 pip install -e ".[dev,ui]"
 ```
 
@@ -90,8 +98,11 @@ python -m src.training.train --config configs/train_config.yaml
 # Start server
 uvicorn src.inference.api:app --host 0.0.0.0 --port 8000
 
-# Test
+# Test single prediction
 curl -X POST "http://localhost:8000/predict" -F "file=@image.jpg"
+
+# Check drift status
+curl http://localhost:8000/drift
 ```
 
 ### Run UI
@@ -104,13 +115,30 @@ streamlit run src/ui/app.py
 
 ```bash
 docker-compose up -d
-# API: http://localhost:8000
-# UI: http://localhost:8501
+# API:        http://localhost:8000
+# UI:         http://localhost:8501
+# MLflow:     http://localhost:5000
+# Prometheus: http://localhost:9090
+# Grafana:    http://localhost:3000
 ```
 
-## 📊 API Reference
+## MLflow
+
+Training runs are tracked with MLflow. Experiment data is stored in the `mlruns/` directory.
+
+```bash
+# View training experiments locally
+mlflow ui --backend-store-uri mlruns --port 5000
+# Then open http://localhost:5000
+```
+
+The `docker-compose.yml` includes an MLflow tracking server (port 5000) backed by SQLite for persistent experiment storage.
+
+## API Reference
 
 ### POST /predict
+
+Classify a single image.
 
 ```bash
 curl -X POST "http://localhost:8000/predict" -F "file=@image.jpg"
@@ -129,78 +157,90 @@ Response:
 
 ### POST /predict/batch
 
-Process multiple images (max 20):
+Classify multiple images (max 20).
+
 ```bash
 curl -X POST "http://localhost:8000/predict/batch" \
   -F "files=@img1.jpg" -F "files=@img2.jpg"
 ```
 
-## 📁 Project Structure
+### GET /health
+
+Returns service health status.
+
+### GET /metrics
+
+Prometheus-formatted metrics.
+
+### GET /drift
+
+Returns drift detection status (mean probability, low confidence ratio, drift score).
+
+## Project Structure
 
 ```
 mlops_project/
 ├── src/
 │   ├── data/             # Data processing
-│   ├── inference/        # API & prediction
-│   ├── monitoring/       # Metrics & drift
+│   ├── inference/        # FastAPI server & prediction
+│   │   ├── api.py        # Endpoints
+│   │   ├── predictor.py  # Model loading & inference
+│   │   ├── schemas.py    # Pydantic models
+│   │   ├── auth.py       # Optional API key auth
+│   │   └── validation.py # Input validation
+│   ├── monitoring/       # Metrics & drift detection
+│   │   ├── metrics.py    # Prometheus metrics
+│   │   └── drift.py      # Drift detector
 │   ├── training/         # Training pipeline
+│   │   ├── train.py      # Training loop (MLflow tracked)
+│   │   ├── model.py      # EfficientNet-B0 architecture
+│   │   ├── dataset.py    # PyTorch dataset
+│   │   └── augmentation.py
 │   ├── ui/               # Streamlit app
-│   └── utils/            # Shared utilities
+│   └── utils/            # Config & logging
 ├── tests/                # Unit tests
+├── configs/              # Train/inference/Prometheus configs
 ├── docker/               # Dockerfiles
-├── configs/              # Configuration files
-└── docs/                 # Documentation
+├── docs/                 # Documentation
+├── models/               # Saved model checkpoints
+├── scripts/              # Utility scripts
+├── docker-compose.yml
+├── pyproject.toml
+└── Makefile
 ```
 
-## 📦 Data Versioning (DVC)
+## Documentation
 
-This project uses [DVC](https://dvc.org/) for data versioning. The local remote is configured to store data artifacts in `./dvc-storage` within the project directory.
+- [Architecture](docs/ARCHITECTURE.md) -- System design and component details
+- [Contributing](docs/CONTRIBUTING.md) -- Development setup and workflow
+- [Incident Scenario](docs/INCIDENT_SCENARIO.md) -- Data drift incident response scenario
 
-```bash
-# Initialize DVC (already done)
-dvc init
-
-# Track a data file
-dvc add data/processed/dataset.csv
-
-# Push data to local storage
-dvc push
-
-# Pull data from storage
-dvc pull
-```
-
-To switch to a cloud remote (S3, GCS, Azure), update `.dvc/config`:
-```bash
-dvc remote modify local url s3://your-bucket/dvc-storage
-```
-
-## 📋 Documentation
-
-- [Incident Scenario](docs/INCIDENT_SCENARIO.md) — Drift detection incident response scenario documenting a realistic data drift event, root cause analysis, remediation steps, and prevention measures.
-
-## 🧪 Testing
+## Testing
 
 ```bash
+# Run all tests
 pytest tests/ -v --cov=src
+
+# Run specific test file
+pytest tests/test_api.py -v
 ```
 
-## 📈 Model Performance
+## Model Performance
 
 | Metric | Value |
 |--------|-------|
 | Accuracy | ~83% |
 | Inference | ~50ms |
 
-## 👤 Author
+## Author
 
 **Nolan Cacheux**
 - GitHub: [nolancacheux](https://github.com/nolancacheux)
 - LinkedIn: [nolancacheux](https://linkedin.com/in/nolancacheux)
 
-## 📄 License
+## License
 
-MIT License - see [LICENSE](LICENSE)
+MIT License -- see [LICENSE](LICENSE)
 
 ---
-*M2 MLOps - JUNIA 2026*
+*M2 MLOps -- JUNIA 2026*

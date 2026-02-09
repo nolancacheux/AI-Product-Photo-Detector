@@ -38,7 +38,7 @@ The AI Product Photo Detector is a MLOps system for detecting AI-generated produ
 
 | File | Purpose |
 |------|---------|
-| `api.py` | FastAPI endpoints (/predict, /predict/batch, /health, /metrics) |
+| `api.py` | FastAPI endpoints (/predict, /predict/batch, /health, /metrics, /drift) |
 | `predictor.py` | Model loading and inference |
 | `schemas.py` | Pydantic models for request/response |
 | `auth.py` | Optional API key authentication |
@@ -92,6 +92,7 @@ The AI Product Photo Detector is a MLOps system for detecting AI-generated produ
 | `/predict/batch` | POST | Classify up to 20 images |
 | `/health` | GET | Health check |
 | `/metrics` | GET | Prometheus metrics |
+| `/drift` | GET | Drift detection status |
 
 ## Configuration
 

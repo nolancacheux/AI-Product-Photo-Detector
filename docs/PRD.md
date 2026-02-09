@@ -1,4 +1,4 @@
-# 📋 Product Requirements Document (PRD)
+# Product Requirements Document (PRD)
 
 ## AI Product Photo Detector
 
@@ -518,10 +518,10 @@ Google's SynthID embeds invisible watermarks in AI-generated images, but:
 | Aspect | SynthID | Our Detector |
 |--------|---------|--------------|
 | Detection method | Embedded watermark | Visual artifact analysis |
-| Works on SD/Flux/MJ | ❌ No | ✅ Yes |
-| Works without cooperation | ❌ No | ✅ Yes |
-| Open source | ❌ No | ✅ Yes |
-| Self-hostable | ❌ No | ✅ Yes |
+| Works on SD/Flux/MJ | No | Yes |
+| Works without cooperation | No | Yes |
+| Open source | No | Yes |
+| Self-hostable | No | Yes |
 
 **Our value proposition**: Unlike watermark-based approaches, our detector works on ANY AI-generated image regardless of source, making it effective against real-world e-commerce fraud where scammers use open-source generators.
 

@@ -12,14 +12,17 @@
 
 ```bash
 # Clone repository
-git clone https://github.com/nolancacheux/mlops_project.git
+git clone https://github.com/nolancacheux/AI-Product-Photo-Detector.git
 cd mlops_project
 
-# Create virtual environment
+# With uv (recommended)
+uv venv
+source .venv/bin/activate
+uv pip install -e ".[dev,ui]"
+
+# Or with pip
 python -m venv .venv
 source .venv/bin/activate
-
-# Install dependencies (with dev extras)
 pip install -e ".[dev,ui]"
 
 # Install pre-commit hooks
