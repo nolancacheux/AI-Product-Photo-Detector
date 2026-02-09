@@ -25,26 +25,9 @@ E-commerce platforms face a growing threat: **AI-generated fake product images**
 
 ## Architecture
 
-```
-+-----------------------------------------------------------------+
-|                          Clients                                 |
-|         Web UI (Streamlit)    |    REST API Clients              |
-+-------------------------------+---------------------------------+
-                                |
-                                v
-+-----------------------------------------------------------------+
-|                     FastAPI Application                          |
-|   Rate Limiting -> Validation -> Inference -> Drift Tracking    |
-+-----------------------------------------------------------------+
-|  Endpoints:                                                      |
-|  POST /predict         - Single image classification            |
-|  POST /predict/batch   - Batch classification (up to 20)        |
-|  GET  /health          - Health check                           |
-|  GET  /metrics         - Prometheus metrics                     |
-|  GET  /drift           - Drift detection status                 |
-|  GET  /                - API info                               |
-+-----------------------------------------------------------------+
-```
+<p align="center">
+  <img src="docs/images/architecture.svg" alt="MLOps Pipeline Architecture" width="100%"/>
+</p>
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed component documentation.
 
