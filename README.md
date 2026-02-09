@@ -1,6 +1,5 @@
 # AI Product Photo Detector
 
-[![CI](https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/ci.yml/badge.svg)](https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/ci.yml)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
@@ -23,7 +22,6 @@ E-commerce platforms face a growing threat: **AI-generated fake product images**
 - MLflow experiment tracking and model versioning
 - Prometheus metrics and Grafana dashboards
 - Docker Compose deployment with all services
-- CI/CD via GitHub Actions
 
 ## Architecture
 
@@ -59,7 +57,6 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed component document
 | Web UI | Streamlit |
 | Experiment Tracking | MLflow |
 | Containerization | Docker + Docker Compose |
-| CI/CD | GitHub Actions |
 | Monitoring | Prometheus + Grafana |
 
 ## Quick Start
@@ -232,7 +229,6 @@ pytest tests/test_api.py -v
 
 | Metric | Value |
 |--------|-------|
-| Accuracy | ~83% |
 | Inference | ~50ms |
 
 ## Author

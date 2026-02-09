@@ -221,7 +221,7 @@ An ML-powered detection system that analyzes product images and returns a probab
 | **Experiment Tracking** | MLflow | Industry standard, free |
 | **Data Versioning** | DVC | Git-like for data |
 | **Containerization** | Docker | Standard, lightweight images |
-| **CI/CD** | GitHub Actions | Free tier, integrated |
+| **CI/CD** | GitHub Actions (planned) | Free tier, integrated |
 | **Metrics** | Prometheus | Standard, Grafana compatible |
 | **Logging** | structlog | Structured JSON logs |
 

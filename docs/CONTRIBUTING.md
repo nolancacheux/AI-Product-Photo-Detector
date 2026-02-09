@@ -159,4 +159,4 @@ mlops_project/
 2. Update `CHANGELOG.md`
 3. Create release tag: `git tag v1.0.0`
 4. Push tag: `git push origin v1.0.0`
-5. GitHub Actions will build and publish Docker images
+5. Build and publish Docker images
