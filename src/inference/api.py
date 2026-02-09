@@ -8,7 +8,7 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import Counter, Histogram, generate_latest
+from prometheus_client import generate_latest
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -24,36 +24,31 @@ from src.inference.schemas import (
     HealthStatus,
     PredictResponse,
 )
+from src.monitoring.drift import DriftDetector
+from src.monitoring.metrics import (
+    ACTIVE_REQUESTS,
+    BATCH_LATENCY,
+    BATCH_PREDICTIONS_TOTAL,
+    BATCH_SIZE_HISTOGRAM,
+    ERRORS_TOTAL,
+    IMAGE_VALIDATION_ERRORS,
+    MODEL_LOADED,
+    PREDICTIONS_TOTAL,
+    set_app_info,
+    set_model_info,
+)
+from src.monitoring.metrics import (
+    record_prediction as record_prediction_metrics,
+)
 from src.utils.config import get_settings, load_yaml_config
 from src.utils.logger import get_logger, setup_logging
 
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address)
 
-# Metrics
-REQUEST_COUNT = Counter(
-    "predictions_total",
-    "Total number of predictions",
-    ["status", "prediction"],
-)
-REQUEST_LATENCY = Histogram(
-    "prediction_latency_seconds",
-    "Prediction latency in seconds",
-    buckets=[0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5],
-)
-BATCH_SIZE = Histogram(
-    "batch_size",
-    "Number of images in batch requests",
-    buckets=[1, 2, 5, 10, 20, 50],
-)
-BATCH_LATENCY = Histogram(
-    "batch_latency_seconds",
-    "Batch prediction latency in seconds",
-    buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0],
-)
-
 # Global state
 predictor: Predictor | None = None
+drift_detector: DriftDetector | None = None
 start_time: float = 0.0
 logger = get_logger(__name__)
 
@@ -61,11 +56,13 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler."""
-    global predictor, start_time
+    global predictor, drift_detector, start_time
 
     # Startup
     setup_logging(level="INFO", json_format=True)
     logger.info("Starting AI Product Photo Detector API")
+
+    set_app_info("1.0.0")
 
     # Load config
     settings = get_settings()
@@ -83,8 +80,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     if predictor.is_ready():
         logger.info("Model loaded successfully")
+        set_model_info(
+            name="ai-product-photo-detector",
+            version=predictor.model_version,
+            architecture="efficientnet",
+            parameters=0,
+        )
+        MODEL_LOADED.set(1)
     else:
         logger.warning("Model not loaded - predictions will fail")
+        MODEL_LOADED.set(0)
+
+    # Initialize drift detector
+    drift_detector = DriftDetector(window_size=1000)
 
     yield
 
@@ -163,63 +171,91 @@ async def predict(
     Returns:
         Prediction with probability score and confidence level.
     """
-    global predictor
+    global predictor, drift_detector
 
-    # Check if model is loaded
-    if predictor is None or not predictor.is_ready():
-        REQUEST_COUNT.labels(status="error", prediction="none").inc()
-        raise HTTPException(
-            status_code=503,
-            detail={"error": "Service unavailable", "detail": "Model not loaded"},
-        )
-
-    # Validate content type
-    if file.content_type not in ALLOWED_TYPES:
-        REQUEST_COUNT.labels(status="error", prediction="none").inc()
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "Invalid image format",
-                "detail": f"Supported formats: JPEG, PNG, WebP. Got: {file.content_type}",
-            },
-        )
-
-    # Read file
-    contents = await file.read()
-
-    # Check file size
-    if len(contents) > MAX_FILE_SIZE:
-        REQUEST_COUNT.labels(status="error", prediction="none").inc()
-        raise HTTPException(
-            status_code=413,
-            detail={
-                "error": "File too large",
-                "detail": f"Maximum file size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
-            },
-        )
-
-    # Make prediction
+    ACTIVE_REQUESTS.inc()
     try:
-        with REQUEST_LATENCY.time():
+        # Check if model is loaded
+        if predictor is None or not predictor.is_ready():
+            PREDICTIONS_TOTAL.labels(
+                status="error", prediction="none", confidence="none",
+            ).inc()
+            ERRORS_TOTAL.labels(type="model_not_loaded", endpoint="/predict").inc()
+            raise HTTPException(
+                status_code=503,
+                detail={"error": "Service unavailable", "detail": "Model not loaded"},
+            )
+
+        # Validate content type
+        if file.content_type not in ALLOWED_TYPES:
+            PREDICTIONS_TOTAL.labels(
+                status="error", prediction="none", confidence="none",
+            ).inc()
+            IMAGE_VALIDATION_ERRORS.labels(error_type="invalid_format").inc()
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "Invalid image format",
+                    "detail": f"Supported formats: JPEG, PNG, WebP. Got: {file.content_type}",
+                },
+            )
+
+        # Read file
+        contents = await file.read()
+
+        # Check file size
+        if len(contents) > MAX_FILE_SIZE:
+            PREDICTIONS_TOTAL.labels(
+                status="error", prediction="none", confidence="none",
+            ).inc()
+            IMAGE_VALIDATION_ERRORS.labels(error_type="file_too_large").inc()
+            raise HTTPException(
+                status_code=413,
+                detail={
+                    "error": "File too large",
+                    "detail": f"Maximum file size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
+                },
+            )
+
+        # Make prediction
+        try:
+            start = time.monotonic()
             result = predictor.predict_from_bytes(contents)
+            latency = time.monotonic() - start
 
-        REQUEST_COUNT.labels(status="success", prediction=result.prediction.value).inc()
+            record_prediction_metrics(
+                prediction=result.prediction.value,
+                probability=result.probability,
+                confidence=result.confidence.value,
+                latency_seconds=latency,
+                success=True,
+            )
 
-        logger.info(
-            "Prediction complete",
-            prediction=result.prediction.value,
-            probability=result.probability,
-            inference_time_ms=result.inference_time_ms,
-        )
+            if drift_detector is not None:
+                drift_detector.record_prediction(
+                    result.probability, result.prediction.value,
+                )
 
-        return result
+            logger.info(
+                "Prediction complete",
+                prediction=result.prediction.value,
+                probability=result.probability,
+                inference_time_ms=result.inference_time_ms,
+            )
 
-    except ValueError as e:
-        REQUEST_COUNT.labels(status="error", prediction="none").inc()
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "Processing error", "detail": str(e)},
-        ) from e
+            return result
+
+        except ValueError as e:
+            PREDICTIONS_TOTAL.labels(
+                status="error", prediction="none", confidence="none",
+            ).inc()
+            ERRORS_TOTAL.labels(type="processing_error", endpoint="/predict").inc()
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "Processing error", "detail": str(e)},
+            ) from e
+    finally:
+        ACTIVE_REQUESTS.dec()
 
 
 MAX_BATCH_SIZE = 20
@@ -276,11 +312,11 @@ async def predict_batch(
             detail={"error": "Empty batch", "detail": "No files provided"},
         )
 
-    BATCH_SIZE.observe(len(files))
+    BATCH_SIZE_HISTOGRAM.observe(len(files))
     results: list[BatchItemResult] = []
     successful = 0
     failed = 0
-    start_time = time.time()
+    batch_start = time.time()
 
     for file in files:
         # Validate content type
@@ -295,7 +331,9 @@ async def predict_batch(
                 )
             )
             failed += 1
-            REQUEST_COUNT.labels(status="error", prediction="none").inc()
+            PREDICTIONS_TOTAL.labels(
+                status="error", prediction="none", confidence="none",
+            ).inc()
             continue
 
         # Read file
@@ -313,7 +351,9 @@ async def predict_batch(
                 )
             )
             failed += 1
-            REQUEST_COUNT.labels(status="error", prediction="none").inc()
+            PREDICTIONS_TOTAL.labels(
+                status="error", prediction="none", confidence="none",
+            ).inc()
             continue
 
         # Make prediction
@@ -329,7 +369,11 @@ async def predict_batch(
                 )
             )
             successful += 1
-            REQUEST_COUNT.labels(status="success", prediction=result.prediction.value).inc()
+            PREDICTIONS_TOTAL.labels(
+                status="success",
+                prediction=result.prediction.value,
+                confidence=result.confidence.value,
+            ).inc()
 
         except Exception as e:
             results.append(
@@ -342,10 +386,13 @@ async def predict_batch(
                 )
             )
             failed += 1
-            REQUEST_COUNT.labels(status="error", prediction="none").inc()
+            PREDICTIONS_TOTAL.labels(
+                status="error", prediction="none", confidence="none",
+            ).inc()
 
-    total_time = (time.time() - start_time) * 1000
+    total_time = (time.time() - batch_start) * 1000
     BATCH_LATENCY.observe(total_time / 1000)
+    BATCH_PREDICTIONS_TOTAL.labels(status="success" if failed == 0 else "partial").inc()
 
     logger.info(
         "Batch prediction complete",
@@ -376,6 +423,24 @@ async def metrics() -> Response:
         content=generate_latest(),
         media_type="text/plain",
     )
+
+
+@app.get("/drift", tags=["Monitoring"])
+async def drift_status() -> dict:
+    """Get drift detection status.
+
+    Returns:
+        Current drift monitoring status.
+    """
+    global drift_detector
+
+    if drift_detector is None:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Drift detector not initialized"},
+        )
+
+    return drift_detector.get_status()
 
 
 @app.get("/", tags=["Info"])
