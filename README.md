@@ -69,7 +69,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed component document
 ```bash
 # Clone
 git clone https://github.com/nolancacheux/AI-Product-Photo-Detector.git
-cd mlops_project
+cd AI-Product-Photo-Detector
 
 # With uv (recommended)
 uv venv

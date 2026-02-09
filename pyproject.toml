@@ -68,9 +68,9 @@ ui = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/nolancacheux/mlops_project"
-Repository = "https://github.com/nolancacheux/mlops_project"
-Documentation = "https://github.com/nolancacheux/mlops_project/tree/main/docs"
+Homepage = "https://github.com/nolancacheux/AI-Product-Photo-Detector"
+Repository = "https://github.com/nolancacheux/AI-Product-Photo-Detector"
+Documentation = "https://github.com/nolancacheux/AI-Product-Photo-Detector/tree/main/docs"
 
 [project.scripts]
 train = "src.training.train:main"
