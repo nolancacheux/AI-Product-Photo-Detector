@@ -15,10 +15,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Install uv for faster dependency resolution
+RUN pip install --no-cache-dir uv
+
 # Install Python dependencies
 COPY pyproject.toml .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+RUN uv pip install --no-cache-dir . --system
 
 # Production stage
 FROM python:3.11-slim

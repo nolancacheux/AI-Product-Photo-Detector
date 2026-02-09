@@ -31,10 +31,10 @@ help:
 
 # Setup
 install:
-	pip install -e .
+	uv pip install -e . || pip install -e .
 
 dev:
-	pip install -e ".[dev,ui]"
+	uv pip install -e ".[dev,ui]" || pip install -e ".[dev,ui]"
 	pre-commit install
 
 # Development
