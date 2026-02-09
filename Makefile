@@ -61,8 +61,8 @@ ui:
 
 # Docker
 docker-build:
-	docker build -f docker/train.Dockerfile -t ai-product-detector-train:latest .
-	docker build -f docker/serve.Dockerfile -t ai-product-detector:latest .
+	docker build -f docker/train.Dockerfile -t ai-product-detector-train:1.0.0 .
+	docker build -f docker/serve.Dockerfile -t ai-product-detector:1.0.0 .
 
 docker-up:
 	docker compose up -d

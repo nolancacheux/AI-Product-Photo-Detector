@@ -152,6 +152,33 @@ mlops_project/
 └── docs/                 # Documentation
 ```
 
+## 📦 Data Versioning (DVC)
+
+This project uses [DVC](https://dvc.org/) for data versioning. The local remote is configured to store data artifacts in `./dvc-storage` within the project directory.
+
+```bash
+# Initialize DVC (already done)
+dvc init
+
+# Track a data file
+dvc add data/processed/dataset.csv
+
+# Push data to local storage
+dvc push
+
+# Pull data from storage
+dvc pull
+```
+
+To switch to a cloud remote (S3, GCS, Azure), update `.dvc/config`:
+```bash
+dvc remote modify local url s3://your-bucket/dvc-storage
+```
+
+## 📋 Documentation
+
+- [Incident Scenario](docs/INCIDENT_SCENARIO.md) — Drift detection incident response scenario documenting a realistic data drift event, root cause analysis, remediation steps, and prevention measures.
+
 ## 🧪 Testing
 
 ```bash

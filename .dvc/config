@@ -3,4 +3,4 @@
     autostage = true
 
 [remote "local"]
-    url = /tmp/dvc-storage
+    url = ./dvc-storage
