@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -54,9 +54,7 @@ class Settings(BaseSettings):
     mlflow_tracking_uri: str = "http://localhost:5000"
     log_level: str = "INFO"
 
-    class Config:
-        env_prefix = ""
-        case_sensitive = False
+    model_config = ConfigDict(env_prefix="", case_sensitive=False)
 
 
 def load_yaml_config(config_path: str | Path) -> dict[str, Any]:

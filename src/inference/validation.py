@@ -2,6 +2,7 @@
 
 import hashlib
 import io
+import re
 
 from PIL import Image
 
@@ -191,12 +192,18 @@ def sanitize_filename(filename: str | None) -> str:
     if filename is None:
         return "unknown"
 
-    # Remove path separators and null bytes
-    sanitized = filename.replace("/", "_").replace("\\", "_").replace("\x00", "")
+    # Replace path traversal patterns (../ or ..\) — dots become underscore
+    sanitized = re.sub(r"\.\.[/\\]", lambda m: "_" + m.group()[-1], filename)
 
     # Remove leading dots (hidden files)
     while sanitized.startswith("."):
         sanitized = sanitized[1:]
+
+    # Remove path separators and null bytes
+    sanitized = sanitized.replace("/", "_").replace("\\", "_").replace("\x00", "")
+
+    # Replace any remaining path traversal dots
+    sanitized = sanitized.replace("..", "_")
 
     # Limit length
     if len(sanitized) > 255:

@@ -127,7 +127,7 @@ def main() -> None:
         st.header("ℹ️ About")
         st.markdown("""
         Detects AI-generated product photos using deep learning.
-        
+
         **Supported formats:** JPEG, PNG, WebP
         **Max file size:** 10 MB
         """)

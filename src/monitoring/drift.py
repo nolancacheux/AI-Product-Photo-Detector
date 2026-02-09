@@ -7,7 +7,7 @@ the model needs retraining.
 import json
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -96,7 +96,7 @@ class DriftDetector:
             "std_probability": metrics.std_probability,
             "low_confidence_ratio": metrics.low_confidence_ratio,
             "prediction_ratio": metrics.prediction_ratio,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -121,7 +121,7 @@ class DriftDetector:
             {
                 "probability": probability,
                 "prediction": prediction,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
         )
 
@@ -133,7 +133,7 @@ class DriftDetector:
         """
         if len(self.predictions) == 0:
             return DriftMetrics(
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 window_size=0,
                 mean_probability=0.5,
                 std_probability=0.0,
@@ -179,7 +179,7 @@ class DriftDetector:
                 alerts.append(f"Prediction ratio drift: AI {ai_ratio:.1%}")
 
         return DriftMetrics(
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             window_size=len(self.predictions),
             mean_probability=mean_prob,
             std_probability=std_prob,

@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ConfidenceLevel(str, Enum):
@@ -31,8 +31,8 @@ class PredictResponse(BaseModel):
     inference_time_ms: float = Field(ge=0, description="Inference time in milliseconds")
     model_version: str = Field(description="Model version used for prediction")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "prediction": "ai_generated",
                 "probability": 0.87,
@@ -41,6 +41,7 @@ class PredictResponse(BaseModel):
                 "model_version": "1.0.0",
             }
         }
+    )
 
 
 class HealthStatus(str, Enum):
@@ -58,8 +59,8 @@ class HealthResponse(BaseModel):
     model_version: str = Field(description="Loaded model version")
     uptime_seconds: float = Field(ge=0, description="Server uptime in seconds")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "healthy",
                 "model_loaded": True,
@@ -67,6 +68,7 @@ class HealthResponse(BaseModel):
                 "uptime_seconds": 3600.5,
             }
         }
+    )
 
 
 class ErrorResponse(BaseModel):
@@ -75,13 +77,14 @@ class ErrorResponse(BaseModel):
     error: str = Field(description="Error type")
     detail: str = Field(description="Detailed error message")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "error": "Invalid image format",
                 "detail": "Supported formats: JPEG, PNG, WebP",
             }
         }
+    )
 
 
 class BatchItemResult(BaseModel):
@@ -106,8 +109,8 @@ class BatchPredictResponse(BaseModel):
     total_inference_time_ms: float = Field(ge=0, description="Total inference time in milliseconds")
     model_version: str = Field(description="Model version used for predictions")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "results": [
                     {
@@ -132,3 +135,4 @@ class BatchPredictResponse(BaseModel):
                 "model_version": "1.0.0",
             }
         }
+    )
