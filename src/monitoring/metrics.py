@@ -56,18 +56,6 @@ BATCH_LATENCY = Histogram(
     buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0],
 )
 
-# Explainability metrics
-EXPLAIN_REQUESTS_TOTAL = Counter(
-    "aidetect_explain_requests_total",
-    "Total number of explanation requests",
-    ["status"],
-)
-EXPLAIN_LATENCY = Histogram(
-    "aidetect_explain_latency_seconds",
-    "Explanation generation latency in seconds",
-    buckets=[0.1, 0.25, 0.5, 1.0, 2.5, 5.0],
-)
-
 # Image validation metrics
 IMAGE_SIZE_BYTES = Histogram(
     "aidetect_image_size_bytes",
@@ -85,32 +73,11 @@ IMAGE_VALIDATION_ERRORS = Counter(
     ["error_type"],
 )
 
-# Cache metrics
-CACHE_HITS = Counter(
-    "aidetect_cache_hits_total",
-    "Total number of cache hits",
-)
-CACHE_MISSES = Counter(
-    "aidetect_cache_misses_total",
-    "Total number of cache misses",
-)
-CACHE_SIZE = Gauge(
-    "aidetect_cache_size",
-    "Current number of items in cache",
-)
-
 # Rate limiting metrics
 RATE_LIMIT_EXCEEDED = Counter(
     "aidetect_rate_limit_exceeded_total",
     "Total number of rate limit exceeded responses",
     ["endpoint"],
-)
-
-# Authentication metrics
-AUTH_ATTEMPTS = Counter(
-    "aidetect_auth_attempts_total",
-    "Total number of authentication attempts",
-    ["method", "result"],
 )
 
 # Error metrics
@@ -192,77 +159,3 @@ def record_prediction(
     if success:
         PREDICTION_LATENCY.observe(latency_seconds)
         PREDICTION_PROBABILITY.observe(probability)
-
-
-def record_batch_prediction(
-    batch_size: int,
-    latency_seconds: float,
-    successful: int,
-    failed: int,
-) -> None:
-    """Record batch prediction metrics.
-
-    Args:
-        batch_size: Number of images in batch.
-        latency_seconds: Total batch latency.
-        successful: Number of successful predictions.
-        failed: Number of failed predictions.
-    """
-    status = "success" if failed == 0 else ("partial" if successful > 0 else "error")
-    BATCH_PREDICTIONS_TOTAL.labels(status=status).inc()
-    BATCH_SIZE_HISTOGRAM.observe(batch_size)
-    BATCH_LATENCY.observe(latency_seconds)
-
-
-def record_image_validation(
-    size_bytes: int,
-    width: int,
-    height: int,
-    error_type: str | None = None,
-) -> None:
-    """Record image validation metrics.
-
-    Args:
-        size_bytes: Image size in bytes.
-        width: Image width.
-        height: Image height.
-        error_type: Validation error type if any.
-    """
-    IMAGE_SIZE_BYTES.observe(size_bytes)
-    IMAGE_DIMENSIONS.observe(max(width, height))
-
-    if error_type:
-        IMAGE_VALIDATION_ERRORS.labels(error_type=error_type).inc()
-
-
-def record_cache_access(hit: bool) -> None:
-    """Record cache access metrics.
-
-    Args:
-        hit: Whether it was a cache hit.
-    """
-    if hit:
-        CACHE_HITS.inc()
-    else:
-        CACHE_MISSES.inc()
-
-
-def record_auth_attempt(method: str, success: bool) -> None:
-    """Record authentication attempt metrics.
-
-    Args:
-        method: Authentication method (api_key, jwt).
-        success: Whether authentication was successful.
-    """
-    result = "success" if success else "failure"
-    AUTH_ATTEMPTS.labels(method=method, result=result).inc()
-
-
-def record_error(error_type: str, endpoint: str) -> None:
-    """Record error metrics.
-
-    Args:
-        error_type: Type of error.
-        endpoint: API endpoint where error occurred.
-    """
-    ERRORS_TOTAL.labels(type=error_type, endpoint=endpoint).inc()
