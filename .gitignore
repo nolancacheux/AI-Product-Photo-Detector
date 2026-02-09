@@ -64,13 +64,11 @@ htmlcov/
 models/
 !models/.gitkeep
 
-# Dataset (tracked by DVC)
+# Dataset
 data/raw/
 data/processed/
 !data/.gitkeep
 !data/**/.gitkeep
-*.dvc
-!.dvc
 
 # MLflow local artifacts
 mlruns/

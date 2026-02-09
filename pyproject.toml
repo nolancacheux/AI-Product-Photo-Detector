@@ -32,7 +32,6 @@ dependencies = [
     
     # MLOps
     "mlflow>=2.8.0",
-    "dvc>=3.30.0",
     
     # Observability
     "structlog>=23.1.0",

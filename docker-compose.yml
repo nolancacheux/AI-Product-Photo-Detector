@@ -64,44 +64,9 @@ services:
     networks:
       - detector-network
 
-  # Prometheus (Metrics)
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: ai-detector-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-    restart: unless-stopped
-    networks:
-      - detector-network
-
-  # Grafana (Dashboards)
-  grafana:
-    image: grafana/grafana:latest
-    container_name: ai-detector-grafana
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana-data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
-    depends_on:
-      - prometheus
-    restart: unless-stopped
-    networks:
-      - detector-network
-
 networks:
   detector-network:
     driver: bridge
 
 volumes:
   mlflow-data:
-  prometheus-data:
-  grafana-data:
