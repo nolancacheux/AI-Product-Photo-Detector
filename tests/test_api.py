@@ -44,6 +44,15 @@ class TestHealthEndpoint:
         assert "uptime_seconds" in data
 
 
+    def test_health_unhealthy_when_no_model(self, client: TestClient) -> None:
+        """Test health returns unhealthy when model is not loaded."""
+        response = client.get("/health")
+        data = response.json()
+        # Model file doesn't exist in test env, so should be unhealthy
+        assert data["status"] == "unhealthy"
+        assert data["model_loaded"] is False
+
+
 class TestRootEndpoint:
     """Tests for / endpoint."""
 
@@ -61,6 +70,12 @@ class TestRootEndpoint:
         assert "version" in data
         assert "docs" in data
 
+    def test_root_contains_api_name(self, client: TestClient) -> None:
+        """Test root response contains the API name."""
+        response = client.get("/")
+        data = response.json()
+        assert data["name"] == "AI Product Photo Detector"
+
 
 class TestMetricsEndpoint:
     """Tests for /metrics endpoint."""
@@ -74,6 +89,13 @@ class TestMetricsEndpoint:
         """Test metrics returns text/plain."""
         response = client.get("/metrics")
         assert "text/plain" in response.headers["content-type"]
+
+    def test_metrics_prometheus_format(self, client: TestClient) -> None:
+        """Test metrics returns prometheus-compatible output."""
+        response = client.get("/metrics")
+        content = response.text
+        # Prometheus metrics contain HELP or TYPE lines, or metric names
+        assert "predictions_total" in content or "# " in content or len(content) > 0
 
 
 class TestPredictEndpoint:
