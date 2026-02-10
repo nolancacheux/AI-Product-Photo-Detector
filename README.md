@@ -15,29 +15,31 @@ A complete end-to-end machine learning system — from data ingestion and model 
 
 > **Live API** → [ai-product-detector-714127049161.europe-west1.run.app](https://ai-product-detector-714127049161.europe-west1.run.app)
 > &nbsp;|&nbsp; **Swagger UI** → [/docs](https://ai-product-detector-714127049161.europe-west1.run.app/docs)
+> &nbsp;|&nbsp; **Web UI** → [ai-product-detector-ui-714127049161.europe-west1.run.app](https://ai-product-detector-ui-714127049161.europe-west1.run.app)
 
 ---
 
 ## Features
 
-- 🔍 **Binary image classification** — Detects whether a product photo is real or AI-generated
-- 🧠 **EfficientNet-B0 backbone** — Transfer learning with pretrained ImageNet weights via `timm`
-- 🔥 **Grad-CAM explainability** — Visual heatmaps showing which image regions drive the prediction
-- ⚡ **FastAPI serving** — Async API with single and batch prediction endpoints
-- 🐳 **Docker-first** — Multi-service stack with Compose (API + UI + MLflow + Prometheus + Grafana)
-- 📊 **Full observability** — Prometheus metrics, Grafana dashboards, structured JSON logging
-- 🔄 **DVC pipelines** — Reproducible data download → validation → training workflow
-- 🚀 **CI/CD to GCP Cloud Run** — Automated deploy on push to `main` via GitHub Actions
-- 🛡️ **Production hardening** — Rate limiting, API key auth, CORS, input validation, drift detection
-- 🧪 **Comprehensive testing** — Unit, integration, and load tests (Locust)
-- 🎨 **Streamlit UI** — Interactive web interface for drag-and-drop image analysis
+- **Binary image classification** -- Detects whether a product photo is real or AI-generated
+- **EfficientNet-B0 backbone** -- Transfer learning with pretrained ImageNet weights via `timm`
+- **Grad-CAM explainability** -- Visual heatmaps showing which image regions drive the prediction
+- **FastAPI serving** -- Async API with single, batch, and explainability endpoints
+- **Docker-first** -- Multi-service stack with Compose (API + UI + MLflow + Prometheus + Grafana)
+- **Full observability** -- Prometheus metrics, Grafana dashboards, structured JSON logging
+- **DVC pipelines** -- Reproducible data download, validation, and training workflow
+- **CI/CD to GCP Cloud Run** -- Automated deploy on push to `main` via GitHub Actions
+- **Production hardening** -- Rate limiting, API key auth, CORS, input validation, drift detection
+- **Comprehensive testing** -- Unit, integration, and load tests (Locust + k6)
+- **Data validation** -- Automated dataset integrity checks with detailed reporting
+- **Streamlit UI** -- Interactive web interface for drag-and-drop image analysis, deployed on Cloud Run
 
 ---
 
 ## Architecture
 
 <p align="center">
-  <img src="docs/images/architecture.svg" alt="System Architecture" width="800"/>
+  <img src="docs/architecture.svg" alt="System Architecture" width="800"/>
 </p>
 
 The system follows a modular architecture with clear separation between training, serving, and monitoring concerns. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full breakdown.
@@ -54,7 +56,7 @@ The system follows a modular architecture with clear separation between training
 | **Monitoring** | Prometheus, Grafana, structlog (JSON), custom drift detection |
 | **Infrastructure** | Docker, Docker Compose, GCP Cloud Run, Artifact Registry |
 | **CI/CD** | GitHub Actions (lint → type-check → test → security → deploy) |
-| **Quality** | Ruff (lint + format), mypy (strict), pytest + coverage, Locust (load testing) |
+| **Quality** | Ruff (lint + format), mypy (strict), pytest + coverage, Locust + k6 (load testing) |
 | **UI** | Streamlit |
 
 ---
@@ -124,6 +126,7 @@ make docker-up
 make test           # Unit + integration tests with coverage
 make lint           # Ruff + mypy
 make load-test      # Locust load test (10 users, 60s)
+make load-test-k6   # k6 load test
 ```
 
 ---
@@ -351,11 +354,11 @@ Three workflows automate quality and deployment:
 
 | Workflow | Trigger | Pipeline |
 |---|---|---|
-| **CI** ([`ci.yml`](.github/workflows/ci.yml)) | Push / PR to `main` | Lint → Type check → Test (3.11 + 3.12) → Security scan → Docker build → Deploy |
-| **Deploy** ([`deploy.yml`](.github/workflows/deploy.yml)) | Manual dispatch | Build → Push to Artifact Registry → Deploy to Cloud Run → Health check |
-| **DVC** ([`dvc.yml`](.github/workflows/dvc.yml)) | Manual dispatch | Pull data → Reproduce pipeline → Upload model artifact |
+| **CI** ([`ci.yml`](.github/workflows/ci.yml)) | Push / PR to `main` | Lint, type check, test (3.11 + 3.12), security scan, Docker build |
+| **CD** ([`cd.yml`](.github/workflows/cd.yml)) | Push to `main` / Manual dispatch | Wait for CI, build and push to Artifact Registry, deploy to Cloud Run, smoke test |
+| **Model Training** ([`model-training.yml`](.github/workflows/model-training.yml)) | Manual dispatch | Pull data, train model, evaluate, upload model artifact |
 
-The CI pipeline automatically deploys to GCP Cloud Run on every push to `main` after all checks pass.
+The CD pipeline automatically deploys to GCP Cloud Run on every push to `main` after CI passes.
 
 ### Experiment Tracking — MLflow
 
@@ -395,10 +398,7 @@ git push main → CI passes → Docker build → Push to Artifact Registry → D
 make deploy
 
 # Rollback to specific commit
-gh workflow run deploy.yml -f image_tag=<commit-sha>
-
-# Dry run (validate only)
-gh workflow run deploy.yml -f dry_run=true
+gh workflow run cd.yml -f image_tag=<commit-sha>
 ```
 
 ### Docker
@@ -425,6 +425,25 @@ docker compose down     # Tear down
 | MLflow | 5000 | http://localhost:5000 |
 | Prometheus | 9090 | http://localhost:9090 |
 | Grafana | 3000 | http://localhost:3000 |
+
+---
+
+## Streamlit UI
+
+An interactive web interface built with Streamlit provides drag-and-drop image analysis with real-time predictions and Grad-CAM visualizations.
+
+**Live deployment:** [ai-product-detector-ui-714127049161.europe-west1.run.app](https://ai-product-detector-ui-714127049161.europe-west1.run.app)
+
+```bash
+# Run locally
+make ui
+
+# Run via Docker
+docker build -f docker/ui.Dockerfile -t ai-product-detector-ui .
+docker run --rm -p 8501:8501 ai-product-detector-ui
+```
+
+The UI is also included in the Docker Compose stack and is automatically deployed to Cloud Run alongside the API.
 
 ---
 
@@ -480,21 +499,28 @@ All application logs use `structlog` with JSON output, including:
 AI-Product-Photo-Detector/
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml                  # CI: lint + test + security + deploy
-│       ├── deploy.yml              # Manual deploy / rollback
-│       └── dvc.yml                 # DVC pipeline reproduction
+│       ├── ci.yml                  # CI: lint + type check + test + security
+│       ├── cd.yml                  # CD: build + push + deploy to Cloud Run
+│       └── model-training.yml      # Model training pipeline (manual)
 ├── configs/
-│   ├── grafana/provisioning/       # Grafana dashboard + datasource configs
+│   ├── grafana/
+│   │   ├── dashboards/             # Grafana dashboard JSON definitions
+│   │   └── provisioning/           # Datasource and dashboard provisioning
 │   ├── inference_config.yaml       # API server configuration
 │   ├── prometheus.yml              # Prometheus scrape targets
-│   └── train_config.yaml          # Training hyperparameters
+│   └── train_config.yaml           # Training hyperparameters
 ├── docker/
-│   └── Dockerfile                  # Production image (CPU PyTorch, non-root)
+│   ├── Dockerfile                  # API production image (CPU PyTorch, non-root)
+│   ├── serve.Dockerfile            # Serving-optimized image
+│   ├── train.Dockerfile            # Training image
+│   └── ui.Dockerfile               # Streamlit UI image
 ├── docs/
-│   ├── images/architecture.svg     # System architecture diagram
+│   ├── architecture.svg            # System architecture diagram
 │   ├── ARCHITECTURE.md             # Detailed architecture documentation
+│   ├── AUDIT_ARCHITECTURE.md       # Architecture audit report
 │   ├── CONTRIBUTING.md             # Contribution guidelines
 │   ├── COSTS.md                    # Cloud cost analysis
+│   ├── INCIDENT_SCENARIO.md        # Incident response playbook
 │   └── PRD.md                      # Product requirements document
 ├── scripts/
 │   ├── create_sample_data.py       # Generate sample test images
@@ -508,8 +534,10 @@ AI-Product-Photo-Detector/
 │   │   ├── auth.py                 # API key authentication (HMAC + constant-time)
 │   │   ├── explainer.py            # Grad-CAM heatmap generation
 │   │   ├── predictor.py            # Model inference engine
+│   │   ├── routes/                 # Modular route definitions
 │   │   ├── schemas.py              # Pydantic request/response schemas
 │   │   ├── shadow.py               # Shadow model comparison
+│   │   ├── state.py                # Application state management
 │   │   └── validation.py           # Image validation utilities
 │   ├── monitoring/
 │   │   ├── drift.py                # Real-time drift detection
@@ -526,15 +554,24 @@ AI-Product-Photo-Detector/
 │       └── logger.py               # Structured logging setup
 ├── tests/
 │   ├── load/
-│   │   └── locustfile.py           # Load testing scenarios
+│   │   ├── locustfile.py           # Locust load testing scenarios
+│   │   └── k6_test.js             # k6 load testing script
 │   ├── test_api.py                 # API endpoint tests
+│   ├── test_augmentation.py        # Data augmentation tests
 │   ├── test_auth.py                # Authentication tests
 │   ├── test_batch.py               # Batch prediction tests
+│   ├── test_config.py              # Configuration tests
+│   ├── test_dataset.py             # Dataset tests
 │   ├── test_drift.py               # Drift detection tests
+│   ├── test_drift_extended.py      # Extended drift detection tests
 │   ├── test_explainer.py           # Grad-CAM tests
+│   ├── test_integration.py         # Integration tests
+│   ├── test_logger.py              # Logging tests
+│   ├── test_metrics.py             # Prometheus metrics tests
 │   ├── test_model.py               # Model architecture tests
 │   ├── test_predictor.py           # Inference engine tests
-│   └── ...                         # + config, dataset, metrics, validation tests
+│   ├── test_predictor_extended.py  # Extended predictor tests
+│   └── test_validation.py          # Image validation tests
 ├── docker-compose.yml              # Full stack orchestration
 ├── dvc.yaml                        # DVC pipeline definition
 ├── Makefile                        # Development commands
