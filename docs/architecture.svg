@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" width="960" height="680" font-family="Segoe UI, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 820" width="960" height="820" font-family="Segoe UI, Arial, sans-serif">
   <defs>
     <!-- Background patterns & gradients -->
     <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
@@ -26,6 +26,10 @@
       <stop offset="0%" stop-color="#e2e3e5"/>
       <stop offset="100%" stop-color="#d6d8db"/>
     </linearGradient>
+    <linearGradient id="vertexGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fce4ec"/>
+      <stop offset="100%" stop-color="#f8bbd0"/>
+    </linearGradient>
     <!-- Arrow marker -->
     <marker id="arrow" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
       <path d="M0,0 L10,3 L0,6 Z" fill="#495057"/>
@@ -36,6 +40,9 @@
     <marker id="arrowPurple" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
       <path d="M0,0 L10,3 L0,6 Z" fill="#7b4fa0"/>
     </marker>
+    <marker id="arrowRed" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#c62828"/>
+    </marker>
     <!-- Drop shadow -->
     <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
       <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.12"/>
@@ -43,11 +50,11 @@
   </defs>
 
   <!-- Background -->
-  <rect width="960" height="680" rx="8" fill="url(#bgGrad)"/>
+  <rect width="960" height="820" rx="8" fill="url(#bgGrad)"/>
 
   <!-- Title -->
-  <text x="480" y="28" text-anchor="middle" font-size="16" font-weight="700" fill="#212529">AI Product Photo Detector — System Architecture</text>
-  <text x="480" y="44" text-anchor="middle" font-size="9" fill="#6c757d">EfficientNet-B0 binary classifier  |  FastAPI + Streamlit  |  GCP Cloud Run  |  DVC + MLflow</text>
+  <text x="480" y="28" text-anchor="middle" font-size="16" font-weight="700" fill="#212529">AI Product Photo Detector -- System Architecture</text>
+  <text x="480" y="44" text-anchor="middle" font-size="9" fill="#6c757d">EfficientNet-B0 binary classifier  |  FastAPI + Streamlit  |  Vertex AI + GCS  |  GCP Cloud Run  |  DVC + MLflow</text>
 
   <!-- ============================================================ -->
   <!-- SECTION 1: DATA LAYER (green) -->
@@ -65,7 +72,7 @@
   <text x="230" y="99" text-anchor="middle" font-size="8.5" font-weight="600" fill="#155724">Raw Dataset</text>
   <text x="230" y="111" text-anchor="middle" font-size="7" fill="#495057">real/ + ai/ images</text>
 
-  <!-- Arrow: Kaggle → Raw -->
+  <!-- Arrow: Kaggle -> Raw -->
   <line x1="148" y1="102" x2="168" y2="102" stroke="#495057" stroke-width="1.2" marker-end="url(#arrow)"/>
 
   <!-- DVC Pipeline box -->
@@ -92,44 +99,89 @@
   <rect x="28" y="220" width="262" height="42" rx="6" fill="#fff" stroke="#28a745" stroke-width="1"/>
   <text x="159" y="236" text-anchor="middle" font-size="8.5" font-weight="600" fill="#155724">Data Validation</text>
   <text x="159" y="248" text-anchor="middle" font-size="7" fill="#495057">Class balance | Corrupt images | Resolution stats</text>
-  <text x="159" y="257" text-anchor="middle" font-size="6.5" fill="#6c757d">src/data/validate.py  →  reports/data_validation.json</text>
+  <text x="159" y="257" text-anchor="middle" font-size="6.5" fill="#6c757d">src/data/validate.py  --  reports/data_validation.json</text>
 
-  <!-- Arrow: Raw → DVC -->
+  <!-- Arrow: Raw -> DVC -->
   <line x1="230" y1="120" x2="230" y2="128" stroke="#495057" stroke-width="1.0" marker-end="url(#arrow)"/>
 
   <!-- ============================================================ -->
-  <!-- SECTION 2: TRAINING LAYER (orange) -->
+  <!-- SECTION 2: VERTEX AI TRAINING PIPELINE (red/pink) -->
   <!-- ============================================================ -->
-  <rect x="14" y="326" width="290" height="200" rx="10" fill="url(#trainGrad)" stroke="#e67e22" stroke-width="1.2" filter="url(#shadow)"/>
-  <text x="159" y="344" text-anchor="middle" font-size="11" font-weight="700" fill="#7c4a03">TRAINING LAYER</text>
+  <rect x="14" y="326" width="290" height="250" rx="10" fill="url(#vertexGrad)" stroke="#c62828" stroke-width="1.2" filter="url(#shadow)"/>
+  <text x="159" y="344" text-anchor="middle" font-size="11" font-weight="700" fill="#b71c1c">VERTEX AI TRAINING PIPELINE</text>
 
-  <!-- Model box -->
-  <rect x="28" y="354" width="262" height="44" rx="6" fill="#fff" stroke="#e67e22" stroke-width="1"/>
-  <text x="159" y="370" text-anchor="middle" font-size="8.5" font-weight="600" fill="#7c4a03">EfficientNet-B0</text>
-  <text x="159" y="381" text-anchor="middle" font-size="7" fill="#495057">timm | ImageNet pretrained | Transfer learning</text>
-  <text x="159" y="391" text-anchor="middle" font-size="6.5" fill="#6c757d">Binary classifier (sigmoid) | dropout=0.3</text>
+  <!-- GCS central store -->
+  <rect x="28" y="354" width="262" height="40" rx="6" fill="#fff" stroke="#c62828" stroke-width="1"/>
+  <text x="159" y="370" text-anchor="middle" font-size="9" font-weight="600" fill="#b71c1c">Google Cloud Storage (GCS)</text>
+  <text x="159" y="382" text-anchor="middle" font-size="7" fill="#495057">gs://ai-product-detector-487013 -- data, models, staging</text>
 
-  <!-- Training loop -->
-  <rect x="28" y="406" width="126" height="44" rx="6" fill="#fff" stroke="#e67e22" stroke-width="1"/>
-  <text x="91" y="421" text-anchor="middle" font-size="8.5" font-weight="600" fill="#7c4a03">PyTorch Training</text>
-  <text x="91" y="432" text-anchor="middle" font-size="7" fill="#495057">Early stopping</text>
-  <text x="91" y="442" text-anchor="middle" font-size="6.5" fill="#6c757d">Cosine LR + Warmup</text>
+  <!-- Pipeline stages row 1 -->
+  <rect x="28" y="402" width="82" height="34" rx="5" fill="#fff" stroke="#c62828" stroke-width="0.8"/>
+  <text x="69" y="416" text-anchor="middle" font-size="7" font-weight="600" fill="#b71c1c">1. Upload</text>
+  <text x="69" y="428" text-anchor="middle" font-size="6" fill="#495057">Data to GCS</text>
 
-  <!-- MLflow -->
-  <rect x="164" y="406" width="126" height="44" rx="6" fill="#fff" stroke="#e67e22" stroke-width="1"/>
-  <text x="227" y="421" text-anchor="middle" font-size="8.5" font-weight="600" fill="#7c4a03">MLflow Tracking</text>
-  <text x="227" y="432" text-anchor="middle" font-size="7" fill="#495057">Experiments, params</text>
-  <text x="227" y="442" text-anchor="middle" font-size="6.5" fill="#6c757d">Metrics, model artifacts</text>
+  <rect x="118" y="402" width="82" height="34" rx="5" fill="#fff" stroke="#c62828" stroke-width="0.8"/>
+  <text x="159" y="416" text-anchor="middle" font-size="7" font-weight="600" fill="#b71c1c">2. Build</text>
+  <text x="159" y="428" text-anchor="middle" font-size="6" fill="#495057">Docker image</text>
 
-  <!-- Checkpoint -->
-  <rect x="28" y="460" width="262" height="30" rx="6" fill="#fff3e0" stroke="#e67e22" stroke-width="1"/>
-  <text x="159" y="479" text-anchor="middle" font-size="8" font-weight="600" fill="#7c4a03">best_model.pt  (DVC tracked)</text>
+  <rect x="208" y="402" width="82" height="34" rx="5" fill="#fff" stroke="#c62828" stroke-width="0.8"/>
+  <text x="249" y="416" text-anchor="middle" font-size="7" font-weight="600" fill="#b71c1c">3. Train</text>
+  <text x="249" y="428" text-anchor="middle" font-size="6" fill="#495057">Vertex AI T4</text>
 
-  <!-- Data → Training arrow -->
+  <line x1="110" y1="419" x2="116" y2="419" stroke="#c62828" stroke-width="0.8" marker-end="url(#arrowRed)"/>
+  <line x1="200" y1="419" x2="206" y2="419" stroke="#c62828" stroke-width="0.8" marker-end="url(#arrowRed)"/>
+
+  <!-- Pipeline stages row 2 -->
+  <rect x="28" y="444" width="82" height="34" rx="5" fill="#fff" stroke="#c62828" stroke-width="0.8"/>
+  <text x="69" y="458" text-anchor="middle" font-size="7" font-weight="600" fill="#b71c1c">4. Evaluate</text>
+  <text x="69" y="470" text-anchor="middle" font-size="6" fill="#495057">Test metrics</text>
+
+  <rect x="118" y="444" width="82" height="34" rx="5" fill="#fff" stroke="#c62828" stroke-width="0.8"/>
+  <text x="159" y="458" text-anchor="middle" font-size="7" font-weight="600" fill="#b71c1c">5. Quality Gate</text>
+  <text x="159" y="470" text-anchor="middle" font-size="6" fill="#495057">Acc>=0.85 F1>=0.80</text>
+
+  <rect x="208" y="444" width="82" height="34" rx="5" fill="#fff" stroke="#c62828" stroke-width="0.8"/>
+  <text x="249" y="458" text-anchor="middle" font-size="7" font-weight="600" fill="#b71c1c">6. Deploy</text>
+  <text x="249" y="470" text-anchor="middle" font-size="6" fill="#495057">Cloud Run</text>
+
+  <line x1="249" y1="436" x2="249" y2="442" stroke="#c62828" stroke-width="0.8" marker-end="url(#arrowRed)"/>
+  <path d="M249,436 L270,436 L270,440 L270,442" fill="none" stroke="none"/>
+  <!-- Arrow from row 1 end down to row 2 start -->
+  <path d="M249,436 L275,436 L275,461 L290,461" fill="none" stroke="#c62828" stroke-width="0.8"/>
+  <path d="M28,461 L20,461 L20,436 L28,436" fill="none" stroke="none"/>
+  <!-- Connect: train -> evaluate via wrap-around -->
+  <path d="M290,461 L296,461 L296,490 L22,490 L22,461 L28,461" fill="none" stroke="#c62828" stroke-width="0.8" marker-end="url(#arrowRed)"/>
+  <line x1="110" y1="461" x2="116" y2="461" stroke="#c62828" stroke-width="0.8" marker-end="url(#arrowRed)"/>
+  <line x1="200" y1="461" x2="206" y2="461" stroke="#c62828" stroke-width="0.8" marker-end="url(#arrowRed)"/>
+
+  <!-- Compute details -->
+  <rect x="28" y="502" width="262" height="34" rx="6" fill="#fff" stroke="#c62828" stroke-width="0.8"/>
+  <text x="159" y="516" text-anchor="middle" font-size="7.5" font-weight="600" fill="#b71c1c">n1-standard-4 + NVIDIA Tesla T4 GPU</text>
+  <text x="159" y="528" text-anchor="middle" font-size="6.5" fill="#6c757d">src/training/vertex_submit.py | model-training.yml</text>
+
+  <!-- Arrow: Data -> Vertex Pipeline -->
   <line x1="159" y1="316" x2="159" y2="324" stroke="#495057" stroke-width="1.2" marker-end="url(#arrow)"/>
 
-  <!-- Augmentation note -->
-  <text x="159" y="518" text-anchor="middle" font-size="6.5" fill="#7c4a03">Augmentation: flip, rotate, color jitter, crop</text>
+  <!-- ============================================================ -->
+  <!-- SECTION 2b: LOCAL TRAINING (orange, smaller) -->
+  <!-- ============================================================ -->
+  <rect x="14" y="586" width="290" height="100" rx="10" fill="url(#trainGrad)" stroke="#e67e22" stroke-width="1.2" filter="url(#shadow)"/>
+  <text x="159" y="604" text-anchor="middle" font-size="11" font-weight="700" fill="#7c4a03">LOCAL TRAINING</text>
+
+  <!-- Model box -->
+  <rect x="28" y="614" width="126" height="44" rx="6" fill="#fff" stroke="#e67e22" stroke-width="1"/>
+  <text x="91" y="630" text-anchor="middle" font-size="8.5" font-weight="600" fill="#7c4a03">EfficientNet-B0</text>
+  <text x="91" y="641" text-anchor="middle" font-size="7" fill="#495057">timm | PyTorch</text>
+  <text x="91" y="651" text-anchor="middle" font-size="6.5" fill="#6c757d">Cosine LR + Warmup</text>
+
+  <!-- MLflow -->
+  <rect x="164" y="614" width="126" height="44" rx="6" fill="#fff" stroke="#e67e22" stroke-width="1"/>
+  <text x="227" y="630" text-anchor="middle" font-size="8.5" font-weight="600" fill="#7c4a03">MLflow Tracking</text>
+  <text x="227" y="641" text-anchor="middle" font-size="7" fill="#495057">Experiments, params</text>
+  <text x="227" y="651" text-anchor="middle" font-size="6.5" fill="#6c757d">Metrics, model artifacts</text>
+
+  <!-- Checkpoint note -->
+  <text x="159" y="676" text-anchor="middle" font-size="7" fill="#7c4a03">best_model.pt (DVC tracked) | Augmentation: flip, rotate, color jitter</text>
 
   <!-- ============================================================ -->
   <!-- SECTION 3: INFERENCE LAYER (blue) -->
@@ -168,7 +220,7 @@
   <text x="581" y="218" text-anchor="middle" font-size="7" fill="#495057">Model comparison</text>
   <text x="581" y="226" text-anchor="middle" font-size="6.5" fill="#6c757d">shadow.py</text>
 
-  <!-- Arrows: endpoints → components -->
+  <!-- Arrows: endpoints -> components -->
   <line x1="520" y1="106" x2="528" y2="106" stroke="#0069d9" stroke-width="0.9" marker-end="url(#arrowBlue)"/>
   <line x1="520" y1="134" x2="530" y2="156" stroke="#0069d9" stroke-width="0.9" marker-end="url(#arrowBlue)"/>
   <line x1="520" y1="152" x2="530" y2="207" stroke="#0069d9" stroke-width="0.9" marker-end="url(#arrowBlue)"/>
@@ -191,8 +243,9 @@
   <rect x="334" y="312" width="298" height="24" rx="6" fill="#fff" stroke="#0069d9" stroke-width="0.8"/>
   <text x="483" y="328" text-anchor="middle" font-size="7" fill="#003d80">Pydantic Schemas: PredictResponse | BatchResponse | ExplainResponse | CompareResponse | HealthResponse</text>
 
-  <!-- Arrow: model checkpoint → Predictor -->
-  <path d="M290,475 L310,475 L310,50 L581,50 L581,82" fill="none" stroke="#495057" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
+  <!-- Arrow: model checkpoint -> Predictor (dashed from Vertex/GCS) -->
+  <path d="M290,374 L310,374 L310,50 L581,50 L581,82" fill="none" stroke="#c62828" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrowRed)"/>
+  <text x="314" y="66" font-size="6" fill="#c62828">model from GCS</text>
 
   <!-- ============================================================ -->
   <!-- SECTION 4: FRONTEND (blue-ish) -->
@@ -213,9 +266,12 @@
   <text x="410" y="499" text-anchor="middle" font-size="6.5" fill="#495057">GradCAM visualization</text>
   <text x="410" y="509" text-anchor="middle" font-size="6.5" fill="#495057">Confidence display</text>
 
-  <!-- Arrow: Streamlit → FastAPI -->
+  <!-- Arrow: Streamlit -> FastAPI -->
   <line x1="410" y1="376" x2="410" y2="368" stroke="#0069d9" stroke-width="1.2" marker-end="url(#arrowBlue)"/>
   <text x="418" y="372" font-size="6" fill="#0069d9">HTTP</text>
+
+  <!-- Cloud Run label under Streamlit -->
+  <text x="410" y="524" text-anchor="middle" font-size="6.5" fill="#1e3a5f">Deployed on Cloud Run</text>
 
   <!-- ============================================================ -->
   <!-- SECTION 5: MONITORING (purple) -->
@@ -237,14 +293,14 @@
   <text x="872" y="122" text-anchor="middle" font-size="6.5" fill="#495057">Alerts &amp; viz</text>
   <text x="872" y="131" text-anchor="middle" font-size="6.5" fill="#6c757d">configs/grafana/</text>
 
-  <!-- Arrow: Prometheus → Grafana -->
+  <!-- Arrow: Prometheus -> Grafana -->
   <line x1="804" y1="110" x2="810" y2="110" stroke="#7b4fa0" stroke-width="0.9" marker-end="url(#arrowPurple)"/>
 
   <!-- Drift Detection -->
   <rect x="674" y="146" width="258" height="46" rx="6" fill="#fff" stroke="#7b4fa0" stroke-width="1"/>
   <text x="803" y="162" text-anchor="middle" font-size="8.5" font-weight="600" fill="#4a235a">Drift Detection</text>
   <text x="803" y="174" text-anchor="middle" font-size="7" fill="#495057">Probability distribution shift | Low confidence ratio</text>
-  <text x="803" y="184" text-anchor="middle" font-size="6.5" fill="#6c757d">src/monitoring/drift.py  →  drift_score gauge</text>
+  <text x="803" y="184" text-anchor="middle" font-size="6.5" fill="#6c757d">src/monitoring/drift.py  --  drift_score gauge</text>
 
   <!-- Structured Logging -->
   <rect x="674" y="200" width="258" height="38" rx="6" fill="#fff" stroke="#7b4fa0" stroke-width="1"/>
@@ -259,88 +315,103 @@
   <text x="684" y="283" font-size="6.5" fill="#495057">batch_predictions_total | model_loaded</text>
   <text x="684" y="293" font-size="6.5" fill="#495057">http_request_duration | active_requests | errors_total</text>
 
-  <!-- Arrow: FastAPI → Prometheus -->
+  <!-- Arrow: FastAPI -> Prometheus -->
   <line x1="646" y1="110" x2="672" y2="110" stroke="#7b4fa0" stroke-width="1.2" stroke-dasharray="3,2" marker-end="url(#arrowPurple)"/>
   <text x="654" y="104" font-size="6" fill="#7b4fa0">/metrics</text>
 
   <!-- ============================================================ -->
   <!-- SECTION 6: INFRASTRUCTURE (gray) -->
   <!-- ============================================================ -->
-  <rect x="516" y="376" width="430" height="280" rx="10" fill="url(#infraGrad)" stroke="#6c757d" stroke-width="1.2" filter="url(#shadow)"/>
-  <text x="731" y="394" text-anchor="middle" font-size="11" font-weight="700" fill="#343a40">INFRASTRUCTURE</text>
+  <rect x="320" y="540" width="626" height="260" rx="10" fill="url(#infraGrad)" stroke="#6c757d" stroke-width="1.2" filter="url(#shadow)"/>
+  <text x="633" y="558" text-anchor="middle" font-size="11" font-weight="700" fill="#343a40">INFRASTRUCTURE</text>
 
   <!-- Docker -->
-  <rect x="530" y="406" width="150" height="72" rx="6" fill="#fff" stroke="#6c757d" stroke-width="1"/>
-  <text x="605" y="422" text-anchor="middle" font-size="9" font-weight="600" fill="#343a40">Docker</text>
-  <rect x="540" y="430" width="130" height="16" rx="3" fill="#f1f3f5" stroke="#adb5bd" stroke-width="0.5"/>
-  <text x="605" y="441" text-anchor="middle" font-size="7" fill="#495057">serve.Dockerfile  (API)</text>
-  <rect x="540" y="450" width="130" height="16" rx="3" fill="#f1f3f5" stroke="#adb5bd" stroke-width="0.5"/>
-  <text x="605" y="461" text-anchor="middle" font-size="7" fill="#495057">ui.Dockerfile  (Streamlit)</text>
-  <text x="605" y="475" text-anchor="middle" font-size="6.5" fill="#6c757d">+ train.Dockerfile</text>
+  <rect x="334" y="568" width="150" height="72" rx="6" fill="#fff" stroke="#6c757d" stroke-width="1"/>
+  <text x="409" y="584" text-anchor="middle" font-size="9" font-weight="600" fill="#343a40">Docker</text>
+  <rect x="344" y="592" width="130" height="16" rx="3" fill="#f1f3f5" stroke="#adb5bd" stroke-width="0.5"/>
+  <text x="409" y="603" text-anchor="middle" font-size="7" fill="#495057">Dockerfile  (API)</text>
+  <rect x="344" y="612" width="130" height="16" rx="3" fill="#f1f3f5" stroke="#adb5bd" stroke-width="0.5"/>
+  <text x="409" y="623" text-anchor="middle" font-size="7" fill="#495057">ui.Dockerfile  (Streamlit)</text>
+  <text x="409" y="637" text-anchor="middle" font-size="6.5" fill="#6c757d">+ Dockerfile.training (Vertex AI)</text>
 
   <!-- GCP -->
-  <rect x="694" y="406" width="238" height="72" rx="6" fill="#fff" stroke="#6c757d" stroke-width="1"/>
-  <text x="813" y="422" text-anchor="middle" font-size="9" font-weight="600" fill="#343a40">Google Cloud Platform</text>
-  <rect x="704" y="430" width="110" height="16" rx="3" fill="#e8f0fe" stroke="#4285f4" stroke-width="0.5"/>
-  <text x="759" y="441" text-anchor="middle" font-size="7" fill="#174ea6">Artifact Registry</text>
-  <rect x="704" y="450" width="110" height="16" rx="3" fill="#e8f0fe" stroke="#4285f4" stroke-width="0.5"/>
-  <text x="759" y="461" text-anchor="middle" font-size="7" fill="#174ea6">Cloud Run (API)</text>
-  <rect x="822" y="450" width="100" height="16" rx="3" fill="#e8f0fe" stroke="#4285f4" stroke-width="0.5"/>
-  <text x="872" y="461" text-anchor="middle" font-size="7" fill="#174ea6">Cloud Run (UI)</text>
+  <rect x="498" y="568" width="238" height="72" rx="6" fill="#fff" stroke="#6c757d" stroke-width="1"/>
+  <text x="617" y="584" text-anchor="middle" font-size="9" font-weight="600" fill="#343a40">Google Cloud Platform</text>
+  <rect x="508" y="592" width="105" height="16" rx="3" fill="#e8f0fe" stroke="#4285f4" stroke-width="0.5"/>
+  <text x="560" y="603" text-anchor="middle" font-size="7" fill="#174ea6">Artifact Registry</text>
+  <rect x="508" y="612" width="105" height="16" rx="3" fill="#e8f0fe" stroke="#4285f4" stroke-width="0.5"/>
+  <text x="560" y="623" text-anchor="middle" font-size="7" fill="#174ea6">Cloud Run (API+UI)</text>
+  <rect x="621" y="592" width="105" height="16" rx="3" fill="#fce4ec" stroke="#c62828" stroke-width="0.5"/>
+  <text x="673" y="603" text-anchor="middle" font-size="7" fill="#b71c1c">Vertex AI</text>
+  <rect x="621" y="612" width="105" height="16" rx="3" fill="#e8f0fe" stroke="#4285f4" stroke-width="0.5"/>
+  <text x="673" y="623" text-anchor="middle" font-size="7" fill="#174ea6">Cloud Storage (GCS)</text>
 
-  <!-- Arrow: Docker → GCP -->
-  <line x1="680" y1="442" x2="702" y2="442" stroke="#495057" stroke-width="1.0" marker-end="url(#arrow)"/>
-  <text x="688" y="437" font-size="5.5" fill="#6c757d">push</text>
+  <!-- Arrow: Docker -> GCP -->
+  <line x1="484" y1="604" x2="506" y2="604" stroke="#495057" stroke-width="1.0" marker-end="url(#arrow)"/>
+  <text x="492" y="599" font-size="5.5" fill="#6c757d">push</text>
+
+  <!-- GCS box standalone -->
+  <rect x="750" y="568" width="182" height="72" rx="6" fill="#fff" stroke="#6c757d" stroke-width="1"/>
+  <text x="841" y="584" text-anchor="middle" font-size="9" font-weight="600" fill="#343a40">GCS Bucket</text>
+  <rect x="760" y="592" width="162" height="16" rx="3" fill="#fff3e0" stroke="#e67e22" stroke-width="0.5"/>
+  <text x="841" y="603" text-anchor="middle" font-size="7" fill="#7c4a03">data/processed/ (train, val, test)</text>
+  <rect x="760" y="612" width="162" height="16" rx="3" fill="#fff3e0" stroke="#e67e22" stroke-width="0.5"/>
+  <text x="841" y="623" text-anchor="middle" font-size="7" fill="#7c4a03">models/best_model.pt</text>
 
   <!-- CI/CD -->
-  <rect x="530" y="490" width="402" height="68" rx="6" fill="#fff" stroke="#6c757d" stroke-width="1"/>
-  <text x="731" y="506" text-anchor="middle" font-size="9" font-weight="600" fill="#343a40">GitHub Actions CI/CD</text>
-  <rect x="544" y="514" width="116" height="18" rx="4" fill="#f6f8fa" stroke="#d1d5da" stroke-width="0.6"/>
-  <text x="602" y="527" text-anchor="middle" font-size="7" font-weight="600" fill="#24292e">ci.yml</text>
-  <text x="602" y="537" text-anchor="middle" font-size="5.5" fill="#6c757d">lint, test, typecheck</text>
+  <rect x="334" y="650" width="598" height="68" rx="6" fill="#fff" stroke="#6c757d" stroke-width="1"/>
+  <text x="633" y="666" text-anchor="middle" font-size="9" font-weight="600" fill="#343a40">GitHub Actions CI/CD</text>
+  <rect x="348" y="674" width="116" height="18" rx="4" fill="#f6f8fa" stroke="#d1d5da" stroke-width="0.6"/>
+  <text x="406" y="687" text-anchor="middle" font-size="7" font-weight="600" fill="#24292e">ci.yml</text>
+  <text x="406" y="697" text-anchor="middle" font-size="5.5" fill="#6c757d">lint, test, typecheck</text>
 
-  <rect x="670" y="514" width="116" height="18" rx="4" fill="#f6f8fa" stroke="#d1d5da" stroke-width="0.6"/>
-  <text x="728" y="527" text-anchor="middle" font-size="7" font-weight="600" fill="#24292e">cd.yml</text>
-  <text x="728" y="537" text-anchor="middle" font-size="5.5" fill="#6c757d">build, push, deploy</text>
+  <rect x="474" y="674" width="116" height="18" rx="4" fill="#f6f8fa" stroke="#d1d5da" stroke-width="0.6"/>
+  <text x="532" y="687" text-anchor="middle" font-size="7" font-weight="600" fill="#24292e">cd.yml</text>
+  <text x="532" y="697" text-anchor="middle" font-size="5.5" fill="#6c757d">build, push, deploy</text>
 
-  <rect x="796" y="514" width="126" height="18" rx="4" fill="#f6f8fa" stroke="#d1d5da" stroke-width="0.6"/>
-  <text x="859" y="527" text-anchor="middle" font-size="7" font-weight="600" fill="#24292e">model-training.yml</text>
-  <text x="859" y="537" text-anchor="middle" font-size="5.5" fill="#6c757d">DVC repro, upload</text>
+  <rect x="600" y="674" width="156" height="18" rx="4" fill="#fce4ec" stroke="#c62828" stroke-width="0.6"/>
+  <text x="678" y="687" text-anchor="middle" font-size="7" font-weight="600" fill="#b71c1c">model-training.yml</text>
+  <text x="678" y="697" text-anchor="middle" font-size="5.5" fill="#b71c1c">Vertex AI GPU pipeline</text>
 
-  <!-- Tools row -->
-  <rect x="530" y="568" width="402" height="38" rx="6" fill="#fff" stroke="#6c757d" stroke-width="1"/>
-  <text x="731" y="583" text-anchor="middle" font-size="8" font-weight="600" fill="#343a40">Dev Tooling</text>
-  <text x="731" y="596" text-anchor="middle" font-size="7" fill="#495057">ruff (lint+format) | mypy (types) | pytest + coverage | pre-commit hooks | Makefile</text>
+  <rect x="766" y="674" width="156" height="18" rx="4" fill="#f6f8fa" stroke="#d1d5da" stroke-width="0.6"/>
+  <text x="844" y="687" text-anchor="middle" font-size="7" font-weight="600" fill="#24292e">Dev Tooling</text>
+  <text x="844" y="697" text-anchor="middle" font-size="5.5" fill="#6c757d">ruff, mypy, pytest, pre-commit</text>
 
   <!-- Config files -->
-  <rect x="530" y="614" width="402" height="30" rx="6" fill="#f8f9fa" stroke="#6c757d" stroke-width="0.8"/>
-  <text x="731" y="633" text-anchor="middle" font-size="7" fill="#6c757d">pyproject.toml | train_config.yaml | inference_config.yaml | prometheus.yml | docker-compose.yml</text>
+  <rect x="334" y="726" width="598" height="30" rx="6" fill="#f8f9fa" stroke="#6c757d" stroke-width="0.8"/>
+  <text x="633" y="745" text-anchor="middle" font-size="7" fill="#6c757d">pyproject.toml | train_config.yaml | inference_config.yaml | prometheus.yml | docker-compose.yml | Makefile</text>
+
+  <!-- Arrow from Vertex AI pipeline to GCS in infra -->
+  <path d="M159,576 L159,586 L320,586 L320,614 L334,614" fill="none" stroke="#c62828" stroke-width="0.8" stroke-dasharray="3,2"/>
 
   <!-- ============================================================ -->
   <!-- LEGEND -->
   <!-- ============================================================ -->
-  <rect x="14" y="536" width="290" height="120" rx="8" fill="#fff" stroke="#dee2e6" stroke-width="1" filter="url(#shadow)"/>
-  <text x="159" y="553" text-anchor="middle" font-size="9" font-weight="700" fill="#343a40">Legend</text>
+  <rect x="14" y="696" width="290" height="110" rx="8" fill="#fff" stroke="#dee2e6" stroke-width="1" filter="url(#shadow)"/>
+  <text x="159" y="713" text-anchor="middle" font-size="9" font-weight="700" fill="#343a40">Legend</text>
 
-  <rect x="28" y="562" width="14" height="10" rx="2" fill="#d4edda" stroke="#28a745" stroke-width="0.8"/>
-  <text x="48" y="571" font-size="7.5" fill="#343a40">Data Layer (DVC, Kaggle, Validation)</text>
+  <rect x="28" y="722" width="14" height="10" rx="2" fill="#d4edda" stroke="#28a745" stroke-width="0.8"/>
+  <text x="48" y="731" font-size="7.5" fill="#343a40">Data Layer (DVC, Kaggle, Validation)</text>
 
-  <rect x="28" y="578" width="14" height="10" rx="2" fill="#ffeeba" stroke="#e67e22" stroke-width="0.8"/>
-  <text x="48" y="587" font-size="7.5" fill="#343a40">Training (PyTorch, EfficientNet, MLflow)</text>
+  <rect x="28" y="736" width="14" height="10" rx="2" fill="#fce4ec" stroke="#c62828" stroke-width="0.8"/>
+  <text x="48" y="745" font-size="7.5" fill="#343a40">Vertex AI Training (GPU, GCS, Quality Gate)</text>
 
-  <rect x="28" y="594" width="14" height="10" rx="2" fill="#cce5ff" stroke="#0069d9" stroke-width="0.8"/>
-  <text x="48" y="603" font-size="7.5" fill="#343a40">Inference (FastAPI, Streamlit)</text>
+  <rect x="28" y="750" width="14" height="10" rx="2" fill="#ffeeba" stroke="#e67e22" stroke-width="0.8"/>
+  <text x="48" y="759" font-size="7.5" fill="#343a40">Local Training (PyTorch, MLflow)</text>
 
-  <rect x="28" y="610" width="14" height="10" rx="2" fill="#e2d5f1" stroke="#7b4fa0" stroke-width="0.8"/>
-  <text x="48" y="619" font-size="7.5" fill="#343a40">Monitoring (Prometheus, Grafana, Drift)</text>
+  <rect x="28" y="764" width="14" height="10" rx="2" fill="#cce5ff" stroke="#0069d9" stroke-width="0.8"/>
+  <text x="48" y="773" font-size="7.5" fill="#343a40">Inference + Frontend (FastAPI, Streamlit)</text>
 
-  <rect x="28" y="626" width="14" height="10" rx="2" fill="#e2e3e5" stroke="#6c757d" stroke-width="0.8"/>
-  <text x="48" y="635" font-size="7.5" fill="#343a40">Infrastructure (Docker, GCP, CI/CD)</text>
+  <rect x="28" y="778" width="14" height="10" rx="2" fill="#e2d5f1" stroke="#7b4fa0" stroke-width="0.8"/>
+  <text x="48" y="787" font-size="7.5" fill="#343a40">Monitoring (Prometheus, Grafana, Drift)</text>
 
-  <line x1="170" y1="569" x2="196" y2="569" stroke="#495057" stroke-width="1.2" marker-end="url(#arrow)"/>
-  <text x="202" y="572" font-size="7.5" fill="#343a40">Data flow</text>
+  <rect x="28" y="792" width="14" height="10" rx="2" fill="#e2e3e5" stroke="#6c757d" stroke-width="0.8"/>
+  <text x="48" y="801" font-size="7.5" fill="#343a40">Infrastructure (Docker, GCP, CI/CD)</text>
 
-  <line x1="170" y1="585" x2="196" y2="585" stroke="#495057" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
-  <text x="202" y="588" font-size="7.5" fill="#343a40">Model artifact flow</text>
+  <line x1="170" y1="731" x2="196" y2="731" stroke="#495057" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <text x="202" y="734" font-size="7.5" fill="#343a40">Data flow</text>
+
+  <line x1="170" y1="747" x2="196" y2="747" stroke="#c62828" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrowRed)"/>
+  <text x="202" y="750" font-size="7.5" fill="#343a40">Model / artifact flow</text>
 
 </svg>

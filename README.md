@@ -11,7 +11,7 @@
 
 **Production-grade MLOps pipeline for detecting AI-generated product photos in e-commerce listings.**
 
-A complete end-to-end machine learning system — from data ingestion and model training to API serving, monitoring, and cloud deployment — built with modern MLOps best practices.
+A complete end-to-end machine learning system -- from data ingestion and GPU training on Vertex AI to API serving, monitoring, and cloud deployment -- built with modern MLOps best practices.
 
 > **Live API** → [ai-product-detector-714127049161.europe-west1.run.app](https://ai-product-detector-714127049161.europe-west1.run.app)
 > &nbsp;|&nbsp; **Swagger UI** → [/docs](https://ai-product-detector-714127049161.europe-west1.run.app/docs)
@@ -28,6 +28,7 @@ A complete end-to-end machine learning system — from data ingestion and model 
 - **Docker-first** -- Multi-service stack with Compose (API + UI + MLflow + Prometheus + Grafana)
 - **Full observability** -- Prometheus metrics, Grafana dashboards, structured JSON logging
 - **DVC pipelines** -- Reproducible data download, validation, and training workflow
+- **Vertex AI training pipeline** -- GPU training on GCP with automated six-stage Kubeflow-style workflow
 - **CI/CD to GCP Cloud Run** -- Automated deploy on push to `main` via GitHub Actions
 - **Production hardening** -- Rate limiting, API key auth, CORS, input validation, drift detection
 - **Comprehensive testing** -- Unit, integration, and load tests (Locust + k6)
@@ -53,11 +54,12 @@ The system follows a modular architecture with clear separation between training
 | **Deep Learning** | PyTorch, torchvision, timm (EfficientNet-B0), Grad-CAM |
 | **API** | FastAPI, Uvicorn, Pydantic v2, slowapi (rate limiting) |
 | **MLOps** | DVC (pipelines + data versioning), MLflow (experiment tracking) |
+| **Training** | Vertex AI (T4 GPU), Kubeflow-style pipeline, Google Cloud Storage |
 | **Monitoring** | Prometheus, Grafana, structlog (JSON), custom drift detection |
-| **Infrastructure** | Docker, Docker Compose, GCP Cloud Run, Artifact Registry |
-| **CI/CD** | GitHub Actions (lint → type-check → test → security → deploy) |
+| **Infrastructure** | Docker, Docker Compose, GCP Cloud Run, Artifact Registry, GCS |
+| **CI/CD** | GitHub Actions (lint → test → deploy), Vertex AI training workflow |
 | **Quality** | Ruff (lint + format), mypy (strict), pytest + coverage, Locust + k6 (load testing) |
-| **UI** | Streamlit |
+| **UI** | Streamlit (Cloud Run) |
 
 ---
 
@@ -330,9 +332,9 @@ All errors follow a consistent format:
 
 ## MLOps Pipeline
 
-### DVC — Reproducible Pipelines
+### DVC -- Reproducible Pipelines
 
-The entire workflow is orchestrated with [DVC](https://dvc.org):
+The entire workflow is orchestrated with [DVC](https://dvc.org) for local development:
 
 ```yaml
 # dvc.yaml
@@ -348,19 +350,51 @@ dvc repro train     # Re-run training only
 dvc status          # Check what's changed
 ```
 
-### CI/CD — GitHub Actions
+### Vertex AI Training Pipeline
 
-Three workflows automate quality and deployment:
+For production training, a fully automated pipeline runs on Google Cloud Vertex AI with GPU acceleration. The workflow is triggered via GitHub Actions (`model-training.yml`) and executes a six-stage pipeline:
+
+```
+Upload Data    Build Image    Train on GPU    Evaluate    Quality Gate    Deploy
+   (GCS)    (Artifact Reg.)  (Vertex AI T4)   (CPU)      (auto check)  (Cloud Run)
+    [1]  ──→     [2]     ──→     [3]      ──→  [4]   ──→    [5]    ──→   [6]
+```
+
+| Stage | Description |
+|---|---|
+| **1. Upload Data** | Sync training data to Google Cloud Storage (`gs://ai-product-detector-487013/data/processed/`) |
+| **2. Build Image** | Build the training Docker image and push to Artifact Registry |
+| **3. Train** | Submit a `CustomContainerTrainingJob` to Vertex AI (n1-standard-4 + NVIDIA T4 GPU) |
+| **4. Evaluate** | Download the trained model and run evaluation on the test set |
+| **5. Quality Gate** | Enforce minimum thresholds: accuracy >= 0.85, F1 >= 0.80 |
+| **6. Deploy** | Build the inference image, deploy to Cloud Run, and run a smoke test |
+
+**Trigger:** Manual dispatch via `workflow_dispatch` (configurable epochs, batch size, auto-deploy flag) or automatically on data changes pushed to `main`.
+
+**Infrastructure:**
+- **Compute:** n1-standard-4 with 1x NVIDIA Tesla T4 GPU, 100 GB boot disk
+- **Storage:** GCS bucket for training data, model artifacts, and staging
+- **Registry:** Artifact Registry for training and inference Docker images
+
+The pipeline can also be run locally using `src/training/vertex_submit.py`:
+
+```bash
+python -m src.training.vertex_submit --epochs 15 --batch-size 64 --sync
+```
+
+### CI/CD -- GitHub Actions
+
+Three workflows automate quality, training, and deployment:
 
 | Workflow | Trigger | Pipeline |
 |---|---|---|
 | **CI** ([`ci.yml`](.github/workflows/ci.yml)) | Push / PR to `main` | Lint, type check, test (3.11 + 3.12), security scan, Docker build |
 | **CD** ([`cd.yml`](.github/workflows/cd.yml)) | Push to `main` / Manual dispatch | Wait for CI, build and push to Artifact Registry, deploy to Cloud Run, smoke test |
-| **Model Training** ([`model-training.yml`](.github/workflows/model-training.yml)) | Manual dispatch | Pull data, train model, evaluate, upload model artifact |
+| **Model Training** ([`model-training.yml`](.github/workflows/model-training.yml)) | Manual dispatch / Data changes | Upload to GCS, build training image, Vertex AI GPU training, evaluate, quality gate, deploy |
 
-The CD pipeline automatically deploys to GCP Cloud Run on every push to `main` after CI passes.
+The CD pipeline automatically deploys to GCP Cloud Run on every push to `main` after CI passes. The Model Training pipeline handles the full training lifecycle on Vertex AI and conditionally deploys when the quality gate passes.
 
-### Experiment Tracking — MLflow
+### Experiment Tracking -- MLflow
 
 All training runs are logged to MLflow with hyperparameters, metrics, and model artifacts:
 
@@ -374,7 +408,7 @@ make mlflow         # Start MLflow UI on port 5000
 
 ### GCP Cloud Run
 
-The API is deployed as a serverless container on Google Cloud Run:
+The API and UI are deployed as serverless containers on Google Cloud Run:
 
 ```
 Region:             europe-west1
@@ -385,10 +419,33 @@ Scaling:            0 → N (automatic)
 Auth:               API key via X-API-Key header
 ```
 
-**Deployment flow:**
+| Service | URL |
+|---|---|
+| **API** | [ai-product-detector-714127049161.europe-west1.run.app](https://ai-product-detector-714127049161.europe-west1.run.app) |
+| **Streamlit UI** | [ai-product-detector-ui-714127049161.europe-west1.run.app](https://ai-product-detector-ui-714127049161.europe-west1.run.app) |
+| **Swagger Docs** | [/docs](https://ai-product-detector-714127049161.europe-west1.run.app/docs) |
+
+### Google Cloud Storage
+
+GCS serves as the central data and model store for the training pipeline:
 
 ```
+Bucket:             gs://ai-product-detector-487013
+├── data/processed/ — Training, validation, and test datasets
+├── models/         — Trained model checkpoints (best_model.pt)
+└── staging/        — Vertex AI job staging files
+```
+
+### Deployment Flows
+
+**Code changes (CD):**
+```
 git push main → CI passes → Docker build → Push to Artifact Registry → Deploy to Cloud Run → Health check
+```
+
+**Model retraining (Vertex AI):**
+```
+Trigger workflow → Upload data to GCS → Build training image → Vertex AI (T4 GPU) → Evaluate → Quality gate → Deploy
 ```
 
 **Manual deploy / rollback:**
@@ -501,7 +558,7 @@ AI-Product-Photo-Detector/
 │   └── workflows/
 │       ├── ci.yml                  # CI: lint + type check + test + security
 │       ├── cd.yml                  # CD: build + push + deploy to Cloud Run
-│       └── model-training.yml      # Model training pipeline (manual)
+│       └── model-training.yml      # Vertex AI training pipeline (GPU)
 ├── configs/
 │   ├── grafana/
 │   │   ├── dashboards/             # Grafana dashboard JSON definitions
@@ -511,8 +568,9 @@ AI-Product-Photo-Detector/
 │   └── train_config.yaml           # Training hyperparameters
 ├── docker/
 │   ├── Dockerfile                  # API production image (CPU PyTorch, non-root)
+│   ├── Dockerfile.training         # Vertex AI GPU training image
 │   ├── serve.Dockerfile            # Serving-optimized image
-│   ├── train.Dockerfile            # Training image
+│   ├── train.Dockerfile            # Local training image
 │   └── ui.Dockerfile               # Streamlit UI image
 ├── docs/
 │   ├── architecture.svg            # System architecture diagram
@@ -545,8 +603,10 @@ AI-Product-Photo-Detector/
 │   ├── training/
 │   │   ├── augmentation.py         # Data augmentation transforms
 │   │   ├── dataset.py              # PyTorch Dataset implementation
+│   │   ├── gcs.py                  # Google Cloud Storage upload/download helpers
 │   │   ├── model.py                # EfficientNet-B0 architecture
-│   │   └── train.py                # Training loop with MLflow tracking
+│   │   ├── train.py                # Training loop with MLflow tracking
+│   │   └── vertex_submit.py        # Vertex AI job submission CLI
 │   ├── ui/
 │   │   └── app.py                  # Streamlit web interface
 │   └── utils/
