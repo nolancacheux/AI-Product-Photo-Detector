@@ -1,5 +1,6 @@
 """Dataset and data loading utilities."""
 
+import logging
 from pathlib import Path
 
 import torch
@@ -8,6 +9,8 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
 from src.training.augmentation import get_train_transforms, get_val_transforms
+
+logger = logging.getLogger(__name__)
 
 
 class AIProductDataset(Dataset):
@@ -52,6 +55,9 @@ class AIProductDataset(Dataset):
         # Collect image paths and labels
         self.samples: list[tuple[Path, int]] = []
         self._load_samples()
+
+        if len(self.samples) == 0:
+            logger.warning(f"No samples found in {self.data_dir}. Check directory structure.")
 
     def _get_default_transform(self) -> transforms.Compose:
         """Get default image transforms.
@@ -101,14 +107,20 @@ class AIProductDataset(Dataset):
         """
         img_path, label = self.samples[idx]
 
-        # Load and convert image
-        image = Image.open(img_path).convert("RGB")
+        try:
+            # Load and convert image
+            image = Image.open(img_path).convert("RGB")
 
-        # Apply transforms
-        if self.transform:
-            image = self.transform(image)
+            # Apply transforms
+            if self.transform:
+                image = self.transform(image)
 
-        return image, label
+            return image, label
+        except (OSError, IOError) as e:
+            logger.warning(f"Failed to load image {img_path}: {e}, returning random replacement")
+            # Return a random valid sample instead of crashing
+            replacement_idx = (idx + 1) % len(self.samples)
+            return self.__getitem__(replacement_idx)
 
 
 def create_dataloaders(
@@ -142,13 +154,17 @@ def create_dataloaders(
         image_size=image_size,
     )
 
+    use_workers = num_workers > 0
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
-        pin_memory=True,
+        pin_memory=torch.cuda.is_available(),
         drop_last=True,
+        persistent_workers=use_workers,
+        prefetch_factor=2 if use_workers else None,
     )
 
     val_loader = DataLoader(
@@ -156,7 +172,9 @@ def create_dataloaders(
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=True,
+        pin_memory=torch.cuda.is_available(),
+        persistent_workers=use_workers,
+        prefetch_factor=2 if use_workers else None,
     )
 
     return train_loader, val_loader

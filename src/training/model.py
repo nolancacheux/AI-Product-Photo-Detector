@@ -44,18 +44,19 @@ class AIImageDetector(nn.Module):
                 param.requires_grad = False
 
         # Get feature dimension from backbone
+        # Spatial size doesn't matter here — global avg pool produces same feature_dim
         with torch.no_grad():
             dummy_input = torch.randn(1, 3, 224, 224)
             features = self.backbone(dummy_input)
             feature_dim = features.shape[1]
 
-        # Custom classification head
+        # Custom classification head (outputs raw logits — use BCEWithLogitsLoss)
         self.classifier = nn.Sequential(
             nn.Linear(feature_dim, 512),
+            nn.BatchNorm1d(512),
             nn.ReLU(inplace=True),
             nn.Dropout(p=dropout),
             nn.Linear(512, 1),
-            nn.Sigmoid(),
         )
 
         self.feature_dim = feature_dim
@@ -68,7 +69,7 @@ class AIImageDetector(nn.Module):
             x: Input tensor of shape (batch_size, 3, 224, 224).
 
         Returns:
-            Probability tensor of shape (batch_size, 1).
+            Raw logits tensor of shape (batch_size, 1).
         """
         features = self.backbone(x)
         return self.classifier(features)
@@ -84,7 +85,7 @@ class AIImageDetector(nn.Module):
         """
         self.eval()
         with torch.no_grad():
-            return self.forward(x)
+            return torch.sigmoid(self.forward(x))
 
     def get_num_trainable_params(self) -> int:
         """Get number of trainable parameters.

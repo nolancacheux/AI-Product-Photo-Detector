@@ -78,17 +78,18 @@ def train_epoch(
         labels = labels.float().unsqueeze(1).to(device)
 
         # Forward pass
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
         outputs = model(images)
         loss = criterion(outputs, labels)
 
         # Backward pass
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
 
-        # Metrics
+        # Metrics (threshold at 0.0 for logits, equivalent to 0.5 after sigmoid)
         total_loss += loss.item() * images.size(0)
-        predicted = (outputs > 0.5).float()
+        predicted = (outputs > 0.0).float()
         correct += (predicted == labels).sum().item()
         total += labels.size(0)
 
@@ -99,6 +100,10 @@ def train_epoch(
                 "acc": f"{correct / total:.4f}",
             }
         )
+
+    if total == 0:
+        logger.warning("Training loader was empty — no samples processed")
+        return 0.0, 0.0
 
     avg_loss = total_loss / total
     accuracy = correct / total
@@ -111,7 +116,7 @@ def validate(
     val_loader: torch.utils.data.DataLoader,
     criterion: nn.Module,
     device: torch.device,
-) -> tuple[float, float, float, float]:
+) -> tuple[float, float, float, float, float]:
     """Validate the model.
 
     Args:
@@ -121,7 +126,7 @@ def validate(
         device: Device to use.
 
     Returns:
-        Tuple of (loss, accuracy, precision, recall).
+        Tuple of (loss, accuracy, precision, recall, f1).
     """
     model.eval()
     total_loss = 0.0
@@ -140,7 +145,7 @@ def validate(
             loss = criterion(outputs, labels)
 
             total_loss += loss.item() * images.size(0)
-            predicted = (outputs > 0.5).float()
+            predicted = (outputs > 0.0).float()
             correct += (predicted == labels).sum().item()
             total += labels.size(0)
 
@@ -149,12 +154,17 @@ def validate(
             false_positives += ((predicted == 1) & (labels == 0)).sum().item()
             false_negatives += ((predicted == 0) & (labels == 1)).sum().item()
 
+    if total == 0:
+        logger.warning("Validation loader was empty — no samples processed")
+        return 0.0, 0.0, 0.0, 0.0, 0.0
+
     avg_loss = total_loss / total
     accuracy = correct / total
     precision = true_positives / (true_positives + false_positives + 1e-8)
     recall = true_positives / (true_positives + false_negatives + 1e-8)
+    f1 = 2 * precision * recall / (precision + recall + 1e-8)
 
-    return avg_loss, accuracy, precision, recall
+    return avg_loss, accuracy, precision, recall, f1
 
 
 def train(config_path: str) -> None:
@@ -206,7 +216,7 @@ def train(config_path: str) -> None:
 
     # Training setup
     training_config = config.get("training", {})
-    criterion = nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = AdamW(
         model.parameters(),
         lr=training_config.get("learning_rate", 0.001),
@@ -234,9 +244,20 @@ def train(config_path: str) -> None:
             {
                 "model_name": model_config.get("name"),
                 "learning_rate": training_config.get("learning_rate"),
+                "weight_decay": training_config.get("weight_decay"),
                 "batch_size": data_config.get("batch_size"),
+                "image_size": data_config.get("image_size"),
                 "epochs": epochs,
                 "seed": config.get("seed"),
+                "dropout": model_config.get("dropout"),
+                "pretrained": model_config.get("pretrained"),
+                "optimizer": "AdamW",
+                "scheduler": "CosineAnnealingLR",
+                "early_stopping_patience": patience,
+                "num_workers": data_config.get("num_workers"),
+                "trainable_params": model.get_num_trainable_params(),
+                "total_params": model.get_num_total_params(),
+                "device": str(device),
             }
         )
 
@@ -247,7 +268,7 @@ def train(config_path: str) -> None:
             train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, device)
 
             # Validate
-            val_loss, val_acc, val_precision, val_recall = validate(
+            val_loss, val_acc, val_precision, val_recall, val_f1 = validate(
                 model, val_loader, criterion, device
             )
 
@@ -263,6 +284,7 @@ def train(config_path: str) -> None:
                     "val_accuracy": val_acc,
                     "val_precision": val_precision,
                     "val_recall": val_recall,
+                    "val_f1": val_f1,
                     "learning_rate": scheduler.get_last_lr()[0],
                 },
                 step=epoch,
@@ -293,12 +315,15 @@ def train(config_path: str) -> None:
                         "epoch": epoch,
                         "model_state_dict": model.state_dict(),
                         "optimizer_state_dict": optimizer.state_dict(),
+                        "scheduler_state_dict": scheduler.state_dict(),
                         "val_accuracy": val_acc,
+                        "best_val_accuracy": best_val_accuracy,
                         "config": config,
                     },
                     checkpoint_dir / "best_model.pt",
                 )
 
+                mlflow.log_artifact(str(checkpoint_dir / "best_model.pt"))
                 logger.info("Saved best model", val_accuracy=f"{val_acc:.4f}")
             else:
                 patience_counter += 1
@@ -308,9 +333,15 @@ def train(config_path: str) -> None:
                 logger.info(f"Early stopping at epoch {epoch + 1}")
                 break
 
+        # Log best metrics
+        mlflow.log_metric("best_val_accuracy", best_val_accuracy)
+
         # Log final model
         if mlflow_config.get("log_models", True):
             mlflow.pytorch.log_model(model, "model")
+
+        # Log config as artifact
+        mlflow.log_artifact(config_path)
 
         logger.info("Training complete", best_val_accuracy=f"{best_val_accuracy:.4f}")
 
