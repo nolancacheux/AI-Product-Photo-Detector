@@ -1,4 +1,8 @@
-"""Structured logging configuration with request tracing."""
+"""Structured logging configuration with request tracing.
+
+Outputs JSON logs compatible with Google Cloud Run / Cloud Logging.
+Maps structlog levels to Cloud Run's `severity` field for proper log level filtering.
+"""
 
 import logging
 import os
@@ -11,6 +15,15 @@ import structlog
 
 # Context variable for request ID tracking
 request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
+
+# Cloud Run severity mapping
+_CLOUD_RUN_SEVERITY = {
+    "debug": "DEBUG",
+    "info": "INFO",
+    "warning": "WARNING",
+    "error": "ERROR",
+    "critical": "CRITICAL",
+}
 
 
 def get_request_id() -> str | None:
@@ -43,16 +56,7 @@ def add_request_id(
     method_name: str,
     event_dict: dict[str, Any],
 ) -> dict[str, Any]:
-    """Add request ID to log events.
-
-    Args:
-        logger: The logger instance.
-        method_name: The logging method name.
-        event_dict: The event dictionary.
-
-    Returns:
-        Updated event dictionary.
-    """
+    """Add request ID to log events."""
     request_id = get_request_id()
     if request_id:
         event_dict["request_id"] = request_id
@@ -64,18 +68,44 @@ def add_service_info(
     method_name: str,
     event_dict: dict[str, Any],
 ) -> dict[str, Any]:
-    """Add service information to log events.
-
-    Args:
-        logger: The logger instance.
-        method_name: The logging method name.
-        event_dict: The event dictionary.
-
-    Returns:
-        Updated event dictionary.
-    """
+    """Add service information to log events."""
     event_dict["service"] = os.getenv("SERVICE_NAME", "ai-photo-detector")
     event_dict["version"] = os.getenv("SERVICE_VERSION", "1.0.0")
+    return event_dict
+
+
+def add_cloud_run_severity(
+    logger: structlog.types.WrappedLogger,
+    method_name: str,
+    event_dict: dict[str, Any],
+) -> dict[str, Any]:
+    """Map log level to Cloud Run severity field.
+
+    Cloud Run / Cloud Logging expects a top-level `severity` field
+    to properly categorize log entries. Without this, all structured
+    logs appear as DEFAULT severity.
+    """
+    level = event_dict.get("level", "info")
+    event_dict["severity"] = _CLOUD_RUN_SEVERITY.get(level, "DEFAULT")
+    return event_dict
+
+
+def add_cloud_trace_context(
+    logger: structlog.types.WrappedLogger,
+    method_name: str,
+    event_dict: dict[str, Any],
+) -> dict[str, Any]:
+    """Add Cloud Trace context for request correlation.
+
+    Cloud Run sets X-Cloud-Trace-Context header. If the trace_id
+    is available in the context, format it for Cloud Logging.
+    """
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+    trace_id = event_dict.pop("trace_id", None)
+    if project_id and trace_id:
+        event_dict["logging.googleapis.com/trace"] = (
+            f"projects/{project_id}/traces/{trace_id}"
+        )
     return event_dict
 
 
@@ -88,21 +118,21 @@ def setup_logging(
 
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR).
-        json_format: If True, output logs in JSON format.
+        json_format: If True, output logs in JSON format (production).
         include_service_info: If True, add service name/version to logs.
     """
-    # Set up standard library logging
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
         level=getattr(logging, level.upper()),
+        force=True,
     )
 
     # Silence noisy libraries
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("watchfiles").setLevel(logging.WARNING)
 
-    # Configure structlog processors
     shared_processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
@@ -112,22 +142,26 @@ def setup_logging(
     ]
 
     if include_service_info:
-        shared_processors.insert(4, add_service_info)
+        shared_processors.append(add_service_info)
 
     if json_format:
-        # JSON output for production
+        # Cloud Run compatible: add severity + trace context
+        shared_processors.append(add_cloud_run_severity)
+        shared_processors.append(add_cloud_trace_context)
         processors = shared_processors + [
+            structlog.processors.format_exc_info,
             structlog.processors.JSONRenderer(),
         ]
     else:
-        # Pretty console output for development
         processors = shared_processors + [
             structlog.dev.ConsoleRenderer(colors=True),
         ]
 
     structlog.configure(
         processors=processors,
-        wrapper_class=structlog.make_filtering_bound_logger(getattr(logging, level.upper())),
+        wrapper_class=structlog.make_filtering_bound_logger(
+            getattr(logging, level.upper())
+        ),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,

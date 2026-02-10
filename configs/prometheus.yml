@@ -18,9 +18,10 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # AI Detector API
+  # AI Detector API (port must match docker-compose service)
   - job_name: 'ai-detector-api'
     static_configs:
-      - targets: ['api:8000']
+      - targets: ['api:8080']
     metrics_path: '/metrics'
     scrape_interval: 10s
+    scrape_timeout: 5s
