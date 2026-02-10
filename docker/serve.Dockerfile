@@ -19,8 +19,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir uv
 
 # Install Python dependencies
-COPY pyproject.toml .
-RUN uv pip install --no-cache-dir . --system
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+RUN uv pip install --no-cache .
 
 # Production stage
 FROM python:3.11-slim
@@ -44,8 +45,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY src/ ./src/
 COPY configs/ ./configs/
 
-# Create models directory
-RUN mkdir -p models && \
+# Create models directory (model mounted at runtime via volume)
+RUN mkdir -p models/checkpoints && \
     chown -R appuser:appuser /app
 
 # Switch to non-root user
@@ -54,14 +55,15 @@ USER appuser
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV MODEL_PATH=/app/models/best_model.pt
+ENV MODEL_PATH=/app/models/checkpoints/best_model.pt \
+    PORT=8080
 
 # Expose port
-EXPOSE 8000
+EXPOSE ${PORT}
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"
+    CMD python -c "import httpx; httpx.get('http://localhost:8080/healthz').raise_for_status()"
 
 # Default command
-CMD ["uvicorn", "src.inference.api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.inference.api:app", "--host", "0.0.0.0", "--port", "8080"]

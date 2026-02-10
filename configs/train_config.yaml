@@ -9,7 +9,7 @@ data:
   train_dir: "data/processed/train"
   val_dir: "data/processed/val"
   test_dir: "data/processed/test"
-  image_size: 128
+  image_size: 224
   batch_size: 64
   num_workers: 4
 

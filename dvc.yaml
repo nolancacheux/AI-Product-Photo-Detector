@@ -17,5 +17,5 @@ stages:
       - configs/train_config.yaml
       - data/processed
     outs:
-      - models/best_model.pt:
+      - models/checkpoints/best_model.pt:
           persist: true

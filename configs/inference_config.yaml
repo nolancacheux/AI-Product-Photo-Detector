@@ -4,7 +4,7 @@
 # Server
 server:
   host: "0.0.0.0"
-  port: 8000
+  port: 8080
   workers: 1
   reload: false
 
@@ -15,7 +15,7 @@ model:
   
 # Image Processing
 image:
-  max_size_mb: 10
+  max_size_mb: 5
   supported_formats: ["jpeg", "jpg", "png", "webp"]
   resize_to: 224
   
@@ -35,10 +35,9 @@ logging:
   level: "INFO"
   format: "json"
   
-# Metrics
+# Metrics (served on the same port as the API, not a separate port)
 metrics:
   enabled: true
-  port: 9090
   path: "/metrics"
   
 # Health Check

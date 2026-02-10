@@ -19,8 +19,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir uv
 
 # Install Python dependencies
-COPY pyproject.toml .
-RUN uv pip install --no-cache-dir . --system
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+RUN uv pip install --no-cache .
 
 # Production stage
 FROM python:3.11-slim

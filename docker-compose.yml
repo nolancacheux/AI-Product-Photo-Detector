@@ -16,8 +16,8 @@ services:
       - ./configs:/app/configs:ro
     environment:
       - PORT=8080
-      - MODEL_PATH=/app/models/checkpoints/best_model.pt
-      - LOG_LEVEL=INFO
+      - AIDETECT_MODEL_PATH=/app/models/checkpoints/best_model.pt
+      - AIDETECT_LOG_LEVEL=INFO
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s

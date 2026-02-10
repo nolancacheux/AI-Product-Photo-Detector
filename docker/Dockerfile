@@ -37,12 +37,12 @@ USER appuser
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080 \
-    MODEL_PATH=/app/models/checkpoints/best_model.pt \
-    LOG_LEVEL=INFO
+    AIDETECT_MODEL_PATH=/app/models/checkpoints/best_model.pt \
+    AIDETECT_LOG_LEVEL=INFO
 
 EXPOSE ${PORT}
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health || exit 1
+    CMD curl -f http://localhost:${PORT}/healthz || exit 1
 
 CMD python -m uvicorn src.inference.api:app --host 0.0.0.0 --port ${PORT}
