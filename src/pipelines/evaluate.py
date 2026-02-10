@@ -341,9 +341,7 @@ def evaluate(
 
 def main() -> None:
     """CLI entry point for model evaluation."""
-    parser = argparse.ArgumentParser(
-        description="Evaluate AI Product Photo Detector model"
-    )
+    parser = argparse.ArgumentParser(description="Evaluate AI Product Photo Detector model")
     parser.add_argument(
         "--model-path",
         type=str,

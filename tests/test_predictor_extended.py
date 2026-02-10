@@ -72,7 +72,11 @@ class TestPredictorWithModel:
 
         assert response.prediction in (PredictionResult.REAL, PredictionResult.AI_GENERATED)
         assert 0.0 <= response.probability <= 1.0
-        assert response.confidence in (ConfidenceLevel.LOW, ConfidenceLevel.MEDIUM, ConfidenceLevel.HIGH)
+        assert response.confidence in (
+            ConfidenceLevel.LOW,
+            ConfidenceLevel.MEDIUM,
+            ConfidenceLevel.HIGH,
+        )
         assert response.inference_time_ms >= 0
         assert response.model_version == "1.0.5"
 
@@ -133,8 +137,10 @@ class TestPredictorDeviceSelection:
 
     def test_auto_device_fallback_cpu(self, tmp_path) -> None:
         """Auto device should fallback to CPU when no GPU."""
-        with patch("torch.cuda.is_available", return_value=False), \
-             patch("torch.backends.mps.is_available", return_value=False):
+        with (
+            patch("torch.cuda.is_available", return_value=False),
+            patch("torch.backends.mps.is_available", return_value=False),
+        ):
             predictor = Predictor(model_path=tmp_path / "fake.pt", device="auto")
             assert str(predictor.device) == "cpu"
 

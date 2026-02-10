@@ -272,9 +272,7 @@ def train(
     epochs = training_config.get("epochs", 20)
     patience = training_config.get("early_stopping_patience", 5)
     patience_counter = 0
-    checkpoint_dir = Path(
-        config.get("checkpoint", {}).get("save_dir", "models/checkpoints")
-    )
+    checkpoint_dir = Path(config.get("checkpoint", {}).get("save_dir", "models/checkpoints"))
 
     with mlflow.start_run():
         # Log parameters
@@ -305,12 +303,19 @@ def train(
 
             # Train
             train_loss, train_acc = train_epoch(
-                model, train_loader, criterion, optimizer, device,
+                model,
+                train_loader,
+                criterion,
+                optimizer,
+                device,
             )
 
             # Validate
             val_loss, val_acc, val_precision, val_recall, val_f1 = validate(
-                model, val_loader, criterion, device,
+                model,
+                val_loader,
+                criterion,
+                device,
             )
 
             # Step scheduler

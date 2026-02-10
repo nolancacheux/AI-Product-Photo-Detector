@@ -6,6 +6,7 @@ import logging
 import sys
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
 from PIL import Image
 
@@ -15,7 +16,7 @@ VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
 EXPECTED_CLASSES = {"real", "ai"}
 
 
-def validate_dataset(data_dir: str) -> dict:
+def validate_dataset(data_dir: str) -> dict[str, Any]:
     """Validate dataset structure, integrity, and statistics.
 
     Args:
@@ -26,7 +27,7 @@ def validate_dataset(data_dir: str) -> dict:
         Dictionary containing the validation report.
     """
     data_path = Path(data_dir)
-    report: dict = {
+    report: dict[str, Any] = {
         "data_dir": str(data_path.resolve()),
         "valid": True,
         "errors": [],
@@ -65,14 +66,10 @@ def validate_dataset(data_dir: str) -> dict:
             report["totals"]["per_class"][cls] += count
 
         if split_report["errors"]:
-            report["errors"].extend(
-                f"[{split}] {e}" for e in split_report["errors"]
-            )
+            report["errors"].extend(f"[{split}] {e}" for e in split_report["errors"])
 
         if split_report["warnings"]:
-            report["warnings"].extend(
-                f"[{split}] {w}" for w in split_report["warnings"]
-            )
+            report["warnings"].extend(f"[{split}] {w}" for w in split_report["warnings"])
 
     if report["errors"]:
         report["valid"] = False
@@ -80,7 +77,7 @@ def validate_dataset(data_dir: str) -> dict:
     return _finalize_report(report)
 
 
-def _validate_split(split_path: Path) -> dict:
+def _validate_split(split_path: Path) -> dict[str, Any]:
     """Validate a single data split (train/test).
 
     Args:
@@ -89,7 +86,7 @@ def _validate_split(split_path: Path) -> dict:
     Returns:
         Split-level validation report.
     """
-    split_report: dict = {
+    split_report: dict[str, Any] = {
         "path": str(split_path),
         "class_counts": {},
         "total_images": 0,
@@ -107,9 +104,7 @@ def _validate_split(split_path: Path) -> dict:
         },
     }
 
-    classes = sorted(
-        d.name for d in split_path.iterdir() if d.is_dir()
-    )
+    classes = sorted(d.name for d in split_path.iterdir() if d.is_dir())
 
     if not classes:
         split_report["errors"].append("No class directories found")
@@ -117,15 +112,11 @@ def _validate_split(split_path: Path) -> dict:
 
     missing = EXPECTED_CLASSES - set(classes)
     if missing:
-        split_report["errors"].append(
-            f"Missing expected classes: {sorted(missing)}"
-        )
+        split_report["errors"].append(f"Missing expected classes: {sorted(missing)}")
 
     extra = set(classes) - EXPECTED_CLASSES
     if extra:
-        split_report["warnings"].append(
-            f"Unexpected class directories: {sorted(extra)}"
-        )
+        split_report["warnings"].append(f"Unexpected class directories: {sorted(extra)}")
 
     for cls in classes:
         cls_path = split_path / cls
@@ -200,7 +191,7 @@ def _list_images(directory: Path) -> list[Path]:
     return sorted(images)
 
 
-def _compute_stats(split_report: dict) -> dict:
+def _compute_stats(split_report: dict[str, Any]) -> dict[str, Any]:
     """Compute summary statistics for resolution and file sizes.
 
     Args:
@@ -213,7 +204,7 @@ def _compute_stats(split_report: dict) -> dict:
     heights = split_report["resolution_stats"]["heights"]
     sizes = split_report["file_size_stats"]["sizes_bytes"]
 
-    summary: dict = {}
+    summary: dict[str, Any] = {}
 
     if widths:
         summary["resolution"] = {
@@ -236,7 +227,7 @@ def _compute_stats(split_report: dict) -> dict:
     return split_report
 
 
-def _summarize(values: list) -> dict:
+def _summarize(values: list[float]) -> dict[str, Any]:
     """Compute min/max/mean/median for a list of numbers.
 
     Args:
@@ -257,7 +248,7 @@ def _summarize(values: list) -> dict:
     }
 
 
-def _finalize_report(report: dict) -> dict:
+def _finalize_report(report: dict[str, Any]) -> dict[str, Any]:
     """Convert defaultdicts to regular dicts for JSON serialization.
 
     Args:
@@ -272,9 +263,7 @@ def _finalize_report(report: dict) -> dict:
 
 def main() -> None:
     """CLI entrypoint for dataset validation."""
-    parser = argparse.ArgumentParser(
-        description="Validate dataset for AI image detection"
-    )
+    parser = argparse.ArgumentParser(description="Validate dataset for AI image detection")
     parser.add_argument(
         "--data-dir",
         type=str,

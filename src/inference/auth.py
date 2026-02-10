@@ -37,7 +37,9 @@ class APIKeyManager:
         """Initialize API key manager."""
         self._keys: set[str] = set()
         self._require_auth = os.getenv("REQUIRE_AUTH", "false").lower() in (
-            "true", "1", "yes",
+            "true",
+            "1",
+            "yes",
         )
         self._load_keys()
 

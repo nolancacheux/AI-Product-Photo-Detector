@@ -10,6 +10,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -27,10 +28,10 @@ class DriftMetrics:
     mean_probability: float
     std_probability: float
     low_confidence_ratio: float
-    prediction_ratio: dict  # {"real": float, "ai_generated": float}
+    prediction_ratio: dict[str, float]
     drift_detected: bool
     drift_score: float
-    alerts: list = field(default_factory=list)
+    alerts: list[str] = field(default_factory=list)
 
 
 class DriftDetector:
@@ -65,10 +66,10 @@ class DriftDetector:
 
         # Sliding window of predictions (thread-safe access via lock)
         self._lock = threading.Lock()
-        self.predictions: deque[dict] = deque(maxlen=window_size)
+        self.predictions: deque[dict[str, Any]] = deque(maxlen=window_size)
 
         # Baseline metrics (from training data or initial deployment)
-        self.baseline: dict | None = None
+        self.baseline: dict[str, Any] | None = None
         if baseline_path and baseline_path.exists():
             self.load_baseline(baseline_path)
 
@@ -213,7 +214,7 @@ class DriftDetector:
 
         return metrics
 
-    def get_status(self) -> dict:
+    def get_status(self) -> dict[str, Any]:
         """Get current monitoring status.
 
         Returns:

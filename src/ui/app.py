@@ -4,6 +4,7 @@ import base64
 import io
 import os
 from datetime import datetime
+from typing import Any
 
 import httpx
 import streamlit as st
@@ -25,7 +26,8 @@ def init_page() -> None:
         initial_sidebar_state="collapsed",
     )
 
-    st.markdown("""
+    st.markdown(
+        """
     <style>
         .main > div { max-width: 700px; margin: 0 auto; }
         .stFileUploader > div { border-radius: 12px; }
@@ -51,7 +53,9 @@ def init_page() -> None:
         }
         .heatmap-section { margin-top: 20px; }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 # Session state
@@ -89,7 +93,7 @@ def compress_image(image_bytes: bytes, max_size_mb: float = 4.5) -> bytes:
     return buf.getvalue()
 
 
-def check_api_health() -> dict | None:
+def check_api_health() -> dict[str, Any] | None:
     """Check if API is healthy."""
     try:
         response = httpx.get(f"{API_URL}/health", timeout=5.0)
@@ -100,14 +104,17 @@ def check_api_health() -> dict | None:
     return None
 
 
-def predict_image(image_bytes: bytes, filename: str) -> dict | None:
+def predict_image(image_bytes: bytes, filename: str) -> dict[str, Any] | None:
     """Send image to API for prediction."""
     try:
         compressed = compress_image(image_bytes)
         files = {"file": (filename, compressed, "image/jpeg")}
         headers = {"X-API-Key": API_KEY} if API_KEY else {}
         response = httpx.post(
-            f"{API_URL}/predict", files=files, headers=headers, timeout=30.0,
+            f"{API_URL}/predict",
+            files=files,
+            headers=headers,
+            timeout=30.0,
         )
         if response.status_code == 200:
             return response.json()
@@ -122,14 +129,17 @@ def predict_image(image_bytes: bytes, filename: str) -> dict | None:
     return None
 
 
-def explain_image(image_bytes: bytes, filename: str) -> dict | None:
+def explain_image(image_bytes: bytes, filename: str) -> dict[str, Any] | None:
     """Get Grad-CAM explanation from API."""
     try:
         compressed = compress_image(image_bytes)
         files = {"file": (filename, compressed, "image/jpeg")}
         headers = {"X-API-Key": API_KEY} if API_KEY else {}
         response = httpx.post(
-            f"{API_URL}/predict/explain", files=files, headers=headers, timeout=30.0,
+            f"{API_URL}/predict/explain",
+            files=files,
+            headers=headers,
+            timeout=30.0,
         )
         if response.status_code == 200:
             return response.json()
@@ -152,14 +162,12 @@ def display_result(result: dict) -> None:
         css_class = "result-ai"
         color = "#e53935"
         bar_color = "#e53935"
-        icon = "AI"
     else:
         percent = (1 - probability) * 100
         label = "Real Photo"
         css_class = "result-real"
         color = "#4caf50"
         bar_color = "#4caf50"
-        icon = "REAL"
 
     # Confidence text
     if percent >= 95:
@@ -171,7 +179,8 @@ def display_result(result: dict) -> None:
     else:
         conf_text = "Low Confidence"
 
-    st.markdown(f"""
+    st.markdown(
+        f"""
     <div class="result-card {css_class}">
         <div class="result-label">{label}</div>
         <div class="big-percent" style="color: {color}">{percent:.1f}%</div>
@@ -180,7 +189,9 @@ def display_result(result: dict) -> None:
         </div>
         <div class="result-meta">{conf_text} · {inference_time:.0f}ms inference</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 def main() -> None:
@@ -194,7 +205,10 @@ def main() -> None:
     # Status indicator
     health = check_api_health()
     if health and health.get("status") == "healthy":
-        st.caption(f"<span style='color:#4caf50;'>●</span> API Online · Model v{health.get('model_version', '?')}", unsafe_allow_html=True)
+        st.caption(
+            f"<span style='color:#4caf50;'>●</span> API Online · Model v{health.get('model_version', '?')}",
+            unsafe_allow_html=True,
+        )
     else:
         st.caption("<span style='color:#e53935;'>●</span> API Offline", unsafe_allow_html=True)
 
@@ -233,12 +247,14 @@ def main() -> None:
                 if result:
                     st.session_state.last_result = result
                     st.session_state.last_explain = None
-                    st.session_state.history.append({
-                        "time": datetime.now().strftime("%H:%M"),
-                        "file": uploaded_file.name[:25],
-                        "result": result.get("prediction", "?"),
-                        "score": f"{(1 - result['probability']) * 100 if result['prediction'] == 'real' else result['probability'] * 100:.1f}%",
-                    })
+                    st.session_state.history.append(
+                        {
+                            "time": datetime.now().strftime("%H:%M"),
+                            "file": uploaded_file.name[:25],
+                            "result": result.get("prediction", "?"),
+                            "score": f"{(1 - result['probability']) * 100 if result['prediction'] == 'real' else result['probability'] * 100:.1f}%",
+                        }
+                    )
 
         if explain:
             with st.spinner("Generating heatmap..."):

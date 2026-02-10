@@ -21,9 +21,7 @@ logger = get_logger(__name__)
 PROJECT_ID = "ai-product-detector-487013"
 REGION = "europe-west1"
 GCS_BUCKET = "ai-product-detector-487013"
-ARTIFACT_REGISTRY = (
-    f"{REGION}-docker.pkg.dev/{PROJECT_ID}/ai-product-detector"
-)
+ARTIFACT_REGISTRY = f"{REGION}-docker.pkg.dev/{PROJECT_ID}/ai-product-detector"
 IMAGE_NAME = "ai-product-detector-train"
 IMAGE_TAG = "latest"
 IMAGE_URI = f"{ARTIFACT_REGISTRY}/{IMAGE_NAME}:{IMAGE_TAG}"
@@ -50,9 +48,12 @@ def build_and_push_image(project_root: Path) -> str:
     # Build the image
     subprocess.run(
         [
-            "docker", "build",
-            "-f", "docker/Dockerfile.training",
-            "-t", IMAGE_URI,
+            "docker",
+            "build",
+            "-f",
+            "docker/Dockerfile.training",
+            "-t",
+            IMAGE_URI,
             ".",
         ],
         check=True,
@@ -115,10 +116,14 @@ def submit_training_job(
         accelerator_count=1,
         boot_disk_size_gb=100,
         args=[
-            "--config", config_path,
-            "--gcs-bucket", GCS_BUCKET,
-            "--epochs", str(epochs),
-            "--batch-size", str(batch_size),
+            "--config",
+            config_path,
+            "--gcs-bucket",
+            GCS_BUCKET,
+            "--epochs",
+            str(epochs),
+            "--batch-size",
+            str(batch_size),
         ],
         sync=sync,
     )

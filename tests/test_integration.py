@@ -57,11 +57,14 @@ def loaded_client(model_checkpoint: Path) -> TestClient:
     picks up the patched version instead of reading inference_config.yaml
     (which hardcodes a stale model path).
     """
-    with patch.dict(os.environ, {"AIDETECT_MODEL_PATH": str(model_checkpoint)}), \
-         patch("src.utils.config.load_yaml_config", return_value={}):
+    with (
+        patch.dict(os.environ, {"AIDETECT_MODEL_PATH": str(model_checkpoint)}),
+        patch("src.utils.config.load_yaml_config", return_value={}),
+    ):
         import importlib
 
         import src.inference.api
+
         importlib.reload(src.inference.api)
         from src.inference.api import app
 
@@ -150,10 +153,7 @@ class TestEndToEndBatch:
     def test_batch_multiple_images(self, loaded_client: TestClient) -> None:
         """Batch with multiple images should return results for each."""
         image_bytes = _make_image_bytes()
-        files = [
-            ("files", (f"test{i}.jpg", image_bytes, "image/jpeg"))
-            for i in range(3)
-        ]
+        files = [("files", (f"test{i}.jpg", image_bytes, "image/jpeg")) for i in range(3)]
         response = loaded_client.post("/predict/batch", files=files)
         assert response.status_code == 200
         data = response.json()
@@ -177,10 +177,7 @@ class TestEndToEndBatch:
     def test_batch_too_many_files(self, loaded_client: TestClient) -> None:
         """Batch should reject more than 20 files."""
         image_bytes = _make_image_bytes()
-        files = [
-            ("files", (f"test{i}.jpg", image_bytes, "image/jpeg"))
-            for i in range(25)
-        ]
+        files = [("files", (f"test{i}.jpg", image_bytes, "image/jpeg")) for i in range(25)]
         response = loaded_client.post("/predict/batch", files=files)
         assert response.status_code == 400
 

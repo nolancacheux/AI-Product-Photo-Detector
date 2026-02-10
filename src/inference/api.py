@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import structlog
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
@@ -218,7 +218,9 @@ async def observability_middleware(request: Request, call_next) -> Response:  # 
         response = await call_next(request)
     except Exception:
         HTTP_REQUESTS_TOTAL.labels(
-            method=method, endpoint=endpoint, status_code="500",
+            method=method,
+            endpoint=endpoint,
+            status_code="500",
         ).inc()
         track_request_end()
         raise
@@ -226,7 +228,9 @@ async def observability_middleware(request: Request, call_next) -> Response:  # 
     duration = time.monotonic() - start
     HTTP_REQUEST_DURATION.labels(method=method, endpoint=endpoint).observe(duration)
     HTTP_REQUESTS_TOTAL.labels(
-        method=method, endpoint=endpoint, status_code=str(response.status_code),
+        method=method,
+        endpoint=endpoint,
+        status_code=str(response.status_code),
     ).inc()
 
     # Response size
@@ -310,7 +314,9 @@ async def predict(
     # Check if model is loaded
     if predictor is None or not predictor.is_ready():
         PREDICTIONS_TOTAL.labels(
-            status="error", prediction="none", confidence="none",
+            status="error",
+            prediction="none",
+            confidence="none",
         ).inc()
         ERRORS_TOTAL.labels(type="model_not_loaded", endpoint="/predict").inc()
         raise HTTPException(
@@ -321,7 +327,9 @@ async def predict(
     # Validate content type
     if file.content_type not in ALLOWED_TYPES:
         PREDICTIONS_TOTAL.labels(
-            status="error", prediction="none", confidence="none",
+            status="error",
+            prediction="none",
+            confidence="none",
         ).inc()
         IMAGE_VALIDATION_ERRORS.labels(error_type="invalid_format").inc()
         raise HTTPException(
@@ -338,7 +346,9 @@ async def predict(
     # Check file size
     if len(contents) > MAX_FILE_SIZE:
         PREDICTIONS_TOTAL.labels(
-            status="error", prediction="none", confidence="none",
+            status="error",
+            prediction="none",
+            confidence="none",
         ).inc()
         IMAGE_VALIDATION_ERRORS.labels(error_type="file_too_large").inc()
         raise HTTPException(
@@ -366,7 +376,8 @@ async def predict(
 
         if drift_detector is not None:
             drift_detector.record_prediction(
-                result.probability, result.prediction.value,
+                result.probability,
+                result.prediction.value,
             )
 
         logger.info(
@@ -380,7 +391,9 @@ async def predict(
 
     except ValueError as e:
         PREDICTIONS_TOTAL.labels(
-            status="error", prediction="none", confidence="none",
+            status="error",
+            prediction="none",
+            confidence="none",
         ).inc()
         ERRORS_TOTAL.labels(type="processing_error", endpoint="/predict").inc()
         raise HTTPException(
@@ -389,7 +402,9 @@ async def predict(
         ) from e
     except Exception as exc:
         PREDICTIONS_TOTAL.labels(
-            status="error", prediction="none", confidence="none",
+            status="error",
+            prediction="none",
+            confidence="none",
         ).inc()
         ERRORS_TOTAL.labels(type="internal_error", endpoint="/predict").inc()
         logger.exception("Unexpected error during prediction")
@@ -474,7 +489,9 @@ async def predict_batch(
             )
             failed += 1
             PREDICTIONS_TOTAL.labels(
-                status="error", prediction="none", confidence="none",
+                status="error",
+                prediction="none",
+                confidence="none",
             ).inc()
             continue
 
@@ -505,7 +522,9 @@ async def predict_batch(
             )
             failed += 1
             PREDICTIONS_TOTAL.labels(
-                status="error", prediction="none", confidence="none",
+                status="error",
+                prediction="none",
+                confidence="none",
             ).inc()
             continue
 
@@ -541,7 +560,9 @@ async def predict_batch(
             )
             failed += 1
             PREDICTIONS_TOTAL.labels(
-                status="error", prediction="none", confidence="none",
+                status="error",
+                prediction="none",
+                confidence="none",
             ).inc()
 
     total_time_ms = (time.monotonic() - batch_start) * 1000
@@ -670,7 +691,7 @@ async def metrics() -> Response:
 
 
 @app.get("/drift", tags=["Monitoring"])
-async def drift_status() -> dict:
+async def drift_status() -> dict[str, Any]:
     """Get drift detection status with full metrics.
 
     Returns:
@@ -689,7 +710,7 @@ async def drift_status() -> dict:
 
 
 @app.get("/privacy", tags=["Info"])
-async def privacy() -> dict:
+async def privacy() -> dict[str, Any]:
     """Privacy policy summary.
 
     Returns:
@@ -707,7 +728,7 @@ async def privacy() -> dict:
 
 
 @app.get("/", tags=["Info"])
-async def root() -> dict:
+async def root() -> dict[str, Any]:
     """API root endpoint.
 
     Returns:

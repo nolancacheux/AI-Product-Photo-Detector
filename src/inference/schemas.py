@@ -103,9 +103,7 @@ class ExplainResponse(BaseModel):
     """Response schema for /predict/explain endpoint with Grad-CAM heatmap."""
 
     prediction: str = Field(description="Classification result (real or ai_generated)")
-    probability: float = Field(
-        ge=0.0, le=1.0, description="Probability of being AI-generated"
-    )
+    probability: float = Field(ge=0.0, le=1.0, description="Probability of being AI-generated")
     confidence: str = Field(description="Confidence level: low, medium, high")
     heatmap_base64: str = Field(description="Base64-encoded JPEG heatmap overlay")
     inference_time_ms: float = Field(ge=0, description="Inference time in milliseconds")

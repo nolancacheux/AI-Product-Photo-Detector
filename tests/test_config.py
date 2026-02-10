@@ -54,7 +54,9 @@ class TestSettings:
 
     def test_settings_from_env(self) -> None:
         """Settings should read from environment variables."""
-        with patch.dict(os.environ, {"AIDETECT_MODEL_PATH": "/custom/model.pt", "AIDETECT_LOG_LEVEL": "DEBUG"}):
+        with patch.dict(
+            os.environ, {"AIDETECT_MODEL_PATH": "/custom/model.pt", "AIDETECT_LOG_LEVEL": "DEBUG"}
+        ):
             settings = Settings()
             assert settings.model_path == "/custom/model.pt"
             assert settings.log_level == "DEBUG"

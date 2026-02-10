@@ -20,7 +20,6 @@ import logging
 from pathlib import Path
 from typing import Any
 
-import kfp
 from kfp import compiler, dsl
 
 from src.utils.config import load_yaml_config
@@ -32,9 +31,7 @@ PROJECT_ID = "ai-product-detector-487013"
 REGION = "europe-west1"
 GCS_BUCKET = "gs://ai-product-detector-487013"
 PIPELINE_ROOT = f"{GCS_BUCKET}/pipeline_root"
-ARTIFACT_REGISTRY = (
-    "europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector"
-)
+ARTIFACT_REGISTRY = "europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector"
 TRAINING_IMAGE = f"{ARTIFACT_REGISTRY}/train:latest"
 SERVICE_NAME = "ai-product-detector"
 
@@ -94,10 +91,7 @@ def validate_data(
         for class_name in ["real", "ai_generated"]:
             class_prefix = f"{prefix}/{split}/{class_name}/"
             blobs = list(bucket.list_blobs(prefix=class_prefix))
-            image_blobs = [
-                b for b in blobs
-                if Path(b.name).suffix.lower() in valid_extensions
-            ]
+            image_blobs = [b for b in blobs if Path(b.name).suffix.lower() in valid_extensions]
             count = len(image_blobs)
             key = f"{split}/{class_name}"
             report["class_counts"][key] = count
@@ -200,12 +194,18 @@ def train_model(
 
     job.run(
         args=[
-            "--config", "configs/train_config.yaml",
-            "--epochs", str(epochs),
-            "--batch-size", str(batch_size),
-            "--learning-rate", str(learning_rate),
-            "--data-dir", "/gcs/data/processed",
-            "--output-dir", "/gcs/output",
+            "--config",
+            "configs/train_config.yaml",
+            "--epochs",
+            str(epochs),
+            "--batch-size",
+            str(batch_size),
+            "--learning-rate",
+            str(learning_rate),
+            "--data-dir",
+            "/gcs/data/processed",
+            "--output-dir",
+            "/gcs/output",
         ],
         replica_count=1,
         machine_type="n1-standard-4",
@@ -268,7 +268,6 @@ def evaluate_model(
     from sklearn.metrics import (
         accuracy_score,
         auc,
-        classification_report,
         confusion_matrix,
         f1_score,
         precision_score,
@@ -341,11 +340,13 @@ def evaluate_model(
     from torch.utils.data import DataLoader, Dataset
     from torchvision import transforms
 
-    transform = transforms.Compose([
-        transforms.Resize((image_size, image_size)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
+    transform = transforms.Compose(
+        [
+            transforms.Resize((image_size, image_size)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
 
     class _TestDataset(Dataset):
         def __init__(self, root: Path) -> None:
@@ -393,7 +394,12 @@ def evaluate_model(
         "f1": float(f1_score(y_true, y_pred, zero_division=0)),
         "auc_roc": roc_auc,
         "total_samples": int(len(y_true)),
-        "confusion_matrix": {"tn": int(cm[0, 0]), "fp": int(cm[0, 1]), "fn": int(cm[1, 0]), "tp": int(cm[1, 1])},
+        "confusion_matrix": {
+            "tn": int(cm[0, 0]),
+            "fp": int(cm[0, 1]),
+            "fn": int(cm[1, 0]),
+            "tp": int(cm[1, 1]),
+        },
     }
 
     # Upload metrics JSON to GCS
@@ -568,8 +574,6 @@ def deploy_model(
     Returns:
         Deployment status message.
     """
-    import json
-
     if not model_resource_name:
         msg = "No model to deploy (registration was skipped)."
         print(msg)
@@ -592,11 +596,17 @@ def deploy_model(
 
     result = subprocess.run(
         [
-            "gcloud", "run", "services", "update", service_name,
-            "--region", region,
+            "gcloud",
+            "run",
+            "services",
+            "update",
+            service_name,
+            "--region",
+            region,
             "--update-env-vars",
             f"MODEL_RESOURCE_NAME={model_resource_name}",
-            "--project", project_id,
+            "--project",
+            project_id,
             "--quiet",
         ],
         capture_output=True,
@@ -607,10 +617,7 @@ def deploy_model(
     if result.returncode == 0:
         msg = f"Deployed model {model_resource_name} to Cloud Run service {service_name}."
     else:
-        msg = (
-            f"Cloud Run update failed (exit {result.returncode}): "
-            f"{result.stderr.strip()}"
-        )
+        msg = f"Cloud Run update failed (exit {result.returncode}): {result.stderr.strip()}"
 
     print(msg)
     return msg
@@ -832,7 +839,9 @@ def main() -> None:
     # run sub-command
     run_parser = subparsers.add_parser("run", help="Submit a pipeline run to Vertex AI")
     run_parser.add_argument(
-        "--config", type=str, default="configs/pipeline_config.yaml",
+        "--config",
+        type=str,
+        default="configs/pipeline_config.yaml",
         help="Path to pipeline configuration",
     )
     run_parser.add_argument("--epochs", type=int, default=None, help="Training epochs override")
@@ -840,9 +849,7 @@ def main() -> None:
     run_parser.add_argument(
         "--min-accuracy", type=float, default=None, help="Minimum accuracy threshold override"
     )
-    run_parser.add_argument(
-        "--auto-deploy", action="store_true", help="Enable auto-deployment"
-    )
+    run_parser.add_argument("--auto-deploy", action="store_true", help="Enable auto-deployment")
 
     args = parser.parse_args()
 

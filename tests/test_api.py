@@ -43,7 +43,6 @@ class TestHealthEndpoint:
         assert "model_version" in data
         assert "uptime_seconds" in data
 
-
     def test_health_unhealthy_when_no_model(self, client: TestClient) -> None:
         """Test health returns unhealthy when model is not loaded."""
         response = client.get("/health")
@@ -99,7 +98,10 @@ class TestPrivacyEndpoint:
         """Test privacy explicitly states no image storage."""
         response = client.get("/privacy")
         data = response.json()
-        assert "never saved" in data["image_storage"].lower() or "in-memory" in data["image_storage"].lower()
+        assert (
+            "never saved" in data["image_storage"].lower()
+            or "in-memory" in data["image_storage"].lower()
+        )
 
 
 class TestMetricsEndpoint:

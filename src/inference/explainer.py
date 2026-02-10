@@ -3,6 +3,7 @@
 import base64
 import io
 import time
+from typing import Any
 
 import numpy as np
 import torch
@@ -18,7 +19,9 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-def _rebuild_classifier(state_dict: dict, feature_dim: int, dropout: float) -> nn.Sequential:
+def _rebuild_classifier(
+    state_dict: dict[str, Any], feature_dim: int, dropout: float
+) -> nn.Sequential:
     """Rebuild classifier head to match checkpoint structure.
 
     Inspects state_dict keys to determine the original classifier layout,
@@ -28,9 +31,7 @@ def _rebuild_classifier(state_dict: dict, feature_dim: int, dropout: float) -> n
 
     # Current model: [Linear, BatchNorm, ReLU, Dropout, Linear] → indices 0,1,2,3,4
     # Old model:     [Linear, ReLU, Dropout, Linear]             → indices 0,1,2,3
-    has_batchnorm = any(
-        k for k in cls_keys if ".running_mean" in k or ".running_var" in k
-    )
+    has_batchnorm = any(k for k in cls_keys if ".running_mean" in k or ".running_var" in k)
 
     if has_batchnorm:
         return nn.Sequential(
@@ -57,17 +58,21 @@ class GradCAMExplainer:
         self.model: AIImageDetector | None = None
         self.cam: GradCAM | None = None
         self.model_version: str = "1.0.0"
-        self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ])
+        self.transform = transforms.Compose(
+            [
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            ]
+        )
         self._load_model()
 
     def _load_model(self) -> None:
         try:
             checkpoint = torch.load(
-                self.model_path, map_location=self.device, weights_only=False,
+                self.model_path,
+                map_location=self.device,
+                weights_only=False,
             )
 
             config = checkpoint.get("config", {})
@@ -82,7 +87,9 @@ class GradCAMExplainer:
             # Rebuild classifier to match checkpoint structure (handles old checkpoints)
             state_dict = checkpoint["model_state_dict"]
             self.model.classifier = _rebuild_classifier(
-                state_dict, self.model.feature_dim, model_config.get("dropout", 0.3),
+                state_dict,
+                self.model.feature_dim,
+                model_config.get("dropout", 0.3),
             )
 
             self.model.load_state_dict(state_dict)
@@ -100,7 +107,7 @@ class GradCAMExplainer:
             self.model = None
             self.cam = None
 
-    def explain(self, image_bytes: bytes) -> dict:
+    def explain(self, image_bytes: bytes) -> dict[str, Any]:
         """Generate prediction with Grad-CAM heatmap overlay.
 
         Args:

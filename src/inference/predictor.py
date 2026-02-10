@@ -76,7 +76,9 @@ class Predictor:
 
         try:
             checkpoint = torch.load(
-                self.model_path, map_location=self.device, weights_only=False,
+                self.model_path,
+                map_location=self.device,
+                weights_only=False,
             )
 
             # Get config from checkpoint
@@ -97,6 +99,7 @@ class Predictor:
             except RuntimeError:
                 # Rebuild classifier to match checkpoint format
                 import torch.nn as nn
+
                 if "classifier.1.weight" not in state_dict and "classifier.3.weight" in state_dict:
                     # Old format: Linear(in, 512) -> ReLU -> Dropout -> Linear(512, 1)
                     in_features = self.model.classifier[0].in_features
@@ -177,6 +180,7 @@ class Predictor:
             image.close()
 
             # Predict (model outputs raw logits, apply sigmoid for probability)
+            assert self.model is not None  # guaranteed by is_ready() check above
             with torch.no_grad():
                 output = self.model(tensor)
                 probability = torch.sigmoid(output).item()

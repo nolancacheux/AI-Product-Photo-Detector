@@ -1,6 +1,6 @@
 """Configuration management utilities."""
 
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings
 
 
-class LogLevel(str, Enum):
+class LogLevel(StrEnum):
     """Valid log levels."""
 
     DEBUG = "DEBUG"
@@ -83,7 +83,8 @@ def load_yaml_config(config_path: str | Path) -> dict[str, Any]:
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
     with open(config_path) as f:
-        return yaml.safe_load(f)
+        result: dict[str, Any] = yaml.safe_load(f)
+        return result
 
 
 def get_settings() -> Settings:

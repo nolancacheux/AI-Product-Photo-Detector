@@ -61,10 +61,12 @@ class TestAIProductDataset:
         from torchvision import transforms
 
         _create_test_images(tmp_path, real_count=1, ai_count=0)
-        custom = transforms.Compose([
-            transforms.Resize((64, 64)),
-            transforms.ToTensor(),
-        ])
+        custom = transforms.Compose(
+            [
+                transforms.Resize((64, 64)),
+                transforms.ToTensor(),
+            ]
+        )
         dataset = AIProductDataset(data_dir=tmp_path, transform=custom, image_size=64)
         image, _ = dataset[0]
         assert image.shape == (3, 64, 64)

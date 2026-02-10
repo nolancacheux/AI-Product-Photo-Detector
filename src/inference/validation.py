@@ -3,6 +3,7 @@
 import hashlib
 import io
 import re
+from typing import Any
 
 from PIL import Image
 
@@ -64,7 +65,7 @@ def validate_image_bytes(
     max_size: int = MAX_FILE_SIZE,
     min_dimension: int = MIN_IMAGE_SIZE,
     max_dimension: int = MAX_IMAGE_SIZE,
-) -> dict:
+) -> dict[str, Any]:
     """Validate image data thoroughly.
 
     Args:
@@ -208,10 +209,10 @@ def sanitize_filename(filename: str | None) -> str:
 
 
 async def validate_upload_file(
-    file,
+    file: Any,
     allowed_types: set[str] | None = None,
     max_size: int = MAX_FILE_SIZE,
-) -> tuple[bytes, dict]:
+) -> tuple[bytes, dict[str, Any]]:
     """Validate an uploaded file.
 
     Args:

@@ -25,6 +25,7 @@ def _get_client(project: str = DEFAULT_PROJECT) -> Any:
         google.cloud.storage.Client instance.
     """
     from google.cloud import storage
+
     return storage.Client(project=project)
 
 
@@ -52,7 +53,7 @@ def download_directory(
         if blob.name.endswith("/"):
             continue
 
-        relative_path = blob.name[len(gcs_prefix):].lstrip("/")
+        relative_path = blob.name[len(gcs_prefix) :].lstrip("/")
         if not relative_path:
             continue
 

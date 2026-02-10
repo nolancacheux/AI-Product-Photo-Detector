@@ -103,9 +103,7 @@ def add_cloud_trace_context(
     project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
     trace_id = event_dict.pop("trace_id", None)
     if project_id and trace_id:
-        event_dict["logging.googleapis.com/trace"] = (
-            f"projects/{project_id}/traces/{trace_id}"
-        )
+        event_dict["logging.googleapis.com/trace"] = f"projects/{project_id}/traces/{trace_id}"
     return event_dict
 
 
@@ -159,9 +157,7 @@ def setup_logging(
 
     structlog.configure(
         processors=processors,
-        wrapper_class=structlog.make_filtering_bound_logger(
-            getattr(logging, level.upper())
-        ),
+        wrapper_class=structlog.make_filtering_bound_logger(getattr(logging, level.upper())),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,
