@@ -90,8 +90,25 @@ class Predictor:
                 dropout=model_config.get("dropout", 0.3),
             )
 
-            # Load weights
-            self.model.load_state_dict(checkpoint["model_state_dict"])
+            # Handle old checkpoints without BatchNorm in classifier
+            state_dict = checkpoint["model_state_dict"]
+            try:
+                self.model.load_state_dict(state_dict)
+            except RuntimeError:
+                # Rebuild classifier to match checkpoint format
+                import torch.nn as nn
+                classifier_keys = [k for k in state_dict if k.startswith("classifier.")]
+                if "classifier.1.weight" not in state_dict and "classifier.3.weight" in state_dict:
+                    # Old format: Linear(in, 512) -> ReLU -> Dropout -> Linear(512, 1)
+                    in_features = self.model.classifier[0].in_features
+                    dropout = model_config.get("dropout", 0.3)
+                    self.model.classifier = nn.Sequential(
+                        nn.Linear(in_features, 512),
+                        nn.ReLU(inplace=True),
+                        nn.Dropout(p=dropout),
+                        nn.Linear(512, 1),
+                    )
+                    self.model.load_state_dict(state_dict)
             self.model = self.model.to(self.device)
             self.model.eval()
 
