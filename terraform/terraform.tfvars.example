@@ -1,0 +1,16 @@
+# Required — your GCP project ID
+project_id = "my-gcp-project-id"
+
+# Optional — override defaults
+# region      = "europe-west1"
+# app_name    = "ai-product-detector"
+# environment = "dev"
+
+# Cloud Run tuning
+# cloud_run_cpu            = "1000m"
+# cloud_run_memory         = "512Mi"
+# cloud_run_max_instances  = 3
+# cloud_run_min_instances  = 0
+
+# Custom container image (leave empty to use Artifact Registry default)
+# cloud_run_container_image = "europe-west1-docker.pkg.dev/my-project/aiproductdetector/ai-product-detector:v1.0.0"
