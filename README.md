@@ -1,6 +1,7 @@
 # AI Product Photo Detector
 
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
+[![CI](https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/ci.yml/badge.svg)](https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/ci.yml)
+[![Python 3.11 | 3.12](https://img.shields.io/badge/python-3.11%20|%203.12-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -104,13 +105,59 @@ Once you have a trained model in `models/checkpoints/best_model.pt`:
 
 ```bash
 # Start server
-uvicorn src.inference.api:app --host 0.0.0.0 --port 8000
+make serve
+# or: uvicorn src.inference.api:app --host 0.0.0.0 --port 8000
+```
 
-# Test single prediction
-curl -X POST "http://localhost:8000/predict" -F "file=@image.jpg"
+#### API Endpoints
 
-# Check drift status
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | API info |
+| `/health` | GET | Health check |
+| `/predict` | POST | Single image prediction |
+| `/predict/batch` | POST | Batch prediction (up to 10 images) |
+| `/metrics` | GET | Prometheus metrics |
+| `/drift` | GET | Drift detection status |
+| `/privacy` | GET | Privacy policy summary |
+| `/docs` | GET | Swagger UI (interactive API docs) |
+
+#### curl Examples
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Single prediction
+curl -X POST http://localhost:8000/predict \
+  -F "file=@tests/data/sample_real.jpg"
+
+# Batch prediction
+curl -X POST http://localhost:8000/predict/batch \
+  -F "files=@tests/data/sample_real.jpg" \
+  -F "files=@tests/data/sample_ai.png"
+
+# Prometheus metrics
+curl http://localhost:8000/metrics
+
+# Drift status
 curl http://localhost:8000/drift
+
+# Privacy info
+curl http://localhost:8000/privacy
+
+# With API key (when auth is enabled)
+curl -X POST http://localhost:8000/predict \
+  -H "X-API-Key: your-key-here" \
+  -F "file=@image.jpg"
+```
+
+#### Quick Test with Make
+
+```bash
+# Requires running API (make serve)
+make predict        # Test single image prediction
+make predict-batch  # Test batch prediction
 ```
 
 ### Run UI
@@ -282,6 +329,79 @@ pytest tests/test_api.py -v
 | Training Time (T4 GPU) | ~45s |
 | Training Time (CPU) | ~15 min |
 | Inference | ~50ms/image |
+
+## CI/CD Pipeline
+
+### Workflows
+
+| Workflow | Trigger | Description |
+|----------|---------|-------------|
+| **CI** (`ci.yml`) | Push/PR to `main` | Lint (ruff), type check (mypy), tests (pytest + coverage), security scan, Docker build (PR), deploy (push main) |
+| **Manual Deploy** (`deploy.yml`) | Manual (`workflow_dispatch`) | Deploy any image tag (rollback support), dry run, health check |
+| **DVC Pipeline** (`dvc.yml`) | Manual (`workflow_dispatch`) | Reproduce DVC pipeline (download data, train model) |
+
+### CI Pipeline Details
+
+On every PR and push to `main`:
+1. **Lint & Format** — `ruff check` + `ruff format --check`
+2. **Type Check** — `mypy` with strict mode
+3. **Tests** — `pytest` with coverage on Python 3.11 & 3.12 (matrix)
+4. **Security** — `pip-audit` (dependency CVEs) + `bandit` (code scan)
+5. **Docker Build** — Validates Dockerfile on PRs (with GitHub Actions cache)
+6. **Deploy** — Auto-deploys to Cloud Run on `main` push (after all checks pass)
+
+### Required GitHub Secrets
+
+Configure these in **Settings → Secrets and variables → Actions**:
+
+| Secret | Description | Required for |
+|--------|-------------|-------------|
+| `GCP_PROJECT_ID` | Google Cloud project ID (e.g., `my-project-123456`) | Deploy |
+| `GCP_SA_KEY` | Service account JSON key with roles: Cloud Run Admin, Artifact Registry Writer, Service Account User | Deploy |
+| `DVC_REMOTE_URL` | DVC remote storage URL (e.g., `s3://bucket/dvc` or `gs://bucket/dvc`) | DVC pipeline (optional) |
+
+#### GCP Service Account Setup
+
+```bash
+# Create service account
+gcloud iam service-accounts create github-actions \
+  --display-name="GitHub Actions CI/CD"
+
+# Grant roles
+for ROLE in run.admin artifactregistry.writer iam.serviceAccountUser; do
+  gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:github-actions@$PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/$ROLE"
+done
+
+# Create JSON key
+gcloud iam service-accounts keys create key.json \
+  --iam-account=github-actions@$PROJECT_ID.iam.gserviceaccount.com
+
+# Copy key.json content to GitHub secret GCP_SA_KEY, then delete local file
+rm key.json
+```
+
+### Branch Protection (Recommended)
+
+Configure in **Settings → Branches → Add rule** for `main`:
+
+- ✅ Require pull request reviews before merging
+- ✅ Require status checks to pass (select: `Lint & Format`, `Tests (Python 3.11)`, `Type Checking`)
+- ✅ Require branches to be up to date before merging
+- ✅ Do not allow bypassing the above settings
+
+## Privacy & Data Handling
+
+This API is designed with privacy-by-design principles:
+
+- **No image storage** — Uploaded images are processed in-memory only and never saved to disk
+- **No user tracking** — No cookies, sessions, or user identifiers
+- **No personal data in logs** — Only operational metadata (prediction result, latency)
+- **No personal data in metrics** — Prometheus metrics contain only aggregate counters
+- **GDPR compliant** — Fully stateless service, no data retention
+
+See [PRIVACY.md](PRIVACY.md) for the full privacy policy, or query the `/privacy` endpoint.
 
 ## Author
 

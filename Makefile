@@ -1,7 +1,7 @@
 # Makefile for AI Product Photo Detector
 # Run `make help` for available commands
 
-.PHONY: help install dev lint format test train serve ui docker-build docker-up docker-down clean
+.PHONY: help install dev lint format test train serve ui docker-build docker-run docker-up docker-down predict predict-batch clean
 
 # Default target
 help:
@@ -23,8 +23,13 @@ help:
 	@echo ""
 	@echo "Docker:"
 	@echo "  make docker-build  Build Docker images"
+	@echo "  make docker-run    Run API container locally"
 	@echo "  make docker-up     Start all services"
 	@echo "  make docker-down   Stop all services"
+	@echo ""
+	@echo "Testing API:"
+	@echo "  make predict       Test single prediction (requires running API)"
+	@echo "  make predict-batch Test batch prediction (requires running API)"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean       Remove build artifacts"
@@ -64,11 +69,26 @@ docker-build:
 	docker build -f docker/train.Dockerfile -t ai-product-detector-train:1.0.0 .
 	docker build -f docker/serve.Dockerfile -t ai-product-detector:1.0.0 .
 
+docker-run:
+	docker run --rm -p 8000:8000 -v $(PWD)/models:/app/models ai-product-detector:1.0.0
+
 docker-up:
 	docker compose up -d
 
 docker-down:
 	docker compose down
+
+# Quick prediction test (requires running API on localhost:8000)
+predict:
+	@echo "Testing prediction with sample image..."
+	curl -s -X POST http://localhost:8000/predict \
+		-F "file=@tests/data/sample_real.jpg" | python -m json.tool
+
+predict-batch:
+	@echo "Testing batch prediction..."
+	curl -s -X POST http://localhost:8000/predict/batch \
+		-F "files=@tests/data/sample_real.jpg" \
+		-F "files=@tests/data/sample_ai.png" | python -m json.tool
 
 # Cleanup
 clean:

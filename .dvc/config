@@ -1,0 +1,4 @@
+[core]
+    remote = gcs
+['remote "gcs"']
+    url = gs://ai-product-detector-487013-mlops-data/dvc
