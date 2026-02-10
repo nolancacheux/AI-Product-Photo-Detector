@@ -30,18 +30,30 @@ class TestAIImageDetector:
         assert output.shape == (batch_size, 1)
 
     def test_model_output_range(self) -> None:
-        """Test output is in valid probability range [0, 1]."""
+        """Test predict_proba output is in valid probability range [0, 1]."""
+        model = create_model(pretrained=False)
+
+        x = torch.randn(8, 3, 224, 224)
+
+        # forward() returns raw logits; predict_proba() applies sigmoid
+        proba = model.predict_proba(x)
+
+        assert torch.all(proba >= 0)
+        assert torch.all(proba <= 1)
+
+    def test_forward_returns_logits(self) -> None:
+        """Test forward pass returns raw logits (can be negative)."""
         model = create_model(pretrained=False)
         model.eval()
 
-        x = torch.randn(8, 3, 224, 224)
+        x = torch.randn(4, 3, 224, 224)
 
         with torch.no_grad():
             output = model(x)
 
-        # Check range
-        assert torch.all(output >= 0)
-        assert torch.all(output <= 1)
+        # Logits can be any real number
+        assert output.shape == (4, 1)
+        assert output.dtype == torch.float32
 
     def test_model_param_count(self) -> None:
         """Test parameter counting methods."""

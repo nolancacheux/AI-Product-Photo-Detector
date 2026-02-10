@@ -53,10 +53,12 @@ def model_checkpoint(tmp_path_factory) -> Path:
 def loaded_client(model_checkpoint: Path) -> TestClient:
     """Create a TestClient with a loaded model.
 
-    Patches the model path so the API actually loads the checkpoint.
+    Patches load_yaml_config at the SOURCE module so that importlib.reload
+    picks up the patched version instead of reading inference_config.yaml
+    (which hardcodes a stale model path).
     """
-    with patch.dict(os.environ, {"MODEL_PATH": str(model_checkpoint)}):
-        # Force reimport so the lifespan picks up the new env
+    with patch.dict(os.environ, {"AIDETECT_MODEL_PATH": str(model_checkpoint)}), \
+         patch("src.utils.config.load_yaml_config", return_value={}):
         import importlib
         import src.inference.api
         importlib.reload(src.inference.api)
