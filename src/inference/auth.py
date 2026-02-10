@@ -19,6 +19,8 @@ API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 def generate_api_key(prefix: str = "apd") -> str:
     """Generate a secure random API key.
 
+    Utility for CLI / admin scripts. Not called by the API itself.
+
     Args:
         prefix: Short prefix for key identification.
 
@@ -47,7 +49,7 @@ class APIKeyManager:
                 key = key.strip()
                 if key:
                     self._keys.add(self._hash_key(key))
-            logger.info(f"Loaded {len(self._keys)} API key(s)")
+            logger.info("API keys loaded", count=len(self._keys))
 
         if self._require_auth and not self._keys:
             logger.warning(
@@ -61,11 +63,17 @@ class APIKeyManager:
         return hashlib.sha256(key.encode()).hexdigest()
 
     def validate_key(self, key: str) -> bool:
-        """Validate an API key using constant-time comparison."""
+        """Validate an API key using constant-time comparison.
+
+        Iterates ALL stored keys to avoid timing side-channels that
+        leak the number of configured keys.
+        """
         key_hash = self._hash_key(key)
-        return any(
-            hmac.compare_digest(key_hash, stored) for stored in self._keys
-        )
+        found = False
+        for stored in self._keys:
+            if hmac.compare_digest(key_hash, stored):
+                found = True
+        return found
 
     @property
     def is_enabled(self) -> bool:

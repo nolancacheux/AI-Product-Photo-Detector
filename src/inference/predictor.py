@@ -71,11 +71,13 @@ class Predictor:
     def _load_model(self) -> None:
         """Load model from checkpoint."""
         if not self.model_path.exists():
-            logger.warning(f"Model not found at {self.model_path}")
+            logger.warning("Model not found", model_path=str(self.model_path))
             return
 
         try:
-            checkpoint = torch.load(self.model_path, map_location=self.device)
+            checkpoint = torch.load(
+                self.model_path, map_location=self.device, weights_only=False,
+            )
 
             # Get config from checkpoint
             config = checkpoint.get("config", {})
@@ -102,8 +104,8 @@ class Predictor:
                 device=str(self.device),
                 version=self.model_version,
             )
-        except Exception as e:
-            logger.error(f"Failed to load model: {e}")
+        except Exception:
+            logger.exception("Failed to load model")
             self.model = None
 
     def is_ready(self) -> bool:
@@ -154,13 +156,14 @@ class Predictor:
             # Load image
             image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-            # Transform
+            # Transform then close PIL image to free memory
             tensor = self.transform(image).unsqueeze(0).to(self.device)
+            image.close()
 
-            # Predict
+            # Predict (model outputs raw logits, apply sigmoid for probability)
             with torch.no_grad():
                 output = self.model(tensor)
-                probability = output.item()
+                probability = torch.sigmoid(output).item()
 
             # Calculate inference time
             inference_time_ms = (time.time() - start_time) * 1000
@@ -181,8 +184,8 @@ class Predictor:
             )
 
         except Exception as e:
-            logger.error(f"Prediction failed: {e}")
-            raise ValueError(f"Failed to process image: {e}") from e
+            logger.exception("Prediction failed")
+            raise ValueError("Failed to process image") from e
 
     def predict_from_path(self, image_path: str | Path) -> PredictResponse:
         """Predict from image file path.

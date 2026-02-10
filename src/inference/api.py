@@ -1,6 +1,7 @@
 """FastAPI application for AI Product Photo Detector."""
 
 import os
+import threading
 import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -8,6 +9,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated
 
+import structlog
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import generate_latest
@@ -70,8 +72,23 @@ limiter = Limiter(key_func=_get_real_client_ip, default_limits=["200/minute"])
 predictor: Predictor | None = None
 drift_detector: DriftDetector | None = None
 start_time: float = 0.0
-total_predictions: int = 0
+_predictions_lock = threading.Lock()
+_total_predictions: int = 0
 logger = get_logger(__name__)
+
+
+def _increment_predictions() -> int:
+    """Atomically increment and return total predictions count."""
+    global _total_predictions
+    with _predictions_lock:
+        _total_predictions += 1
+        return _total_predictions
+
+
+def _get_total_predictions() -> int:
+    """Thread-safe read of total predictions."""
+    with _predictions_lock:
+        return _total_predictions
 
 
 @asynccontextmanager
@@ -165,7 +182,7 @@ ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 # Middleware: request tracking, request ID, HTTP metrics
 # ---------------------------------------------------------------------------
 @app.middleware("http")
-async def observability_middleware(request: Request, call_next):  # noqa: ANN001
+async def observability_middleware(request: Request, call_next) -> Response:  # noqa: ANN001
     """Track HTTP metrics, request size, response size, and inject request ID."""
     # Inject request ID from header or generate
     incoming_id = request.headers.get("X-Request-ID")
@@ -174,7 +191,6 @@ async def observability_middleware(request: Request, call_next):  # noqa: ANN001
     # Track Cloud Trace context for correlated logging
     trace_header = request.headers.get("X-Cloud-Trace-Context")
     if trace_header:
-        import structlog
         structlog.contextvars.bind_contextvars(trace_id=trace_header.split("/")[0])
 
     # Request size (content-length if present)
@@ -232,7 +248,7 @@ async def health_check() -> HealthResponse:
     Returns:
         Health status with model info, active requests, drift status.
     """
-    global predictor, drift_detector, start_time, total_predictions
+    global predictor, drift_detector, start_time
 
     uptime = time.time() - start_time if start_time > 0 else 0.0
     model_loaded = predictor is not None and predictor.is_ready()
@@ -249,7 +265,7 @@ async def health_check() -> HealthResponse:
         uptime_seconds=round(uptime, 2),
         active_requests=int(ACTIVE_REQUESTS._value.get()),
         drift_detected=drift_detected,
-        predictions_total=total_predictions,
+        predictions_total=_get_total_predictions(),
     )
 
 
@@ -278,7 +294,7 @@ async def predict(
     Returns:
         Prediction with probability score and confidence level.
     """
-    global predictor, drift_detector, total_predictions
+    global predictor, drift_detector
 
     # Check if model is loaded
     if predictor is None or not predictor.is_ready():
@@ -305,8 +321,8 @@ async def predict(
             },
         )
 
-    # Read file
-    contents = await file.read()
+    # Read file with size limit — avoid loading huge payloads into memory
+    contents = await file.read(MAX_FILE_SIZE + 1)
 
     # Check file size
     if len(contents) > MAX_FILE_SIZE:
@@ -335,7 +351,7 @@ async def predict(
             latency_seconds=latency,
             success=True,
         )
-        total_predictions += 1
+        _increment_predictions()
 
         if drift_detector is not None:
             drift_detector.record_prediction(
@@ -360,6 +376,16 @@ async def predict(
             status_code=400,
             detail={"error": "Processing error", "detail": str(e)},
         ) from e
+    except Exception:
+        PREDICTIONS_TOTAL.labels(
+            status="error", prediction="none", confidence="none",
+        ).inc()
+        ERRORS_TOTAL.labels(type="internal_error", endpoint="/predict").inc()
+        logger.exception("Unexpected error during prediction")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "Internal error", "detail": "An unexpected error occurred"},
+        )
 
 
 MAX_BATCH_SIZE = 10
@@ -391,7 +417,7 @@ async def predict_batch(
     Returns:
         Batch prediction results with individual results for each image.
     """
-    global predictor, total_predictions
+    global predictor
 
     # Check if model is loaded
     if predictor is None or not predictor.is_ready():
@@ -421,7 +447,7 @@ async def predict_batch(
     successful = 0
     failed = 0
     total_bytes = 0
-    batch_start = time.time()
+    batch_start = time.monotonic()
 
     for file in files:
         # Validate content type
@@ -441,8 +467,8 @@ async def predict_batch(
             ).inc()
             continue
 
-        # Read file
-        contents = await file.read()
+        # Read file with bounded size to avoid memory exhaustion
+        contents = await file.read(MAX_FILE_SIZE + 1)
         total_bytes += len(contents)
 
         # Check total batch payload size
@@ -485,7 +511,7 @@ async def predict_batch(
                 )
             )
             successful += 1
-            total_predictions += 1
+            _increment_predictions()
             PREDICTIONS_TOTAL.labels(
                 status="success",
                 prediction=result.prediction.value,
@@ -507,8 +533,8 @@ async def predict_batch(
                 status="error", prediction="none", confidence="none",
             ).inc()
 
-    total_time = (time.time() - batch_start) * 1000
-    BATCH_LATENCY.observe(total_time / 1000)
+    total_time_ms = (time.monotonic() - batch_start) * 1000
+    BATCH_LATENCY.observe(total_time_ms / 1000)
     BATCH_PREDICTIONS_TOTAL.labels(status="success" if failed == 0 else "partial").inc()
 
     logger.info(
@@ -516,7 +542,7 @@ async def predict_batch(
         total=len(files),
         successful=successful,
         failed=failed,
-        total_time_ms=total_time,
+        total_time_ms=total_time_ms,
     )
 
     return BatchPredictResponse(
@@ -524,7 +550,7 @@ async def predict_batch(
         total=len(files),
         successful=successful,
         failed=failed,
-        total_inference_time_ms=round(total_time, 2),
+        total_inference_time_ms=round(total_time_ms, 2),
         model_version=predictor.model_version,
     )
 
@@ -557,8 +583,8 @@ async def drift_status() -> dict:
             detail={"error": "Drift detector not initialized"},
         )
 
-    metrics = drift_detector.check_drift()
-    return asdict(metrics)
+    drift_metrics = drift_detector.check_drift()
+    return asdict(drift_metrics)
 
 
 @app.get("/privacy", tags=["Info"])
@@ -603,11 +629,12 @@ def main() -> None:
     import uvicorn
 
     settings = get_settings()
+    port = int(os.getenv("PORT", "8080"))
 
     uvicorn.run(
         "src.inference.api:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=False,
         log_level=settings.log_level.lower(),
     )

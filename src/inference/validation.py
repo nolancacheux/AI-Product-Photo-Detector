@@ -10,15 +10,6 @@ from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Magic bytes for image formats
-IMAGE_SIGNATURES = {
-    b"\xff\xd8\xff": "image/jpeg",
-    b"\x89PNG\r\n\x1a\n": "image/png",
-    b"RIFF": "image/webp",  # WebP starts with RIFF, need to check for WEBP
-    b"GIF87a": "image/gif",
-    b"GIF89a": "image/gif",
-}
-
 # Minimum and maximum dimensions
 MIN_IMAGE_SIZE = 10
 MAX_IMAGE_SIZE = 10000
@@ -119,12 +110,16 @@ def validate_image_bytes(
     # Try to open and validate with PIL
     try:
         image = Image.open(io.BytesIO(data))
-        image.verify()  # Verify it's a valid image
+        image.verify()  # Verify it's a valid image (also closes the image)
 
-        # Re-open after verify (verify closes the file)
+        # Re-open after verify (verify invalidates the image object)
         image = Image.open(io.BytesIO(data))
         width, height = image.size
+        mode = image.mode
+        image.close()
 
+    except ValidationError:
+        raise
     except Exception as e:
         raise ValidationError(
             "corrupt_image",
@@ -144,15 +139,15 @@ def validate_image_bytes(
             f"Image dimensions {width}x{height} exceed maximum {max_dimension}x{max_dimension}",
         )
 
-    # Calculate content hash for deduplication/logging
-    content_hash = hashlib.md5(data).hexdigest()
+    # Calculate content hash for deduplication/logging (SHA-256 for security)
+    content_hash = hashlib.sha256(data).hexdigest()
 
     return {
         "mime_type": actual_mime,
         "size_bytes": len(data),
         "width": width,
         "height": height,
-        "mode": image.mode,
+        "mode": mode,
         "content_hash": content_hash,
     }
 
