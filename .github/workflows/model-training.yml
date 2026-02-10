@@ -69,15 +69,22 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Sync training data to GCS
+      - name: Verify training data on GCS
         run: |
-          echo "Uploading training data to gs://${{ env.GCS_BUCKET }}/data/processed/ ..."
-          gsutil -m rsync -r -d data/processed/ gs://${{ env.GCS_BUCKET }}/data/processed/
-          echo "Data upload complete."
+          echo "Verifying training data on GCS..."
+          for split in train val test; do
+            COUNT=$(gsutil ls "gs://${{ env.GCS_BUCKET }}/data/processed/${split}/**" 2>/dev/null | wc -l || echo "0")
+            echo "${split}: ${COUNT} files"
+            if [ "${COUNT}" -eq "0" ]; then
+              echo "ERROR: No ${split} data found on GCS!"
+              exit 1
+            fi
+          done
+          echo "All data verified on GCS."
 
-      - name: Data upload summary
+      - name: Data verification summary
         run: |
-          echo "### 📤 Training Data Upload" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Training Data Verification" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Split | Files |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"

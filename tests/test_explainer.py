@@ -2,12 +2,14 @@
 
 import base64
 import io
+from pathlib import Path
 
 import pytest
 import torch
 from PIL import Image
 
 from src.inference.explainer import GradCAMExplainer, _rebuild_classifier
+from src.training.model import AIImageDetector
 
 
 # ---------------------------------------------------------------------------
@@ -20,6 +22,27 @@ def _make_test_image(size: tuple[int, int] = (224, 224), color: str = "red") -> 
     img.save(buf, format="JPEG")
     buf.seek(0)
     return buf.getvalue()
+
+
+def _create_fake_checkpoint(path: Path) -> None:
+    """Create a minimal valid checkpoint file for testing."""
+    model = AIImageDetector(
+        model_name="efficientnet_b0",
+        pretrained=False,
+        dropout=0.3,
+    )
+    checkpoint = {
+        "epoch": 5,
+        "model_state_dict": model.state_dict(),
+        "config": {
+            "model": {
+                "name": "efficientnet_b0",
+                "dropout": 0.3,
+            },
+        },
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(checkpoint, path)
 
 
 # ---------------------------------------------------------------------------
@@ -37,7 +60,7 @@ class TestRebuildClassifier:
             "classifier.3.bias": torch.randn(1),
         }
         classifier = _rebuild_classifier(state_dict, feature_dim=1280, dropout=0.3)
-        # Should be: Linear, ReLU, Dropout, Linear → 4 layers
+        # Should be: Linear, ReLU, Dropout, Linear -> 4 layers
         assert len(classifier) == 4
         assert isinstance(classifier[0], torch.nn.Linear)
         assert isinstance(classifier[3], torch.nn.Linear)
@@ -55,7 +78,7 @@ class TestRebuildClassifier:
             "classifier.4.bias": torch.randn(1),
         }
         classifier = _rebuild_classifier(state_dict, feature_dim=1280, dropout=0.3)
-        # Should be: Linear, BatchNorm, ReLU, Dropout, Linear → 5 layers
+        # Should be: Linear, BatchNorm, ReLU, Dropout, Linear -> 5 layers
         assert len(classifier) == 5
         assert isinstance(classifier[1], torch.nn.BatchNorm1d)
 
@@ -67,9 +90,11 @@ class TestGradCAMExplainer:
     """Tests for the GradCAMExplainer class."""
 
     @pytest.fixture()
-    def explainer(self) -> GradCAMExplainer:
-        """Create an explainer with the real model checkpoint."""
-        return GradCAMExplainer("models/checkpoints/best_model.pt")
+    def explainer(self, tmp_path: Path) -> GradCAMExplainer:
+        """Create an explainer with a temporary fake checkpoint."""
+        checkpoint_path = tmp_path / "test_model.pt"
+        _create_fake_checkpoint(checkpoint_path)
+        return GradCAMExplainer(str(checkpoint_path))
 
     def test_is_ready(self, explainer: GradCAMExplainer) -> None:
         assert explainer.is_ready()

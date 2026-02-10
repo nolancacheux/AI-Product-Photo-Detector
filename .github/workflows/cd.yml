@@ -47,6 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
+    permissions:
+      checks: read
+
     steps:
       - name: Wait for CI workflow
         uses: lewagon/wait-on-check-action@v1.3.4
