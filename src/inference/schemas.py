@@ -99,6 +99,32 @@ class ErrorResponse(BaseModel):
     )
 
 
+class ExplainResponse(BaseModel):
+    """Response schema for /predict/explain endpoint with Grad-CAM heatmap."""
+
+    prediction: str = Field(description="Classification result (real or ai_generated)")
+    probability: float = Field(
+        ge=0.0, le=1.0, description="Probability of being AI-generated"
+    )
+    confidence: str = Field(description="Confidence level: low, medium, high")
+    heatmap_base64: str = Field(description="Base64-encoded JPEG heatmap overlay")
+    inference_time_ms: float = Field(ge=0, description="Inference time in milliseconds")
+    model_version: str = Field(default="1.0.0", description="Model version")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "prediction": "ai_generated",
+                "probability": 0.87,
+                "confidence": "high",
+                "heatmap_base64": "/9j/4AAQ...",
+                "inference_time_ms": 120.5,
+                "model_version": "1.0.0",
+            }
+        }
+    )
+
+
 class CompareResponse(BaseModel):
     """Response schema for /v1/predict/compare shadow comparison endpoint."""
 

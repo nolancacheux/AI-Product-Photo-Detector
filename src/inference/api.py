@@ -18,11 +18,13 @@ from slowapi.errors import RateLimitExceeded
 from starlette.responses import Response
 
 from src.inference.auth import verify_api_key
+from src.inference.explainer import GradCAMExplainer
 from src.inference.predictor import Predictor
 from src.inference.schemas import (
     BatchItemResult,
     BatchPredictResponse,
     ErrorResponse,
+    ExplainResponse,
     HealthResponse,
     HealthStatus,
     LivenessResponse,
@@ -70,6 +72,7 @@ limiter = Limiter(key_func=_get_real_client_ip, default_limits=["200/minute"])
 
 # Global state
 predictor: Predictor | None = None
+explainer: GradCAMExplainer | None = None
 drift_detector: DriftDetector | None = None
 start_time: float = 0.0
 _predictions_lock = threading.Lock()
@@ -94,7 +97,7 @@ def _get_total_predictions() -> int:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler."""
-    global predictor, drift_detector, start_time
+    global predictor, explainer, drift_detector, start_time
 
     # Startup
     setup_logging(level="INFO", json_format=True)
@@ -128,6 +131,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         logger.warning("Model not loaded - predictions will fail")
         MODEL_LOADED.set(0)
+
+    # Initialize Grad-CAM explainer
+    explainer = GradCAMExplainer(model_path=model_path)
+    if explainer.is_ready():
+        logger.info("GradCAM explainer ready")
+    else:
+        logger.warning("GradCAM explainer not loaded - explain endpoint will fail")
 
     # Initialize drift detector
     drift_detector = DriftDetector(window_size=1000)
@@ -553,6 +563,96 @@ async def predict_batch(
         total_inference_time_ms=round(total_time_ms, 2),
         model_version=predictor.model_version,
     )
+
+
+@app.post(
+    "/predict/explain",
+    response_model=ExplainResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        413: {"model": ErrorResponse},
+        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
+        503: {"model": ErrorResponse},
+    },
+    tags=["Prediction"],
+)
+@limiter.limit("10/minute")
+async def predict_explain(
+    request: Request,
+    file: UploadFile = File(..., description="Image file to analyze with Grad-CAM"),
+    _: Annotated[bool, Depends(verify_api_key)] = True,
+) -> ExplainResponse:
+    """Generate prediction with Grad-CAM heatmap explanation.
+
+    Accepts JPEG, PNG, or WebP images up to 5MB.
+    Returns the prediction plus a base64-encoded JPEG heatmap overlay
+    showing which regions of the image influenced the model's decision.
+    """
+    global explainer
+
+    if explainer is None or not explainer.is_ready():
+        ERRORS_TOTAL.labels(type="explainer_not_loaded", endpoint="/predict/explain").inc()
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Service unavailable", "detail": "Explainer not loaded"},
+        )
+
+    # Validate content type
+    if file.content_type not in ALLOWED_TYPES:
+        IMAGE_VALIDATION_ERRORS.labels(error_type="invalid_format").inc()
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Invalid image format",
+                "detail": f"Supported formats: JPEG, PNG, WebP. Got: {file.content_type}",
+            },
+        )
+
+    contents = await file.read(MAX_FILE_SIZE + 1)
+
+    if len(contents) > MAX_FILE_SIZE:
+        IMAGE_VALIDATION_ERRORS.labels(error_type="file_too_large").inc()
+        raise HTTPException(
+            status_code=413,
+            detail={
+                "error": "File too large",
+                "detail": f"Maximum file size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
+            },
+        )
+
+    try:
+        result = explainer.explain(contents)
+        _increment_predictions()
+
+        logger.info(
+            "Explain prediction complete",
+            prediction=result["prediction"],
+            probability=result["probability"],
+            inference_time_ms=result["inference_time_ms"],
+        )
+
+        return ExplainResponse(
+            prediction=result["prediction"],
+            probability=result["probability"],
+            confidence=result["confidence"],
+            heatmap_base64=result["heatmap_base64"],
+            inference_time_ms=result["inference_time_ms"],
+            model_version=explainer.model_version,
+        )
+
+    except ValueError as e:
+        ERRORS_TOTAL.labels(type="processing_error", endpoint="/predict/explain").inc()
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "Processing error", "detail": str(e)},
+        ) from e
+    except Exception:
+        ERRORS_TOTAL.labels(type="internal_error", endpoint="/predict/explain").inc()
+        logger.exception("Unexpected error during explain prediction")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "Internal error", "detail": "An unexpected error occurred"},
+        )
 
 
 @app.get("/metrics", tags=["Monitoring"])
