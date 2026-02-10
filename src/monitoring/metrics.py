@@ -1,5 +1,7 @@
 """Prometheus metrics for observability."""
 
+import threading
+
 from prometheus_client import Counter, Gauge, Histogram, Info
 
 # Application info
@@ -122,7 +124,8 @@ HTTP_REQUEST_DURATION = Histogram(
     buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0],
 )
 
-# Track current watermark internally
+# Track current watermark internally (thread-safe)
+_active_lock = threading.Lock()
 _current_active: int = 0
 _max_active: int = 0
 
@@ -131,17 +134,19 @@ def track_request_start() -> None:
     """Track the start of a request, updating active and max gauges."""
     global _current_active, _max_active
     ACTIVE_REQUESTS.inc()
-    _current_active += 1
-    if _current_active > _max_active:
-        _max_active = _current_active
-        CONCURRENT_REQUESTS_MAX.set(_max_active)
+    with _active_lock:
+        _current_active += 1
+        if _current_active > _max_active:
+            _max_active = _current_active
+            CONCURRENT_REQUESTS_MAX.set(_max_active)
 
 
 def track_request_end() -> None:
     """Track the end of a request."""
     global _current_active
     ACTIVE_REQUESTS.dec()
-    _current_active = max(0, _current_active - 1)
+    with _active_lock:
+        _current_active = max(0, _current_active - 1)
 
 
 def set_app_info(version: str, environment: str = "production") -> None:
@@ -213,7 +218,6 @@ def record_prediction(
 
 def record_batch_prediction(
     batch_size: int,
-    successful: int,
     failed: int,
     latency_seconds: float,
 ) -> None:
@@ -221,7 +225,6 @@ def record_batch_prediction(
 
     Args:
         batch_size: Total number of images in batch.
-        successful: Number of successful predictions.
         failed: Number of failed predictions.
         latency_seconds: Total batch latency.
     """

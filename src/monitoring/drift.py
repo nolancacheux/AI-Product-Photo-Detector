@@ -5,6 +5,7 @@ the model needs retraining.
 """
 
 import json
+import threading
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -62,8 +63,9 @@ class DriftDetector:
         self.confidence_threshold = confidence_threshold
         self.drift_threshold = drift_threshold
 
-        # Sliding window of predictions
-        self.predictions: deque = deque(maxlen=window_size)
+        # Sliding window of predictions (thread-safe access via lock)
+        self._lock = threading.Lock()
+        self.predictions: deque[dict] = deque(maxlen=window_size)
 
         # Baseline metrics (from training data or initial deployment)
         self.baseline: dict | None = None
@@ -78,7 +80,7 @@ class DriftDetector:
         """
         with open(path) as f:
             self.baseline = json.load(f)
-        logger.info(f"Loaded baseline from {path}")
+        logger.info("Loaded drift baseline", path=str(path))
 
     def save_baseline(self, path: Path) -> None:
         """Save current metrics as baseline.
@@ -86,7 +88,7 @@ class DriftDetector:
         Args:
             path: Path to save baseline JSON.
         """
-        if len(self.predictions) < self.window_size // 2:
+        if len(list(self.predictions)) < self.window_size // 2:
             logger.warning("Not enough data to save baseline")
             return
 
@@ -104,7 +106,7 @@ class DriftDetector:
             json.dump(baseline, f, indent=2)
 
         self.baseline = baseline
-        logger.info(f"Saved baseline to {path}")
+        logger.info("Saved drift baseline", path=str(path))
 
     def record_prediction(
         self,
@@ -117,13 +119,14 @@ class DriftDetector:
             probability: Prediction probability (0-1).
             prediction: Prediction label ("real" or "ai_generated").
         """
-        self.predictions.append(
-            {
-                "probability": probability,
-                "prediction": prediction,
-                "timestamp": datetime.now(UTC).isoformat(),
-            }
-        )
+        with self._lock:
+            self.predictions.append(
+                {
+                    "probability": probability,
+                    "prediction": prediction,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                }
+            )
 
     def _compute_metrics(self) -> DriftMetrics:
         """Compute current drift metrics.
@@ -131,7 +134,10 @@ class DriftDetector:
         Returns:
             DriftMetrics with current statistics.
         """
-        if len(self.predictions) == 0:
+        with self._lock:
+            snapshot = list(self.predictions)
+
+        if len(snapshot) == 0:
             return DriftMetrics(
                 timestamp=datetime.now(UTC).isoformat(),
                 window_size=0,
@@ -143,8 +149,8 @@ class DriftDetector:
                 drift_score=0.0,
             )
 
-        probs = np.array([p["probability"] for p in self.predictions])
-        preds = [p["prediction"] for p in self.predictions]
+        probs = np.array([p["probability"] for p in snapshot])
+        preds = [p["prediction"] for p in snapshot]
 
         # Compute statistics
         mean_prob = float(np.mean(probs))
@@ -180,7 +186,7 @@ class DriftDetector:
 
         return DriftMetrics(
             timestamp=datetime.now(UTC).isoformat(),
-            window_size=len(self.predictions),
+            window_size=len(snapshot),
             mean_probability=mean_prob,
             std_probability=std_prob,
             low_confidence_ratio=low_conf_ratio,

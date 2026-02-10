@@ -2,6 +2,7 @@
 
 from src.utils.config import (
     DataConfig,
+    LogLevel,
     ModelConfig,
     Settings,
     ThresholdsConfig,
@@ -13,6 +14,7 @@ from src.utils.logger import get_logger, setup_logging
 
 __all__ = [
     "DataConfig",
+    "LogLevel",
     "ModelConfig",
     "Settings",
     "ThresholdsConfig",
