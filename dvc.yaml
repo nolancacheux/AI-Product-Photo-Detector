@@ -7,6 +7,15 @@ stages:
       - data/processed:
           persist: true
 
+  validate:
+    cmd: python -m src.data.validate --data-dir data/processed --output reports/data_validation.json
+    deps:
+      - src/data/validate.py
+      - data/processed
+    outs:
+      - reports/data_validation.json:
+          cache: false
+
   train:
     cmd: python -m src.training.train --config configs/train_config.yaml
     deps:
