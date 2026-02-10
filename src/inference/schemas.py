@@ -1,11 +1,11 @@
 """Pydantic schemas for API request/response validation."""
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class ConfidenceLevel(str, Enum):
+class ConfidenceLevel(StrEnum):
     """Confidence level categories."""
 
     LOW = "low"
@@ -13,7 +13,7 @@ class ConfidenceLevel(str, Enum):
     HIGH = "high"
 
 
-class PredictionResult(str, Enum):
+class PredictionResult(StrEnum):
     """Prediction result categories."""
 
     REAL = "real"
@@ -44,7 +44,7 @@ class PredictResponse(BaseModel):
     )
 
 
-class HealthStatus(str, Enum):
+class HealthStatus(StrEnum):
     """Health status categories."""
 
     HEALTHY = "healthy"
