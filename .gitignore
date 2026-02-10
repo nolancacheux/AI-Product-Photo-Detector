@@ -61,8 +61,12 @@ htmlcov/
 *.bin
 
 # Model artifacts (except tracked ones)
-models/
+models/*
 !models/.gitkeep
+!models/checkpoints/
+models/checkpoints/*
+!models/checkpoints/best_model.pt.dvc
+!models/checkpoints/.gitignore
 
 # Dataset (tracked by DVC)
 data/raw/
