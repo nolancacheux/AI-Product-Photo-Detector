@@ -1,3 +1,17 @@
+# ---------------------------------------------------------------------------
+# Backend — Remote state storage (recommended)
+# ---------------------------------------------------------------------------
+# Uncomment after creating the bucket manually:
+#   gsutil mb -l europe-west1 gs://YOUR_PROJECT_ID-tfstate
+#   gsutil versioning set on gs://YOUR_PROJECT_ID-tfstate
+#
+# terraform {
+#   backend "gcs" {
+#     bucket = "YOUR_PROJECT_ID-tfstate"
+#     prefix = "terraform/state"
+#   }
+# }
+
 terraform {
   required_version = ">= 1.5.0"
 
@@ -34,6 +48,8 @@ resource "google_project_service" "required_apis" {
     "artifactregistry.googleapis.com",
     "storage.googleapis.com",
     "iam.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
+    "billingbudgets.googleapis.com",
   ])
 
   project            = var.project_id
@@ -66,6 +82,16 @@ resource "google_storage_bucket" "mlops_data" {
     }
   }
 
+  lifecycle_rule {
+    action {
+      type = "Delete"
+    }
+    condition {
+      age = 90
+      with_state = "ARCHIVED"
+    }
+  }
+
   depends_on = [google_project_service.required_apis]
 }
 
@@ -90,11 +116,21 @@ resource "google_artifact_registry_repository" "docker_repo" {
     }
   }
 
+  cleanup_policies {
+    id     = "delete-old-untagged"
+    action = "DELETE"
+
+    condition {
+      tag_state  = "UNTAGGED"
+      older_than = "604800s" # 7 days
+    }
+  }
+
   depends_on = [google_project_service.required_apis]
 }
 
 # ---------------------------------------------------------------------------
-# Service Account
+# Service Account — least-privilege identity for Cloud Run
 # ---------------------------------------------------------------------------
 resource "google_service_account" "app_sa" {
   account_id   = local.service_account
@@ -104,12 +140,10 @@ resource "google_service_account" "app_sa" {
   depends_on = [google_project_service.required_apis]
 }
 
-# IAM roles for the service account
 resource "google_project_iam_member" "sa_roles" {
   for_each = toset([
     "roles/storage.objectAdmin",
     "roles/artifactregistry.reader",
-    "roles/run.invoker",
     "roles/logging.logWriter",
     "roles/monitoring.metricWriter",
   ])
@@ -190,4 +224,47 @@ resource "google_cloud_run_v2_service_iam_member" "public_access" {
   name     = google_cloud_run_v2_service.api.name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+# ---------------------------------------------------------------------------
+# Budget Alert — avoid surprise bills (critical for students!)
+# ---------------------------------------------------------------------------
+data "google_billing_account" "account" {
+  count          = var.billing_account != "" ? 1 : 0
+  billing_account = var.billing_account
+}
+
+resource "google_billing_budget" "monthly_budget" {
+  count = var.billing_account != "" ? 1 : 0
+
+  billing_account = var.billing_account
+  display_name    = "${var.app_name}-monthly-budget"
+
+  budget_filter {
+    projects = ["projects/${var.project_id}"]
+  }
+
+  amount {
+    specified_amount {
+      currency_code = "EUR"
+      units         = var.budget_amount
+    }
+  }
+
+  threshold_rules {
+    threshold_percent = 0.5
+    spend_basis       = "CURRENT_SPEND"
+  }
+
+  threshold_rules {
+    threshold_percent = 0.8
+    spend_basis       = "CURRENT_SPEND"
+  }
+
+  threshold_rules {
+    threshold_percent = 1.0
+    spend_basis       = "CURRENT_SPEND"
+  }
+
+  depends_on = [google_project_service.required_apis]
 }
