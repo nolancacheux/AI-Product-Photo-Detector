@@ -173,7 +173,7 @@ def display_result(result: dict) -> None:
 
     st.markdown(f"""
     <div class="result-card {css_class}">
-        <div class="result-label">{icon} {label}</div>
+        <div class="result-label">{label}</div>
         <div class="big-percent" style="color: {color}">{percent:.1f}%</div>
         <div class="confidence-bar" style="background: #ddd;">
             <div style="width: {percent}%; height: 100%; background: {bar_color}; border-radius: 4px;"></div>
