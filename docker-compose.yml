@@ -2,27 +2,28 @@
 # Usage: docker compose up -d
 
 services:
-  # Inference API
+  # Inference API (Cloud Run compatible)
   api:
     build:
       context: .
-      dockerfile: docker/serve.Dockerfile
+      dockerfile: docker/Dockerfile
     image: ai-product-detector:1.0.0
     container_name: ai-detector-api
     ports:
-      - "8000:8000"
+      - "8080:8080"
     volumes:
       - ./models:/app/models:ro
       - ./configs:/app/configs:ro
     environment:
-      - MODEL_PATH=/app/models/best_model.pt
+      - PORT=8080
+      - MODEL_PATH=/app/models/checkpoints/best_model.pt
       - LOG_LEVEL=INFO
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 15s
     restart: unless-stopped
     networks:
       - detector-network
@@ -31,14 +32,14 @@ services:
   ui:
     build:
       context: .
-      dockerfile: docker/serve.Dockerfile
+      dockerfile: docker/Dockerfile
     image: ai-product-detector:1.0.0
     container_name: ai-detector-ui
     command: ["streamlit", "run", "src/ui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
     ports:
       - "8501:8501"
     environment:
-      - API_URL=http://api:8000
+      - API_URL=http://api:8080
     depends_on:
       api:
         condition: service_healthy
