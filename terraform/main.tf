@@ -1,0 +1,193 @@
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+locals {
+  bucket_name     = "${var.project_id}-mlops-data"
+  registry_name   = replace(var.app_name, "-", "")
+  service_account = "${var.app_name}-sa"
+  labels = {
+    app         = var.app_name
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Enable required APIs
+# ---------------------------------------------------------------------------
+resource "google_project_service" "required_apis" {
+  for_each = toset([
+    "run.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "storage.googleapis.com",
+    "iam.googleapis.com",
+  ])
+
+  project            = var.project_id
+  service            = each.value
+  disable_on_destroy = false
+}
+
+# ---------------------------------------------------------------------------
+# GCS Bucket — DVC data & model storage
+# ---------------------------------------------------------------------------
+resource "google_storage_bucket" "mlops_data" {
+  name     = local.bucket_name
+  location = var.region
+  labels   = local.labels
+
+  uniform_bucket_level_access = true
+  force_destroy               = false
+  public_access_prevention    = "enforced"
+
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    action {
+      type = "Delete"
+    }
+    condition {
+      num_newer_versions = 5
+    }
+  }
+
+  depends_on = [google_project_service.required_apis]
+}
+
+# ---------------------------------------------------------------------------
+# Artifact Registry — Docker images
+# ---------------------------------------------------------------------------
+resource "google_artifact_registry_repository" "docker_repo" {
+  location      = var.region
+  repository_id = var.app_name
+  description   = "Docker images for ${var.app_name}"
+  format        = "DOCKER"
+  labels        = local.labels
+
+  cleanup_policy_dry_run = false
+
+  cleanup_policies {
+    id     = "keep-recent"
+    action = "KEEP"
+
+    most_recent_versions {
+      keep_count = 10
+    }
+  }
+
+  depends_on = [google_project_service.required_apis]
+}
+
+# ---------------------------------------------------------------------------
+# Service Account
+# ---------------------------------------------------------------------------
+resource "google_service_account" "app_sa" {
+  account_id   = local.service_account
+  display_name = "Service account for ${var.app_name}"
+  description  = "Managed by Terraform — used by Cloud Run and CI/CD"
+
+  depends_on = [google_project_service.required_apis]
+}
+
+# IAM roles for the service account
+resource "google_project_iam_member" "sa_roles" {
+  for_each = toset([
+    "roles/storage.objectAdmin",
+    "roles/artifactregistry.reader",
+    "roles/run.invoker",
+    "roles/logging.logWriter",
+    "roles/monitoring.metricWriter",
+  ])
+
+  project = var.project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.app_sa.email}"
+}
+
+# ---------------------------------------------------------------------------
+# Cloud Run Service — FastAPI inference API
+# ---------------------------------------------------------------------------
+resource "google_cloud_run_v2_service" "api" {
+  name     = var.app_name
+  location = var.region
+  labels   = local.labels
+
+  template {
+    service_account = google_service_account.app_sa.email
+
+    scaling {
+      min_instance_count = var.cloud_run_min_instances
+      max_instance_count = var.cloud_run_max_instances
+    }
+
+    containers {
+      image = var.cloud_run_container_image != "" ? var.cloud_run_container_image : "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.docker_repo.repository_id}/${var.app_name}:latest"
+
+      resources {
+        limits = {
+          cpu    = var.cloud_run_cpu
+          memory = var.cloud_run_memory
+        }
+      }
+
+      ports {
+        container_port = 8000
+      }
+
+      env {
+        name  = "ENVIRONMENT"
+        value = var.environment
+      }
+
+      env {
+        name  = "GCS_BUCKET"
+        value = google_storage_bucket.mlops_data.name
+      }
+
+      startup_probe {
+        http_get {
+          path = "/health"
+        }
+        initial_delay_seconds = 5
+        period_seconds        = 10
+        failure_threshold     = 3
+      }
+
+      liveness_probe {
+        http_get {
+          path = "/health"
+        }
+        period_seconds = 30
+      }
+    }
+  }
+
+  depends_on = [
+    google_project_service.required_apis,
+    google_artifact_registry_repository.docker_repo,
+  ]
+}
+
+# Allow unauthenticated access to the API
+resource "google_cloud_run_v2_service_iam_member" "public_access" {
+  project  = google_cloud_run_v2_service.api.project
+  location = google_cloud_run_v2_service.api.location
+  name     = google_cloud_run_v2_service.api.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
