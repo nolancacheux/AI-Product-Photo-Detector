@@ -87,6 +87,7 @@ docker-compose.override.yml
 !.env.example
 *.pem
 *.key
+*.tfvars
 secrets/
 
 # ========== OS ==========
