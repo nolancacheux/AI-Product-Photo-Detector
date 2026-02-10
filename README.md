@@ -103,6 +103,48 @@ docker-compose up -d
 # MLflow:     http://localhost:5000
 ```
 
+## Data Version Control (DVC)
+
+Dataset files are versioned with [DVC](https://dvc.org/). The actual data is **not** stored in Git — only lightweight `.dvc` pointer files are committed.
+
+### Pull the Data
+
+After cloning the repository, retrieve the dataset:
+
+```bash
+# Install DVC (included in dev dependencies)
+pip install dvc
+
+# Pull the tracked data
+dvc pull
+```
+
+### Reproduce the Pipeline
+
+DVC defines a reproducible pipeline (`dvc.yaml`) with two stages:
+
+1. **download** — Downloads the CIFAKE dataset
+2. **train** — Trains the EfficientNet-B0 model
+
+```bash
+# Run the full pipeline
+dvc repro
+
+# Run a specific stage
+dvc repro download
+dvc repro train
+```
+
+### Configure a Remote Storage
+
+To share data with your team, set up a DVC remote:
+
+```bash
+# Example with S3
+dvc remote add -d myremote s3://my-bucket/dvc-store
+dvc push
+```
+
 ## MLflow
 
 Training runs are tracked with MLflow. Experiment data is stored in the `mlruns/` directory.

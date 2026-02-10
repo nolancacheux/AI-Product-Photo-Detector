@@ -64,9 +64,8 @@ htmlcov/
 models/
 !models/.gitkeep
 
-# Dataset
+# Dataset (tracked by DVC)
 data/raw/
-data/processed/
 !data/.gitkeep
 !data/**/.gitkeep
 

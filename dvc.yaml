@@ -1,0 +1,21 @@
+stages:
+  download:
+    cmd: python scripts/download_cifake.py
+    deps:
+      - scripts/download_cifake.py
+    outs:
+      - data/processed:
+          persist: true
+
+  train:
+    cmd: python -m src.training.train --config configs/train_config.yaml
+    deps:
+      - src/training/train.py
+      - src/training/model.py
+      - src/training/dataset.py
+      - src/training/augmentation.py
+      - configs/train_config.yaml
+      - data/processed
+    outs:
+      - models/best_model.pt:
+          persist: true
