@@ -55,6 +55,7 @@ from src.monitoring.metrics import (
 from src.utils.config import get_settings, load_yaml_config
 from src.utils.logger import get_logger, set_request_id, setup_logging
 
+
 def _get_real_client_ip(request: Request) -> str:
     """Extract real client IP behind Cloud Run / reverse proxies.
 
@@ -183,7 +184,7 @@ app.add_middleware(
 )
 
 # Constants
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB (reduced for anti-spam)
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_BATCH_TOTAL_SIZE = 50 * 1024 * 1024  # 50MB total for batch
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
@@ -386,7 +387,7 @@ async def predict(
             status_code=400,
             detail={"error": "Processing error", "detail": str(e)},
         ) from e
-    except Exception:
+    except Exception as exc:
         PREDICTIONS_TOTAL.labels(
             status="error", prediction="none", confidence="none",
         ).inc()
@@ -395,7 +396,7 @@ async def predict(
         raise HTTPException(
             status_code=500,
             detail={"error": "Internal error", "detail": "An unexpected error occurred"},
-        )
+        ) from exc
 
 
 MAX_BATCH_SIZE = 10
@@ -646,13 +647,13 @@ async def predict_explain(
             status_code=400,
             detail={"error": "Processing error", "detail": str(e)},
         ) from e
-    except Exception:
+    except Exception as exc:
         ERRORS_TOTAL.labels(type="internal_error", endpoint="/predict/explain").inc()
         logger.exception("Unexpected error during explain prediction")
         raise HTTPException(
             status_code=500,
             detail={"error": "Internal error", "detail": "An unexpected error occurred"},
-        )
+        ) from exc
 
 
 @app.get("/metrics", tags=["Monitoring"])
