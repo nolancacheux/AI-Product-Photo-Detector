@@ -10,6 +10,7 @@ from PIL import Image
 
 # Configuration
 API_URL = os.getenv("API_URL", "http://localhost:8080")
+API_KEY = os.getenv("API_KEY", "")
 MAX_FILE_SIZE_MB = 5
 
 # Session state initialization
@@ -44,7 +45,8 @@ def predict_image(image_bytes: bytes, filename: str) -> dict | None:
     """Send image to API for prediction."""
     try:
         files = {"file": (filename, image_bytes, "image/jpeg")}
-        response = httpx.post(f"{API_URL}/predict", files=files, timeout=30.0)
+        headers = {"X-API-Key": API_KEY} if API_KEY else {}
+        response = httpx.post(f"{API_URL}/predict", files=files, headers=headers, timeout=30.0)
         if response.status_code == 200:
             return response.json()
         else:
