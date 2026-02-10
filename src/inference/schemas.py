@@ -52,12 +52,15 @@ class HealthStatus(StrEnum):
 
 
 class HealthResponse(BaseModel):
-    """Response schema for /health endpoint."""
+    """Response schema for /health endpoint (readiness check)."""
 
     status: HealthStatus = Field(description="Current health status")
     model_loaded: bool = Field(description="Whether the model is loaded")
     model_version: str = Field(description="Loaded model version")
     uptime_seconds: float = Field(ge=0, description="Server uptime in seconds")
+    active_requests: int = Field(default=0, description="Number of in-flight requests")
+    drift_detected: bool = Field(default=False, description="Whether drift has been detected")
+    predictions_total: int = Field(default=0, description="Total predictions served")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -66,9 +69,18 @@ class HealthResponse(BaseModel):
                 "model_loaded": True,
                 "model_version": "1.0.0",
                 "uptime_seconds": 3600.5,
+                "active_requests": 2,
+                "drift_detected": False,
+                "predictions_total": 1542,
             }
         }
     )
+
+
+class LivenessResponse(BaseModel):
+    """Response schema for /healthz (liveness probe)."""
+
+    alive: bool = Field(description="Whether the process is alive")
 
 
 class ErrorResponse(BaseModel):

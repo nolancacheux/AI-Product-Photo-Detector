@@ -3,6 +3,7 @@
 import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated
 
@@ -22,6 +23,7 @@ from src.inference.schemas import (
     ErrorResponse,
     HealthResponse,
     HealthStatus,
+    LivenessResponse,
     PredictResponse,
 )
 from src.monitoring.drift import DriftDetector
@@ -31,17 +33,23 @@ from src.monitoring.metrics import (
     BATCH_PREDICTIONS_TOTAL,
     BATCH_SIZE_HISTOGRAM,
     ERRORS_TOTAL,
+    HTTP_REQUEST_DURATION,
+    HTTP_REQUESTS_TOTAL,
     IMAGE_VALIDATION_ERRORS,
     MODEL_LOADED,
     PREDICTIONS_TOTAL,
+    REQUEST_SIZE_BYTES,
+    RESPONSE_SIZE_BYTES,
     set_app_info,
     set_model_info,
+    track_request_end,
+    track_request_start,
 )
 from src.monitoring.metrics import (
     record_prediction as record_prediction_metrics,
 )
 from src.utils.config import get_settings, load_yaml_config
-from src.utils.logger import get_logger, setup_logging
+from src.utils.logger import get_logger, set_request_id, setup_logging
 
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address)
@@ -50,6 +58,7 @@ limiter = Limiter(key_func=get_remote_address)
 predictor: Predictor | None = None
 drift_detector: DriftDetector | None = None
 start_time: float = 0.0
+total_predictions: int = 0
 logger = get_logger(__name__)
 
 
@@ -126,23 +135,95 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
+# ---------------------------------------------------------------------------
+# Middleware: request tracking, request ID, HTTP metrics
+# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def observability_middleware(request: Request, call_next):  # noqa: ANN001
+    """Track HTTP metrics, request size, response size, and inject request ID."""
+    # Inject request ID from header or generate
+    incoming_id = request.headers.get("X-Request-ID")
+    req_id = set_request_id(incoming_id)
+
+    # Track Cloud Trace context for correlated logging
+    trace_header = request.headers.get("X-Cloud-Trace-Context")
+    if trace_header:
+        import structlog
+        structlog.contextvars.bind_contextvars(trace_id=trace_header.split("/")[0])
+
+    # Request size (content-length if present)
+    content_length = request.headers.get("content-length")
+    if content_length:
+        REQUEST_SIZE_BYTES.observe(int(content_length))
+
+    track_request_start()
+    endpoint = request.url.path
+    method = request.method
+    start = time.monotonic()
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        HTTP_REQUESTS_TOTAL.labels(
+            method=method, endpoint=endpoint, status_code="500",
+        ).inc()
+        track_request_end()
+        raise
+
+    duration = time.monotonic() - start
+    HTTP_REQUEST_DURATION.labels(method=method, endpoint=endpoint).observe(duration)
+    HTTP_REQUESTS_TOTAL.labels(
+        method=method, endpoint=endpoint, status_code=str(response.status_code),
+    ).inc()
+
+    # Response size
+    resp_size = response.headers.get("content-length")
+    if resp_size:
+        RESPONSE_SIZE_BYTES.observe(int(resp_size))
+
+    response.headers["X-Request-ID"] = req_id
+    track_request_end()
+    return response
+
+
+# ---------------------------------------------------------------------------
+# Health endpoints: liveness + readiness
+# ---------------------------------------------------------------------------
+@app.get("/healthz", response_model=LivenessResponse, tags=["Health"])
+async def liveness() -> LivenessResponse:
+    """Kubernetes / Cloud Run liveness probe.
+
+    Returns 200 as long as the process is alive.
+    Does NOT check model state — that's the readiness probe's job.
+    """
+    return LivenessResponse(alive=True)
+
+
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check() -> HealthResponse:
-    """Check API health status.
+    """Readiness probe — checks model and drift status.
 
     Returns:
-        Health status with model info.
+        Health status with model info, active requests, drift status.
     """
-    global predictor, start_time
+    global predictor, drift_detector, start_time, total_predictions
 
     uptime = time.time() - start_time if start_time > 0 else 0.0
     model_loaded = predictor is not None and predictor.is_ready()
+
+    drift_detected = False
+    if drift_detector:
+        drift_status = drift_detector.get_status()
+        drift_detected = drift_status.get("drift_detected", False)
 
     return HealthResponse(
         status=HealthStatus.HEALTHY if model_loaded else HealthStatus.UNHEALTHY,
         model_loaded=model_loaded,
         model_version=predictor.model_version if predictor else "unknown",
         uptime_seconds=round(uptime, 2),
+        active_requests=int(ACTIVE_REQUESTS._value.get()),
+        drift_detected=drift_detected,
+        predictions_total=total_predictions,
     )
 
 
@@ -171,91 +252,88 @@ async def predict(
     Returns:
         Prediction with probability score and confidence level.
     """
-    global predictor, drift_detector
+    global predictor, drift_detector, total_predictions
 
-    ACTIVE_REQUESTS.inc()
+    # Check if model is loaded
+    if predictor is None or not predictor.is_ready():
+        PREDICTIONS_TOTAL.labels(
+            status="error", prediction="none", confidence="none",
+        ).inc()
+        ERRORS_TOTAL.labels(type="model_not_loaded", endpoint="/predict").inc()
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Service unavailable", "detail": "Model not loaded"},
+        )
+
+    # Validate content type
+    if file.content_type not in ALLOWED_TYPES:
+        PREDICTIONS_TOTAL.labels(
+            status="error", prediction="none", confidence="none",
+        ).inc()
+        IMAGE_VALIDATION_ERRORS.labels(error_type="invalid_format").inc()
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Invalid image format",
+                "detail": f"Supported formats: JPEG, PNG, WebP. Got: {file.content_type}",
+            },
+        )
+
+    # Read file
+    contents = await file.read()
+
+    # Check file size
+    if len(contents) > MAX_FILE_SIZE:
+        PREDICTIONS_TOTAL.labels(
+            status="error", prediction="none", confidence="none",
+        ).inc()
+        IMAGE_VALIDATION_ERRORS.labels(error_type="file_too_large").inc()
+        raise HTTPException(
+            status_code=413,
+            detail={
+                "error": "File too large",
+                "detail": f"Maximum file size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
+            },
+        )
+
+    # Make prediction
     try:
-        # Check if model is loaded
-        if predictor is None or not predictor.is_ready():
-            PREDICTIONS_TOTAL.labels(
-                status="error", prediction="none", confidence="none",
-            ).inc()
-            ERRORS_TOTAL.labels(type="model_not_loaded", endpoint="/predict").inc()
-            raise HTTPException(
-                status_code=503,
-                detail={"error": "Service unavailable", "detail": "Model not loaded"},
+        pred_start = time.monotonic()
+        result = predictor.predict_from_bytes(contents)
+        latency = time.monotonic() - pred_start
+
+        record_prediction_metrics(
+            prediction=result.prediction.value,
+            probability=result.probability,
+            confidence=result.confidence.value,
+            latency_seconds=latency,
+            success=True,
+        )
+        total_predictions += 1
+
+        if drift_detector is not None:
+            drift_detector.record_prediction(
+                result.probability, result.prediction.value,
             )
 
-        # Validate content type
-        if file.content_type not in ALLOWED_TYPES:
-            PREDICTIONS_TOTAL.labels(
-                status="error", prediction="none", confidence="none",
-            ).inc()
-            IMAGE_VALIDATION_ERRORS.labels(error_type="invalid_format").inc()
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "Invalid image format",
-                    "detail": f"Supported formats: JPEG, PNG, WebP. Got: {file.content_type}",
-                },
-            )
+        logger.info(
+            "Prediction complete",
+            prediction=result.prediction.value,
+            probability=result.probability,
+            inference_time_ms=result.inference_time_ms,
+        )
 
-        # Read file
-        contents = await file.read()
+        return result
 
-        # Check file size
-        if len(contents) > MAX_FILE_SIZE:
-            PREDICTIONS_TOTAL.labels(
-                status="error", prediction="none", confidence="none",
-            ).inc()
-            IMAGE_VALIDATION_ERRORS.labels(error_type="file_too_large").inc()
-            raise HTTPException(
-                status_code=413,
-                detail={
-                    "error": "File too large",
-                    "detail": f"Maximum file size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
-                },
-            )
-
-        # Make prediction
-        try:
-            start = time.monotonic()
-            result = predictor.predict_from_bytes(contents)
-            latency = time.monotonic() - start
-
-            record_prediction_metrics(
-                prediction=result.prediction.value,
-                probability=result.probability,
-                confidence=result.confidence.value,
-                latency_seconds=latency,
-                success=True,
-            )
-
-            if drift_detector is not None:
-                drift_detector.record_prediction(
-                    result.probability, result.prediction.value,
-                )
-
-            logger.info(
-                "Prediction complete",
-                prediction=result.prediction.value,
-                probability=result.probability,
-                inference_time_ms=result.inference_time_ms,
-            )
-
-            return result
-
-        except ValueError as e:
-            PREDICTIONS_TOTAL.labels(
-                status="error", prediction="none", confidence="none",
-            ).inc()
-            ERRORS_TOTAL.labels(type="processing_error", endpoint="/predict").inc()
-            raise HTTPException(
-                status_code=400,
-                detail={"error": "Processing error", "detail": str(e)},
-            ) from e
-    finally:
-        ACTIVE_REQUESTS.dec()
+    except ValueError as e:
+        PREDICTIONS_TOTAL.labels(
+            status="error", prediction="none", confidence="none",
+        ).inc()
+        ERRORS_TOTAL.labels(type="processing_error", endpoint="/predict").inc()
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "Processing error", "detail": str(e)},
+        ) from e
 
 
 MAX_BATCH_SIZE = 20
@@ -287,7 +365,7 @@ async def predict_batch(
     Returns:
         Batch prediction results with individual results for each image.
     """
-    global predictor
+    global predictor, total_predictions
 
     # Check if model is loaded
     if predictor is None or not predictor.is_ready():
@@ -369,6 +447,7 @@ async def predict_batch(
                 )
             )
             successful += 1
+            total_predictions += 1
             PREDICTIONS_TOTAL.labels(
                 status="success",
                 prediction=result.prediction.value,
@@ -427,10 +506,10 @@ async def metrics() -> Response:
 
 @app.get("/drift", tags=["Monitoring"])
 async def drift_status() -> dict:
-    """Get drift detection status.
+    """Get drift detection status with full metrics.
 
     Returns:
-        Current drift monitoring status.
+        Current drift monitoring status including alerts.
     """
     global drift_detector
 
@@ -440,7 +519,8 @@ async def drift_status() -> dict:
             detail={"error": "Drift detector not initialized"},
         )
 
-    return drift_detector.get_status()
+    metrics = drift_detector.check_drift()
+    return asdict(metrics)
 
 
 @app.get("/", tags=["Info"])
@@ -455,6 +535,9 @@ async def root() -> dict:
         "version": "1.0.0",
         "docs": "/docs",
         "health": "/health",
+        "healthz": "/healthz",
+        "metrics": "/metrics",
+        "drift": "/drift",
     }
 
 

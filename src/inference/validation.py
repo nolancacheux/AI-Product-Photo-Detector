@@ -23,8 +23,8 @@ IMAGE_SIGNATURES = {
 MIN_IMAGE_SIZE = 10
 MAX_IMAGE_SIZE = 10000
 
-# Maximum file size (10MB)
-MAX_FILE_SIZE = 10 * 1024 * 1024
+# Maximum file size (5MB)
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
 class ValidationError(Exception):
