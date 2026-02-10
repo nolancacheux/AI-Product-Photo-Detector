@@ -3,7 +3,8 @@
 
 .PHONY: help install dev lint format test train serve ui \
         docker-build docker-run docker-up docker-down docker-logs \
-        predict predict-batch data dvc-repro mlflow deploy clean
+        predict predict-batch data dvc-repro mlflow deploy clean \
+        validate load-test load-test-k6
 
 # Default target
 help:
@@ -41,6 +42,11 @@ help:
 	@echo ""
 	@echo "Deploy:"
 	@echo "  make deploy        Trigger manual deploy via GitHub Actions"
+	@echo ""
+	@echo "Validation & Load Testing:"
+	@echo "  make validate      Run dataset validation"
+	@echo "  make load-test     Run Locust load test (headless, 10 users, 60s)"
+	@echo "  make load-test-k6  Run k6 load test"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean         Remove build artifacts"
@@ -119,6 +125,17 @@ predict-batch:
 	curl -s -X POST http://localhost:8000/predict/batch \
 		-F "files=@tests/data/sample_real.jpg" \
 		-F "files=@tests/data/sample_ai.png" | python -m json.tool
+
+# ─── Validation & Load Testing ─────────────────────────────────────────────────
+
+validate:
+	python -m src.data.validate --data-dir data/processed
+
+load-test:
+	locust -f tests/load/locustfile.py --headless -u 10 -r 2 -t 60s --host http://localhost:8000
+
+load-test-k6:
+	k6 run tests/load/k6_test.js
 
 # ─── Deploy ───────────────────────────────────────────────────────────────────
 
