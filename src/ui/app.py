@@ -9,12 +9,14 @@ import streamlit as st
 from PIL import Image
 
 # Configuration
-API_URL = os.getenv("API_URL", "http://localhost:8000")
-MAX_FILE_SIZE_MB = 10
+API_URL = os.getenv("API_URL", "http://localhost:8080")
+MAX_FILE_SIZE_MB = 5
 
 # Session state initialization
 if "history" not in st.session_state:
     st.session_state.history = []
+if "last_result" not in st.session_state:
+    st.session_state.last_result = None
 
 
 def init_page() -> None:
@@ -46,7 +48,11 @@ def predict_image(image_bytes: bytes, filename: str) -> dict | None:
         if response.status_code == 200:
             return response.json()
         else:
-            st.error(f"API Error: {response.json()}")
+            try:
+                detail = response.json().get("detail", response.text)
+            except Exception:
+                detail = response.text
+            st.error(f"API Error ({response.status_code}): {detail}")
     except Exception as e:
         st.error(f"Connection error: {e}")
     return None
@@ -129,7 +135,7 @@ def main() -> None:
         Detects AI-generated product photos using deep learning.
 
         **Supported formats:** JPEG, PNG, WebP
-        **Max file size:** 10 MB
+        **Max file size:** 5 MB
         """)
         st.caption("Built by Nolan Cacheux")
 
@@ -143,6 +149,11 @@ def main() -> None:
     )
 
     if uploaded_file is not None:
+        # Reset last result when a new file is uploaded
+        if st.session_state.get("last_filename") != uploaded_file.name:
+            st.session_state.last_result = None
+            st.session_state.last_filename = uploaded_file.name
+
         file_size_mb = len(uploaded_file.getvalue()) / (1024 * 1024)
         if file_size_mb > MAX_FILE_SIZE_MB:
             st.error(f"File too large! Max size: {MAX_FILE_SIZE_MB}MB")
@@ -164,8 +175,11 @@ def main() -> None:
                     image_bytes = uploaded_file.read()
                     result = predict_image(image_bytes, uploaded_file.name)
                     if result:
-                        display_result(result)
+                        st.session_state.last_result = result
                         add_to_history(uploaded_file.name, result)
+
+            if st.session_state.last_result is not None:
+                display_result(st.session_state.last_result)
             else:
                 st.info("Click the button above to analyze")
 
