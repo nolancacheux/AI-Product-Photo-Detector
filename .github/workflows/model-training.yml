@@ -1,43 +1,291 @@
 # ==============================================================================
-# Model Training Pipeline
-# Manual trigger only (workflow_dispatch).
-# Steps: pull data (DVC) → train → evaluate → upload model artifact
+# Vertex AI Model Training Pipeline
+# Triggers: manual dispatch or data changes on main.
+# Builds training image, submits Vertex AI job, evaluates, optionally deploys.
+# Requires secrets: GCP_SA_KEY, GCP_PROJECT_ID, GCS_BUCKET, API_KEY
 # ==============================================================================
 
-name: Model Training
+name: Model Training (Vertex AI)
 
 on:
   workflow_dispatch:
     inputs:
-      stage:
-        description: "Pipeline stage to run"
-        required: false
-        default: "all"
-        type: choice
-        options:
-          - all
-          - download
-          - train
       epochs:
-        description: "Number of training epochs (overrides config)"
+        description: "Number of training epochs"
         required: false
-        default: ""
+        default: "15"
+        type: string
       batch_size:
-        description: "Batch size (overrides config)"
+        description: "Training batch size"
         required: false
-        default: ""
+        default: "64"
+        type: string
+      auto_deploy:
+        description: "Automatically deploy if evaluation passes"
+        required: false
+        default: false
+        type: boolean
+
+  push:
+    branches: [main]
+    paths:
+      - "data/**"
+
+concurrency:
+  group: model-training-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GCP_PROJECT: ai-product-detector-487013
+  REGION: europe-west1
+  GCS_BUCKET: ai-product-detector-487013
+  REGISTRY: europe-west1-docker.pkg.dev
+  REPO: europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector
+  SERVICE: ai-product-detector
+  # Vertex AI training machine type
+  MACHINE_TYPE: n1-standard-4
+  ACCELERATOR_TYPE: NVIDIA_TESLA_T4
+  ACCELERATOR_COUNT: "1"
+
+permissions:
+  contents: read
 
 jobs:
   # --------------------------------------------------------------------------
-  # Training Pipeline
+  # Upload training data to GCS
   # --------------------------------------------------------------------------
-  train:
-    name: Train Model (${{ github.event.inputs.stage }})
+  upload-data:
+    name: Upload Training Data
     runs-on: ubuntu-latest
-    timeout-minutes: 120
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Sync training data to GCS
+        run: |
+          echo "Uploading training data to gs://${{ env.GCS_BUCKET }}/data/processed/ ..."
+          gsutil -m rsync -r -d data/processed/ gs://${{ env.GCS_BUCKET }}/data/processed/
+          echo "Data upload complete."
+
+      - name: Data upload summary
+        run: |
+          echo "### 📤 Training Data Upload" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Split | Files |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          for split in train val test; do
+            COUNT=$(gsutil ls "gs://${{ env.GCS_BUCKET }}/data/processed/${split}/**" 2>/dev/null | wc -l || echo "0")
+            echo "| ${split} | ${COUNT} |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+  # --------------------------------------------------------------------------
+  # Build and push training Docker image
+  # --------------------------------------------------------------------------
+  build-training-image:
+    name: Build Training Image
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      image_uri: ${{ steps.image.outputs.uri }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push training image
+        id: image
+        run: |
+          IMAGE_URI="${{ env.REPO }}/training"
+          docker build -f docker/Dockerfile.training \
+            -t "${IMAGE_URI}:latest" \
+            -t "${IMAGE_URI}:${{ github.sha }}" \
+            .
+          docker push "${IMAGE_URI}:latest"
+          docker push "${IMAGE_URI}:${{ github.sha }}"
+          echo "uri=${IMAGE_URI}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build summary
+        run: |
+          echo "### 🐳 Training Image" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Image:** \`${{ steps.image.outputs.uri }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+  # --------------------------------------------------------------------------
+  # Submit Vertex AI custom training job
+  # --------------------------------------------------------------------------
+  submit-training:
+    name: Submit Vertex AI Training Job
+    runs-on: ubuntu-latest
+    needs: [upload-data, build-training-image]
+    timeout-minutes: 180
+
+    outputs:
+      model_gcs_path: ${{ steps.training.outputs.model_gcs_path }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Vertex AI SDK
+        run: pip install google-cloud-aiplatform
+
+      - name: Submit training job
+        id: training
+        env:
+          EPOCHS: ${{ github.event.inputs.epochs || '15' }}
+          BATCH_SIZE: ${{ github.event.inputs.batch_size || '64' }}
+          IMAGE_URI: ${{ needs.build-training-image.outputs.image_uri }}
+        run: |
+          python - <<'PYTHON_SCRIPT'
+          import os
+          import json
+          from google.cloud import aiplatform
+
+          project = os.environ["GCP_PROJECT"] if "GCP_PROJECT" in os.environ else "ai-product-detector-487013"
+          region = "europe-west1"
+          bucket = os.environ.get("GCS_BUCKET", "ai-product-detector-487013")
+          image_uri = os.environ["IMAGE_URI"]
+          epochs = os.environ.get("EPOCHS", "15")
+          batch_size = os.environ.get("BATCH_SIZE", "64")
+          sha = os.environ.get("GITHUB_SHA", "local")[:8]
+
+          staging_bucket = f"gs://{bucket}"
+          model_output = f"gs://{bucket}/models/training-{sha}"
+
+          aiplatform.init(
+              project=project,
+              location=region,
+              staging_bucket=staging_bucket,
+          )
+
+          job = aiplatform.CustomContainerTrainingJob(
+              display_name=f"ai-product-detector-{sha}",
+              container_uri=image_uri,
+              command=["python", "-m", "src.training.train", "--config", "configs/train_config.yaml"],
+          )
+
+          # Environment variables passed to the training container
+          env_vars = [
+              {"name": "EPOCHS", "value": epochs},
+              {"name": "BATCH_SIZE", "value": batch_size},
+              {"name": "GCS_DATA_PATH", "value": f"gs://{bucket}/data/processed"},
+              {"name": "GCS_MODEL_OUTPUT", "value": model_output},
+          ]
+
+          print(f"Submitting Vertex AI training job...")
+          print(f"  Image: {image_uri}")
+          print(f"  Epochs: {epochs}, Batch size: {batch_size}")
+          print(f"  Model output: {model_output}")
+
+          model = job.run(
+              model_display_name=f"ai-product-detector-{sha}",
+              base_output_dir=model_output,
+              args=[
+                  "--epochs", epochs,
+                  "--batch-size", batch_size,
+              ],
+              environment_variables={e["name"]: e["value"] for e in env_vars},
+              machine_type=os.environ.get("MACHINE_TYPE", "n1-standard-4"),
+              accelerator_type=os.environ.get("ACCELERATOR_TYPE", "NVIDIA_TESLA_T4"),
+              accelerator_count=int(os.environ.get("ACCELERATOR_COUNT", "1")),
+              replica_count=1,
+          )
+
+          print(f"Training job completed. Model output: {model_output}")
+
+          # Write outputs for subsequent steps
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"model_gcs_path={model_output}\n")
+          PYTHON_SCRIPT
+
+      - name: Download trained model from GCS
+        run: |
+          MODEL_GCS="${{ steps.training.outputs.model_gcs_path }}"
+          mkdir -p models/checkpoints
+
+          # Download best_model.pt from training output
+          gsutil cp "${MODEL_GCS}/model/best_model.pt" models/checkpoints/best_model.pt \
+            || gsutil cp "${MODEL_GCS}/best_model.pt" models/checkpoints/best_model.pt \
+            || echo "WARNING: Could not find best_model.pt in training output"
+
+          # Also copy to the canonical GCS location for other workflows
+          if [ -f models/checkpoints/best_model.pt ]; then
+            gsutil cp models/checkpoints/best_model.pt gs://${{ env.GCS_BUCKET }}/models/best_model.pt
+            echo "Model copied to gs://${{ env.GCS_BUCKET }}/models/best_model.pt"
+          fi
+
+      - name: Upload model artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model-${{ github.sha }}
+          path: models/checkpoints/best_model.pt
+          retention-days: 30
+
+      - name: Training summary
+        run: |
+          echo "### 🏋️ Vertex AI Training" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Job output:** \`${{ steps.training.outputs.model_gcs_path }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Epochs:** ${{ github.event.inputs.epochs || '15' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Batch size:** ${{ github.event.inputs.batch_size || '64' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Machine:** ${{ env.MACHINE_TYPE }} + ${{ env.ACCELERATOR_TYPE }}" >> "$GITHUB_STEP_SUMMARY"
+
+  # --------------------------------------------------------------------------
+  # Evaluate the trained model
+  # --------------------------------------------------------------------------
+  evaluate:
+    name: Evaluate Model
+    runs-on: ubuntu-latest
+    needs: [submit-training]
+
+    outputs:
+      accuracy: ${{ steps.eval.outputs.accuracy }}
+      f1_score: ${{ steps.eval.outputs.f1_score }}
+      passed: ${{ steps.eval.outputs.passed }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download model artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model-${{ github.sha }}
+          path: models/checkpoints/
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -48,142 +296,260 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-          pip install dvc
+          pip install -e "."
 
-      # -----------------------------------------------------------------------
-      # Data — Pull from DVC remote
-      # -----------------------------------------------------------------------
-      - name: Configure DVC remote
-        if: env.DVC_REMOTE_URL != ''
-        env:
-          DVC_REMOTE_URL: ${{ secrets.DVC_REMOTE_URL }}
-        run: dvc remote modify --local myremote url "$DVC_REMOTE_URL"
-
-      - name: Pull DVC data
-        run: |
-          echo "### 📥 Data Download" >> "$GITHUB_STEP_SUMMARY"
-          if dvc pull --allow-missing 2>&1 | tee /tmp/dvc_pull.log; then
-            echo "- **Status:** ✅ Data pulled successfully" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "- **Status:** ⚠️ DVC pull failed (using cached/local data)" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      # -----------------------------------------------------------------------
-      # Train — Run DVC pipeline or training script
-      # -----------------------------------------------------------------------
-      - name: Run training pipeline
-        if: github.event.inputs.stage == 'all' || github.event.inputs.stage == 'train'
-        env:
-          EPOCHS: ${{ github.event.inputs.epochs }}
-          BATCH_SIZE: ${{ github.event.inputs.batch_size }}
-        run: |
-          EXTRA_ARGS=""
-          [ -n "$EPOCHS" ] && EXTRA_ARGS="$EXTRA_ARGS --epochs $EPOCHS"
-          [ -n "$BATCH_SIZE" ] && EXTRA_ARGS="$EXTRA_ARGS --batch-size $BATCH_SIZE"
-
-          echo "Running training pipeline..."
-          if [ -f dvc.yaml ]; then
-            # Use DVC pipeline if defined
-            if [ "${{ github.event.inputs.stage }}" = "all" ]; then
-              dvc repro
-            else
-              dvc repro ${{ github.event.inputs.stage }}
-            fi
-          else
-            # Fallback to direct training script
-            python -m src.training.train $EXTRA_ARGS
-          fi
-
-      - name: Run download only
-        if: github.event.inputs.stage == 'download'
-        run: |
-          if [ -f dvc.yaml ]; then
-            dvc repro download
-          else
-            python -m src.data.download
-          fi
-
-      # -----------------------------------------------------------------------
-      # Evaluate — Generate metrics
-      # -----------------------------------------------------------------------
-      - name: Evaluate model
-        if: github.event.inputs.stage == 'all' || github.event.inputs.stage == 'train'
-        run: |
-          echo "### 📈 Evaluation Results" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          # Display DVC metrics if available
-          if [ -f dvc.yaml ]; then
-            dvc metrics show --md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
-          fi
-
-          # Display metrics file if it exists
-          for f in metrics.json reports/metrics.json; do
-            if [ -f "$f" ]; then
-              echo "#### Metrics (\`$f\`)" >> "$GITHUB_STEP_SUMMARY"
-              echo '```json' >> "$GITHUB_STEP_SUMMARY"
-              cat "$f" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-            fi
-          done
-
-      # -----------------------------------------------------------------------
-      # Upload — Model artifacts
-      # -----------------------------------------------------------------------
-      - name: Upload trained model
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          name: model-${{ github.sha }}
-          path: |
-            models/
-            metrics.json
-            reports/
-          retention-days: 30
-          if-no-files-found: ignore
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Upload training logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: training-logs-${{ github.sha }}
-          path: |
-            logs/
-            mlruns/
-          retention-days: 14
-          if-no-files-found: ignore
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-      # -----------------------------------------------------------------------
-      # Summary
-      # -----------------------------------------------------------------------
-      - name: Pipeline summary
-        if: always()
+      - name: Download test data from GCS
         run: |
+          mkdir -p data/processed
+          gsutil -m rsync -r gs://${{ env.GCS_BUCKET }}/data/processed/test/ data/processed/test/ || true
+          gsutil -m rsync -r gs://${{ env.GCS_BUCKET }}/data/processed/val/ data/processed/val/ || true
+
+      - name: Run evaluation
+        id: eval
+        run: |
+          python - <<'PYTHON_SCRIPT'
+          import json
+          import os
+          import sys
+
+          import torch
+          from pathlib import Path
+
+          # Add src to path
+          sys.path.insert(0, ".")
+
+          from src.training.model import create_model
+          from src.training.dataset import create_dataloaders
+          from src.utils.config import load_yaml_config
+
+          config = load_yaml_config("configs/train_config.yaml")
+          device = torch.device("cpu")
+
+          # Load model
+          model = create_model(
+              model_name=config["model"]["name"],
+              pretrained=False,
+              dropout=config["model"]["dropout"],
+          )
+
+          checkpoint = torch.load(
+              "models/checkpoints/best_model.pt",
+              map_location=device,
+              weights_only=False,
+          )
+          model.load_state_dict(checkpoint["model_state_dict"])
+          model.eval()
+
+          # Load validation/test data
+          data_config = config.get("data", {})
+          val_dir = data_config.get("val_dir", "data/processed/val")
+          test_dir = data_config.get("test_dir", "data/processed/test")
+
+          eval_dir = test_dir if Path(test_dir).exists() else val_dir
+          _, eval_loader = create_dataloaders(
+              train_dir=data_config.get("train_dir", "data/processed/train"),
+              val_dir=eval_dir,
+              batch_size=32,
+              num_workers=2,
+              image_size=data_config.get("image_size", 224),
+          )
+
+          # Evaluate
+          correct = 0
+          total = 0
+          tp = fp = fn = 0
+
+          with torch.no_grad():
+              for images, labels in eval_loader:
+                  images = images.to(device)
+                  labels = labels.float().unsqueeze(1).to(device)
+                  outputs = model(images)
+                  predicted = (outputs > 0.0).float()
+
+                  correct += (predicted == labels).sum().item()
+                  total += labels.size(0)
+                  tp += ((predicted == 1) & (labels == 1)).sum().item()
+                  fp += ((predicted == 1) & (labels == 0)).sum().item()
+                  fn += ((predicted == 0) & (labels == 1)).sum().item()
+
+          accuracy = correct / max(total, 1)
+          precision = tp / max(tp + fp, 1e-8)
+          recall = tp / max(tp + fn, 1e-8)
+          f1 = 2 * precision * recall / max(precision + recall, 1e-8)
+
+          # Quality gate: accuracy >= 0.85 and f1 >= 0.80
+          passed = "true" if accuracy >= 0.85 and f1 >= 0.80 else "false"
+
+          metrics = {
+              "accuracy": round(accuracy, 4),
+              "precision": round(precision, 4),
+              "recall": round(recall, 4),
+              "f1_score": round(f1, 4),
+              "total_samples": total,
+              "passed_quality_gate": passed == "true",
+          }
+
+          print(json.dumps(metrics, indent=2))
+
+          # Write metrics file
+          Path("reports").mkdir(exist_ok=True)
+          with open("reports/metrics.json", "w") as f:
+              json.dump(metrics, f, indent=2)
+
+          # Write GitHub outputs
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"accuracy={accuracy:.4f}\n")
+              f.write(f"f1_score={f1:.4f}\n")
+              f.write(f"passed={passed}\n")
+          PYTHON_SCRIPT
+
+      - name: Post metrics to job summary
+        run: |
+          echo "### 📊 Model Evaluation Results" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### 🔬 Training Pipeline Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Stage:** ${{ github.event.inputs.stage }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Commit:** \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Python:** 3.11" >> "$GITHUB_STEP_SUMMARY"
 
-          if [ -n "${{ github.event.inputs.epochs }}" ]; then
-            echo "- **Epochs:** ${{ github.event.inputs.epochs }}" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -n "${{ github.event.inputs.batch_size }}" ]; then
-            echo "- **Batch size:** ${{ github.event.inputs.batch_size }}" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          if [ -f reports/metrics.json ]; then
+            ACCURACY=$(jq -r '.accuracy' reports/metrics.json)
+            PRECISION=$(jq -r '.precision' reports/metrics.json)
+            RECALL=$(jq -r '.recall' reports/metrics.json)
+            F1=$(jq -r '.f1_score' reports/metrics.json)
+            SAMPLES=$(jq -r '.total_samples' reports/metrics.json)
+            PASSED=$(jq -r '.passed_quality_gate' reports/metrics.json)
 
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### DVC Status" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          dvc status 2>/dev/null >> "$GITHUB_STEP_SUMMARY" || echo "DVC status unavailable" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-
-          # List model files if any
-          if [ -d models/ ]; then
+            echo "| Metric | Value |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Accuracy | ${ACCURACY} |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Precision | ${PRECISION} |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Recall | ${RECALL} |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| F1 Score | ${F1} |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Samples | ${SAMPLES} |" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "#### Model Artifacts" >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-            find models/ -type f -exec ls -lh {} \; >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+            if [ "${PASSED}" = "true" ]; then
+              echo "> ✅ **Quality gate passed** (accuracy >= 0.85, F1 >= 0.80)" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "> ⚠️ **Quality gate failed** (requires accuracy >= 0.85, F1 >= 0.80)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "> ⚠️ No metrics file found" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload metrics artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-metrics-${{ github.sha }}
+          path: reports/metrics.json
+          retention-days: 30
+
+  # --------------------------------------------------------------------------
+  # Deploy to Cloud Run (conditional)
+  # --------------------------------------------------------------------------
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    needs: [evaluate]
+    # Deploy if: (auto_deploy was requested AND quality gate passed) OR quality gate passed on data-push trigger
+    if: |
+      (github.event.inputs.auto_deploy == 'true' && needs.evaluate.outputs.passed == 'true') ||
+      (github.event_name == 'push' && needs.evaluate.outputs.passed == 'true')
+
+    permissions:
+      contents: read
+      id-token: write
+
+    environment:
+      name: production
+      url: ${{ steps.url.outputs.url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download model artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model-${{ github.sha }}
+          path: models/checkpoints/
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push inference image
+        run: |
+          # Copy the newly trained model into the expected location for Docker build
+          mkdir -p models/checkpoints
+          ls -lh models/checkpoints/best_model.pt
+
+          IMAGE="${{ env.REPO }}/api"
+          docker build -f docker/Dockerfile \
+            -t "${IMAGE}:${{ github.sha }}" \
+            -t "${IMAGE}:latest" \
+            .
+          docker push "${IMAGE}:${{ github.sha }}"
+          docker push "${IMAGE}:latest"
+
+      - name: Deploy to Cloud Run
+        run: |
+          IMAGE="${{ env.REPO }}/api:${{ github.sha }}"
+          gcloud run deploy ${{ env.SERVICE }} \
+            --image="${IMAGE}" \
+            --region=${{ env.REGION }} \
+            --port=8080 \
+            --memory=1Gi \
+            --allow-unauthenticated \
+            --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=true" \
+            --quiet
+
+      - name: Get deployment URL
+        id: url
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+
+          echo "Waiting 15s for service to stabilize..."
+          sleep 15
+
+          echo "Checking ${URL}/health ..."
+          STATUS=$(curl -s -o /tmp/health_response -w "%{http_code}" "${URL}/health" --max-time 30)
+          BODY=$(cat /tmp/health_response)
+
+          echo "### 🚀 Deployment" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$STATUS" = "200" ]; then
+            echo "Health check passed (HTTP ${STATUS})"
+            echo "- **Status:** ✅ Healthy" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **URL:** ${URL}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Accuracy:** ${{ needs.evaluate.outputs.accuracy }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **F1:** ${{ needs.evaluate.outputs.f1_score }}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Health check failed (HTTP ${STATUS})"
+            echo "- **Status:** ❌ Failed (HTTP ${STATUS})" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Response:** \`${BODY}\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi

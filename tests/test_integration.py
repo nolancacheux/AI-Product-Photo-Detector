@@ -3,7 +3,7 @@
 import io
 import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 import torch
@@ -60,6 +60,7 @@ def loaded_client(model_checkpoint: Path) -> TestClient:
     with patch.dict(os.environ, {"AIDETECT_MODEL_PATH": str(model_checkpoint)}), \
          patch("src.utils.config.load_yaml_config", return_value={}):
         import importlib
+
         import src.inference.api
         importlib.reload(src.inference.api)
         from src.inference.api import app

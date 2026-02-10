@@ -1,0 +1,44 @@
+# Pipeline Configuration
+# AI Product Photo Detector - Vertex AI Training Pipeline
+
+pipeline:
+  pipeline_name: "ai-product-detector-training"
+  pipeline_root: "gs://ai-product-detector-487013/pipeline_root"
+  project_id: "ai-product-detector-487013"
+  region: "europe-west1"
+  data_gcs_path: "gs://ai-product-detector-487013/data/processed"
+  output_gcs_path: "gs://ai-product-detector-487013/pipeline_runs"
+  production_metrics_gcs_path: "gs://ai-product-detector-487013/production/metrics.json"
+  training_image: "europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/train:latest"
+  serving_image: "europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/serve:latest"
+  model_display_name: "ai-product-detector"
+  enable_caching: true
+
+# Training parameters (defaults matching train_config.yaml)
+training:
+  epochs: 15
+  batch_size: 64
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  image_size: 224
+  scheduler: "cosine"
+  warmup_epochs: 2
+  early_stopping_patience: 5
+
+# Evaluation thresholds
+evaluation:
+  min_accuracy: 0.85
+  min_f1: 0.80
+  min_samples_per_class: 100
+  max_class_imbalance_ratio: 0.3
+
+# Deployment settings
+deployment:
+  auto_deploy: false
+  service_name: "ai-product-detector"
+  cloud_run_region: "europe-west1"
+  min_instances: 0
+  max_instances: 3
+  memory: "2Gi"
+  cpu: "2"
+  timeout_seconds: 300

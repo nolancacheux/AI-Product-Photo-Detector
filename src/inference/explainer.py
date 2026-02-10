@@ -25,7 +25,6 @@ def _rebuild_classifier(state_dict: dict, feature_dim: int, dropout: float) -> n
     handling older checkpoints that lack BatchNorm1d.
     """
     cls_keys = sorted(k for k in state_dict if k.startswith("classifier."))
-    weight_indices = sorted({int(k.split(".")[1]) for k in cls_keys})
 
     # Current model: [Linear, BatchNorm, ReLU, Dropout, Linear] → indices 0,1,2,3,4
     # Old model:     [Linear, ReLU, Dropout, Linear]             → indices 0,1,2,3

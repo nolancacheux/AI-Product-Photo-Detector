@@ -116,7 +116,7 @@ class AIProductDataset(Dataset):
                 image = self.transform(image)
 
             return image, label
-        except (OSError, IOError) as e:
+        except OSError as e:
             logger.warning(f"Failed to load image {img_path}: {e}, returning random replacement")
             # Return a random valid sample instead of crashing
             replacement_idx = (idx + 1) % len(self.samples)

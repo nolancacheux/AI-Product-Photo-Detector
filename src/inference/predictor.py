@@ -97,7 +97,6 @@ class Predictor:
             except RuntimeError:
                 # Rebuild classifier to match checkpoint format
                 import torch.nn as nn
-                classifier_keys = [k for k in state_dict if k.startswith("classifier.")]
                 if "classifier.1.weight" not in state_dict and "classifier.3.weight" in state_dict:
                     # Old format: Linear(in, 512) -> ReLU -> Dropout -> Linear(512, 1)
                     in_features = self.model.classifier[0].in_features

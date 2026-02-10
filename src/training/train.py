@@ -1,4 +1,9 @@
-"""Training pipeline for AI Product Photo Detector."""
+"""Training pipeline for AI Product Photo Detector.
+
+Supports both local and Vertex AI (GCS-backed) training. When a --gcs-bucket
+is provided, data is pulled from GCS before training and the best model +
+MLflow artifacts are uploaded to GCS after training.
+"""
 
 import argparse
 import random
@@ -102,7 +107,7 @@ def train_epoch(
         )
 
     if total == 0:
-        logger.warning("Training loader was empty — no samples processed")
+        logger.warning("Training loader was empty -- no samples processed")
         return 0.0, 0.0
 
     avg_loss = total_loss / total
@@ -155,7 +160,7 @@ def validate(
             false_negatives += ((predicted == 0) & (labels == 1)).sum().item()
 
     if total == 0:
-        logger.warning("Validation loader was empty — no samples processed")
+        logger.warning("Validation loader was empty -- no samples processed")
         return 0.0, 0.0, 0.0, 0.0, 0.0
 
     avg_loss = total_loss / total
@@ -167,27 +172,57 @@ def validate(
     return avg_loss, accuracy, precision, recall, f1
 
 
-def train(config_path: str) -> None:
+def train(
+    config_path: str,
+    gcs_bucket: str | None = None,
+    epoch_override: int | None = None,
+    batch_size_override: int | None = None,
+) -> None:
     """Main training function.
 
     Args:
         config_path: Path to training configuration file.
+        gcs_bucket: GCS bucket name for remote data/model storage.
+            When set, data is downloaded from GCS if missing locally,
+            and the best model is uploaded to GCS after training.
+        epoch_override: Override the number of epochs from config.
+        batch_size_override: Override the batch size from config.
     """
     # Load configuration
     config = load_yaml_config(config_path)
+
+    # Apply CLI overrides
+    if epoch_override is not None:
+        config.setdefault("training", {})["epochs"] = epoch_override
+    if batch_size_override is not None:
+        config.setdefault("data", {})["batch_size"] = batch_size_override
 
     # Setup
     setup_logging(level="INFO", json_format=False)
     set_seed(config.get("seed", 42))
     device = get_device()
 
-    logger.info("Starting training", device=str(device))
+    logger.info("Starting training", device=str(device), gcs_bucket=gcs_bucket)
+
+    # GCS data download: pull training data if local dirs are missing
+    data_config = config.get("data", {})
+    train_dir = data_config.get("train_dir", "data/processed/train")
+    val_dir = data_config.get("val_dir", "data/processed/val")
+
+    if gcs_bucket and (not Path(train_dir).exists() or not Path(val_dir).exists()):
+        from src.training.gcs import download_directory
+
+        logger.info("Local data not found, downloading from GCS", bucket=gcs_bucket)
+        download_directory(
+            bucket_name=gcs_bucket,
+            gcs_prefix="data/processed",
+            local_dir="data/processed",
+        )
 
     # Data
-    data_config = config.get("data", {})
     train_loader, val_loader = create_dataloaders(
-        train_dir=data_config.get("train_dir", "data/processed/train"),
-        val_dir=data_config.get("val_dir", "data/processed/val"),
+        train_dir=train_dir,
+        val_dir=val_dir,
         batch_size=data_config.get("batch_size", 32),
         num_workers=data_config.get("num_workers", 4),
         image_size=data_config.get("image_size", 224),
@@ -237,6 +272,9 @@ def train(config_path: str) -> None:
     epochs = training_config.get("epochs", 20)
     patience = training_config.get("early_stopping_patience", 5)
     patience_counter = 0
+    checkpoint_dir = Path(
+        config.get("checkpoint", {}).get("save_dir", "models/checkpoints")
+    )
 
     with mlflow.start_run():
         # Log parameters
@@ -258,6 +296,7 @@ def train(config_path: str) -> None:
                 "trainable_params": model.get_num_trainable_params(),
                 "total_params": model.get_num_total_params(),
                 "device": str(device),
+                "gcs_bucket": gcs_bucket or "none",
             }
         )
 
@@ -265,11 +304,13 @@ def train(config_path: str) -> None:
             logger.info(f"Epoch {epoch + 1}/{epochs}")
 
             # Train
-            train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, device)
+            train_loss, train_acc = train_epoch(
+                model, train_loader, criterion, optimizer, device,
+            )
 
             # Validate
             val_loss, val_acc, val_precision, val_recall, val_f1 = validate(
-                model, val_loader, criterion, device
+                model, val_loader, criterion, device,
             )
 
             # Step scheduler
@@ -304,10 +345,6 @@ def train(config_path: str) -> None:
                 best_val_accuracy = val_acc
                 patience_counter = 0
 
-                # Save checkpoint
-                checkpoint_dir = Path(
-                    config.get("checkpoint", {}).get("save_dir", "models/checkpoints")
-                )
                 checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
                 torch.save(
@@ -345,6 +382,47 @@ def train(config_path: str) -> None:
 
         logger.info("Training complete", best_val_accuracy=f"{best_val_accuracy:.4f}")
 
+    # Upload artifacts to GCS after training
+    _upload_artifacts_to_gcs(gcs_bucket, checkpoint_dir)
+
+
+def _upload_artifacts_to_gcs(
+    gcs_bucket: str | None,
+    checkpoint_dir: Path,
+) -> None:
+    """Upload model checkpoint and MLflow artifacts to GCS.
+
+    No-op when gcs_bucket is None (local-only training).
+
+    Args:
+        gcs_bucket: GCS bucket name, or None for local training.
+        checkpoint_dir: Local directory containing the best model checkpoint.
+    """
+    best_model_path = checkpoint_dir / "best_model.pt"
+    if not gcs_bucket or not best_model_path.exists():
+        return
+
+    from src.training.gcs import upload_directory, upload_file
+
+    logger.info("Uploading best model to GCS")
+    upload_file(
+        local_path=str(best_model_path),
+        bucket_name=gcs_bucket,
+        gcs_path="models/best_model.pt",
+    )
+
+    # Upload MLflow run artifacts
+    mlruns_dir = Path("mlruns")
+    if mlruns_dir.exists():
+        logger.info("Uploading MLflow artifacts to GCS")
+        upload_directory(
+            local_dir=str(mlruns_dir),
+            bucket_name=gcs_bucket,
+            gcs_prefix="mlruns",
+        )
+
+    logger.info("GCS upload complete")
+
 
 def main() -> None:
     """CLI entry point."""
@@ -355,9 +433,32 @@ def main() -> None:
         default="configs/train_config.yaml",
         help="Path to training configuration file",
     )
+    parser.add_argument(
+        "--gcs-bucket",
+        type=str,
+        default=None,
+        help="GCS bucket for remote data/model storage (e.g. ai-product-detector-487013)",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=None,
+        help="Override number of training epochs",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="Override training batch size",
+    )
     args = parser.parse_args()
 
-    train(args.config)
+    train(
+        config_path=args.config,
+        gcs_bucket=args.gcs_bucket,
+        epoch_override=args.epochs,
+        batch_size_override=args.batch_size,
+    )
 
 
 if __name__ == "__main__":

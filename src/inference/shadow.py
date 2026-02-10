@@ -1,9 +1,6 @@
 """Shadow/comparison mode for A/B model testing."""
 
 import os
-import time
-
-from fastapi import File, UploadFile
 
 from src.inference.predictor import Predictor
 from src.inference.schemas import CompareResponse, PredictResponse

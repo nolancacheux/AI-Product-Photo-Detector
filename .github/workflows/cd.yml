@@ -1,7 +1,8 @@
 # ==============================================================================
 # CD — Build, Push & Deploy to Cloud Run
 # Triggered on push to main (only after CI passes).
-# Requires secrets: GCP_PROJECT_ID, GCP_SA_KEY, API_KEY
+# Before building, syncs the latest trained model from GCS if available.
+# Requires secrets: GCP_PROJECT_ID, GCP_SA_KEY, GCS_BUCKET, API_KEY
 # ==============================================================================
 
 name: CD
@@ -86,6 +87,47 @@ jobs:
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      # Sync latest trained model from GCS (Vertex AI output) if newer than repo copy
+      - name: Sync latest model from GCS
+        run: |
+          GCS_MODEL="gs://${{ secrets.GCS_BUCKET }}/models/best_model.pt"
+          LOCAL_MODEL="models/checkpoints/best_model.pt"
+          mkdir -p models/checkpoints
+
+          # Check if a model exists in GCS
+          if gsutil ls "${GCS_MODEL}" > /dev/null 2>&1; then
+            GCS_UPDATED=$(gsutil stat "${GCS_MODEL}" | grep "Update time" | sed 's/.*Update time: *//')
+            echo "GCS model last updated: ${GCS_UPDATED}"
+
+            if [ -f "${LOCAL_MODEL}" ]; then
+              LOCAL_SIZE=$(stat -c%s "${LOCAL_MODEL}")
+              GCS_SIZE=$(gsutil stat "${GCS_MODEL}" | grep "Content-Length" | awk '{print $2}')
+              echo "Local model size: ${LOCAL_SIZE}, GCS model size: ${GCS_SIZE}"
+
+              # Download if sizes differ (indicates a newer model)
+              if [ "${LOCAL_SIZE}" != "${GCS_SIZE}" ]; then
+                echo "GCS model differs from local copy. Downloading..."
+                gsutil cp "${GCS_MODEL}" "${LOCAL_MODEL}"
+                echo "Downloaded latest model from GCS."
+              else
+                echo "Local model matches GCS. No download needed."
+              fi
+            else
+              echo "No local model found. Downloading from GCS..."
+              gsutil cp "${GCS_MODEL}" "${LOCAL_MODEL}"
+              echo "Downloaded model from GCS."
+            fi
+          else
+            echo "No model found in GCS bucket. Using repo model."
+          fi
+
+          # Verify a model exists for the build
+          if [ -f "${LOCAL_MODEL}" ]; then
+            echo "Model ready: $(ls -lh ${LOCAL_MODEL})"
+          else
+            echo "WARNING: No model file found. Build may use a stale or missing model."
+          fi
 
       - name: Determine image tag
         id: tag

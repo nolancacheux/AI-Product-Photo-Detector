@@ -14,3 +14,6 @@ __all__ = [
     "create_model",
     "train",
 ]
+
+# GCS and Vertex AI modules are imported on demand to avoid
+# requiring google-cloud-* packages for local-only usage.

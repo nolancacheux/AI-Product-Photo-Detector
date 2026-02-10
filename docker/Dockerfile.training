@@ -1,0 +1,39 @@
+# Vertex AI Training Dockerfile
+# AI Product Photo Detector - GPU-enabled training container
+#
+# Data and models are NOT baked in; they are pulled from GCS at runtime.
+# Build: docker build -f docker/Dockerfile.training -t ai-product-detector-train .
+# Run:   docker run --gpus all ai-product-detector-train
+
+FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
+
+LABEL maintainer="Nolan Cacheux <cachnolan@gmail.com>"
+LABEL version="1.0.0"
+LABEL description="Vertex AI training container for AI Product Photo Detector"
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python dependencies first (better layer caching)
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+RUN pip install --no-cache-dir -e ".[dev]"
+
+# Copy configuration
+COPY configs/ ./configs/
+
+# Create runtime directories for data and model artifacts
+RUN mkdir -p data/processed models/checkpoints mlruns
+
+# Default: run training with GCS integration
+CMD ["python", "-m", "src.training.train", "--config", "configs/train_config.yaml"]

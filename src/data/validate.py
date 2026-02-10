@@ -3,7 +3,6 @@
 import argparse
 import json
 import logging
-import os
 import sys
 from collections import defaultdict
 from pathlib import Path
