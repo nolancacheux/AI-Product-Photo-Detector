@@ -8,5 +8,14 @@ providers:
     disableDeletion: false
     editable: true
     options:
-      path: /etc/grafana/provisioning/dashboards
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
+  - name: ai-detector-dashboards
+    orgId: 1
+    folder: AI Detector
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/dashboards
       foldersFromFilesStructure: false
