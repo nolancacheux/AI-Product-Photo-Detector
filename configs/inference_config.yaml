@@ -10,7 +10,7 @@ server:
 
 # Model
 model:
-  path: "models/best_model.pt"
+  path: "models/checkpoints/best_model.pt"
   device: "auto"  # auto, cpu, cuda
   
 # Image Processing

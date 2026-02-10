@@ -64,18 +64,43 @@ pip install -e ".[dev,ui]"
 
 ### Training
 
+You can train locally (CPU) or on Google Colab (GPU, recommended).
+
+#### Option A: Train on Google Colab (GPU) — Recommended
+
+Train on a free T4 GPU in ~1 minute instead of ~15 minutes on CPU.
+
+1. **Open the notebook:** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nolancacheux/AI-Product-Photo-Detector/blob/main/notebooks/train_colab.ipynb)
+2. **Select GPU runtime:** `Runtime > Change runtime type > T4 GPU`
+3. **Run all cells** — the notebook will clone the repo, download data, train, and offer file downloads
+4. **Download the outputs** when prompted:
+   - `best_model.pt` — trained model weights (~54 MB)
+   - `mlflow_artifacts.zip` — experiment tracking data
+5. **Place files in your local project:**
+
+```
+AI-Product-Photo-Detector/
+├── models/
+│   └── checkpoints/
+│       └── best_model.pt        ← put the model here
+└── mlruns/                       ← unzip mlflow_artifacts.zip here
+```
+
+#### Option B: Train locally (CPU)
+
 ```bash
-# Download real dataset (CIFAKE - CIFAR-10 real vs Stable Diffusion AI)
+# Download dataset (CIFAKE - CIFAR-10 real vs Stable Diffusion AI)
 python scripts/download_cifake.py --max-per-class 2500
 
-# Or use synthetic data for quick testing
-python scripts/create_sample_data.py --output data/processed
-
-# Train model
+# Train model (~15 min on CPU)
 python -m src.training.train --config configs/train_config.yaml
 ```
 
+The trained model is automatically saved to `models/checkpoints/best_model.pt`.
+
 ### Run API
+
+Once you have a trained model in `models/checkpoints/best_model.pt`:
 
 ```bash
 # Start server
@@ -252,7 +277,11 @@ pytest tests/test_api.py -v
 
 | Metric | Value |
 |--------|-------|
-| Inference | ~50ms |
+| Train Accuracy | 93.0% |
+| Validation Accuracy | 82.9% |
+| Training Time (T4 GPU) | ~45s |
+| Training Time (CPU) | ~15 min |
+| Inference | ~50ms/image |
 
 ## Author
 

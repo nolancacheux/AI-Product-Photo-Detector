@@ -50,7 +50,7 @@ class ThresholdsConfig(BaseModel):
 class Settings(BaseSettings):
     """Application settings from environment variables."""
 
-    model_path: str = "models/best_model.pt"
+    model_path: str = "models/checkpoints/best_model.pt"
     mlflow_tracking_uri: str = "http://localhost:5000"
     log_level: str = "INFO"
 
