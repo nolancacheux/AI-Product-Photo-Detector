@@ -20,7 +20,7 @@ def init_page() -> None:
     """Initialize Streamlit page configuration."""
     st.set_page_config(
         page_title="AI Image Detector",
-        page_icon="🔍",
+        page_icon="mag",
         layout="centered",
         initial_sidebar_state="collapsed",
     )
@@ -152,14 +152,14 @@ def display_result(result: dict) -> None:
         css_class = "result-ai"
         color = "#e53935"
         bar_color = "#e53935"
-        icon = "🤖"
+        icon = "AI"
     else:
         percent = (1 - probability) * 100
         label = "Real Photo"
         css_class = "result-real"
         color = "#4caf50"
         bar_color = "#4caf50"
-        icon = "✅"
+        icon = "REAL"
 
     # Confidence text
     if percent >= 95:
@@ -188,15 +188,15 @@ def main() -> None:
     init_page()
 
     # Header
-    st.markdown("# 🔍 AI Image Detector")
+    st.markdown("# AI Image Detector")
     st.markdown("Upload an image to detect if it's **AI-generated** or a **real photograph**.")
 
     # Status indicator
     health = check_api_health()
     if health and health.get("status") == "healthy":
-        st.caption(f"🟢 API Online · Model v{health.get('model_version', '?')}")
+        st.caption(f"<span style='color:#4caf50;'>●</span> API Online · Model v{health.get('model_version', '?')}", unsafe_allow_html=True)
     else:
-        st.caption("🔴 API Offline")
+        st.caption("<span style='color:#e53935;'>●</span> API Offline", unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -223,9 +223,9 @@ def main() -> None:
         # Analyze button
         col1, col2 = st.columns(2)
         with col1:
-            analyze = st.button("🔍 Analyze", type="primary", use_container_width=True)
+            analyze = st.button("Analyze", type="primary", use_container_width=True)
         with col2:
-            explain = st.button("🧠 Explain (Grad-CAM)", use_container_width=True)
+            explain = st.button("Explain (Grad-CAM)", use_container_width=True)
 
         if analyze:
             with st.spinner("Analyzing..."):
@@ -254,7 +254,7 @@ def main() -> None:
             # Show heatmap if available
             heatmap_b64 = getattr(st.session_state, "last_explain", None)
             if heatmap_b64:
-                st.markdown("#### 🧠 Grad-CAM Heatmap")
+                st.markdown("#### Grad-CAM Heatmap")
                 st.markdown("*Highlighted areas show what the model focused on*")
                 heatmap_bytes = base64.b64decode(heatmap_b64)
                 st.image(heatmap_bytes, use_container_width=True)
@@ -262,9 +262,9 @@ def main() -> None:
     # History
     if st.session_state.history:
         st.markdown("---")
-        with st.expander(f"📋 History ({len(st.session_state.history)} predictions)"):
+        with st.expander(f"History ({len(st.session_state.history)} predictions)"):
             for entry in reversed(st.session_state.history[-10:]):
-                icon = "✅" if entry["result"] == "real" else "🤖"
+                icon = "REAL" if entry["result"] == "real" else "AI"
                 st.markdown(f"`{entry['time']}` {icon} **{entry['file']}** → {entry['score']}")
 
     # Footer
