@@ -99,6 +99,46 @@ class ErrorResponse(BaseModel):
     )
 
 
+class CompareResponse(BaseModel):
+    """Response schema for /v1/predict/compare shadow comparison endpoint."""
+
+    primary: PredictResponse = Field(description="Primary model prediction")
+    shadow: PredictResponse | None = Field(
+        default=None, description="Shadow model prediction (None if no shadow model)"
+    )
+    agreement: bool = Field(description="Whether both models agree on the prediction")
+    difference: float = Field(
+        ge=0.0, le=1.0, description="Absolute difference between probabilities"
+    )
+    message: str | None = Field(
+        default=None, description="Additional info (e.g. shadow model not configured)"
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "primary": {
+                    "prediction": "ai_generated",
+                    "probability": 0.87,
+                    "confidence": "high",
+                    "inference_time_ms": 45.2,
+                    "model_version": "1.0.0",
+                },
+                "shadow": {
+                    "prediction": "ai_generated",
+                    "probability": 0.82,
+                    "confidence": "high",
+                    "inference_time_ms": 50.1,
+                    "model_version": "1.0.1",
+                },
+                "agreement": True,
+                "difference": 0.05,
+                "message": None,
+            }
+        }
+    )
+
+
 class BatchItemResult(BaseModel):
     """Result for a single item in batch prediction."""
 
