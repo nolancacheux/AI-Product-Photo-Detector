@@ -8,7 +8,7 @@ LABEL version="1.0.0"
 
 # System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libgomp1 curl \
+    build-essential libgomp1 curl libgl1 libglib2.0-0 libxcb1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
