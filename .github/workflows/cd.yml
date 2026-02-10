@@ -1,0 +1,219 @@
+# ==============================================================================
+# CD — Build, Push & Deploy to Cloud Run
+# Triggered on push to main (only after CI passes).
+# Requires secrets: GCP_PROJECT_ID, GCP_SA_KEY, API_KEY
+# ==============================================================================
+
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+  # Allow manual deploy / rollback with custom image tag
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (commit SHA or 'latest' to build fresh)"
+        required: false
+        default: "latest"
+      memory:
+        description: "Cloud Run memory allocation"
+        required: false
+        default: "1Gi"
+        type: choice
+        options:
+          - 512Mi
+          - 1Gi
+          - 2Gi
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGION: europe-west1
+  SERVICE: ai-product-detector
+  REGISTRY: europe-west1-docker.pkg.dev
+  IMAGE: europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Wait for CI to pass (on push events)
+  # --------------------------------------------------------------------------
+  ci-check:
+    name: Wait for CI
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Wait for CI workflow
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          running-workflow-name: "Wait for CI"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          check-regexp: "^(Lint|Tests|Type Checking)"
+          wait-interval: 15
+          allowed-conclusions: success
+
+  # --------------------------------------------------------------------------
+  # Build & Push Docker Image
+  # --------------------------------------------------------------------------
+  build:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [ci-check]
+    if: always() && (needs.ci-check.result == 'success' || github.event_name == 'workflow_dispatch')
+
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Determine image tag
+        id: tag
+        run: |
+          if [ "${{ github.event.inputs.image_tag }}" != "" ] && [ "${{ github.event.inputs.image_tag }}" != "latest" ]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+            echo "skip_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "skip_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.tag.outputs.skip_build == 'false'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        if: steps.tag.outputs.skip_build == 'false'
+        run: |
+          docker build -f docker/Dockerfile \
+            -t ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }} \
+            -t ${{ env.IMAGE }}:latest .
+          docker push ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}
+          docker push ${{ env.IMAGE }}:latest
+
+      - name: Build summary
+        run: |
+          echo "### 📦 Docker Image" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Image:** \`${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+  # --------------------------------------------------------------------------
+  # Deploy to Cloud Run
+  # --------------------------------------------------------------------------
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    permissions:
+      contents: read
+      id-token: write
+
+    environment:
+      name: production
+      url: ${{ steps.url.outputs.url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        run: |
+          MEMORY="${{ github.event.inputs.memory || '1Gi' }}"
+          gcloud run deploy ${{ env.SERVICE }} \
+            --image=${{ env.IMAGE }}:${{ needs.build.outputs.image_tag }} \
+            --region=${{ env.REGION }} \
+            --port=8080 \
+            --memory="${MEMORY}" \
+            --allow-unauthenticated \
+            --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=true" \
+            --quiet
+
+      - name: Get deployment URL
+        id: url
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Deployment summary
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+          echo "### 🚀 Deployed to Cloud Run" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **URL:** ${URL}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Image:** \`${{ needs.build.outputs.image_tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Region:** ${{ env.REGION }}" >> "$GITHUB_STEP_SUMMARY"
+
+  # --------------------------------------------------------------------------
+  # Smoke Test — Verify the deployment is healthy
+  # --------------------------------------------------------------------------
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: [deploy]
+
+    steps:
+      - name: Get service URL
+        id: svc
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Health check
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+
+          echo "Waiting 15s for service to stabilize..."
+          sleep 15
+
+          echo "Checking ${URL}/health ..."
+          STATUS=$(curl -s -o /tmp/health_response -w "%{http_code}" "${URL}/health" --max-time 30)
+          BODY=$(cat /tmp/health_response)
+
+          echo "### 🏥 Smoke Test" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Health check passed (HTTP ${STATUS})"
+            echo "- **Status:** ✅ Healthy (HTTP ${STATUS})" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Response:** \`${BODY}\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Health check failed (HTTP ${STATUS})"
+            echo "Response: ${BODY}"
+            echo "- **Status:** ❌ Failed (HTTP ${STATUS})" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Response:** \`${BODY}\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi

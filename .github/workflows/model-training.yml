@@ -1,0 +1,189 @@
+# ==============================================================================
+# Model Training Pipeline
+# Manual trigger only (workflow_dispatch).
+# Steps: pull data (DVC) → train → evaluate → upload model artifact
+# ==============================================================================
+
+name: Model Training
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Pipeline stage to run"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - download
+          - train
+      epochs:
+        description: "Number of training epochs (overrides config)"
+        required: false
+        default: ""
+      batch_size:
+        description: "Batch size (overrides config)"
+        required: false
+        default: ""
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Training Pipeline
+  # --------------------------------------------------------------------------
+  train:
+    name: Train Model (${{ github.event.inputs.stage }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install dvc
+
+      # -----------------------------------------------------------------------
+      # Data — Pull from DVC remote
+      # -----------------------------------------------------------------------
+      - name: Configure DVC remote
+        if: env.DVC_REMOTE_URL != ''
+        env:
+          DVC_REMOTE_URL: ${{ secrets.DVC_REMOTE_URL }}
+        run: dvc remote modify --local myremote url "$DVC_REMOTE_URL"
+
+      - name: Pull DVC data
+        run: |
+          echo "### 📥 Data Download" >> "$GITHUB_STEP_SUMMARY"
+          if dvc pull --allow-missing 2>&1 | tee /tmp/dvc_pull.log; then
+            echo "- **Status:** ✅ Data pulled successfully" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- **Status:** ⚠️ DVC pull failed (using cached/local data)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # -----------------------------------------------------------------------
+      # Train — Run DVC pipeline or training script
+      # -----------------------------------------------------------------------
+      - name: Run training pipeline
+        if: github.event.inputs.stage == 'all' || github.event.inputs.stage == 'train'
+        env:
+          EPOCHS: ${{ github.event.inputs.epochs }}
+          BATCH_SIZE: ${{ github.event.inputs.batch_size }}
+        run: |
+          EXTRA_ARGS=""
+          [ -n "$EPOCHS" ] && EXTRA_ARGS="$EXTRA_ARGS --epochs $EPOCHS"
+          [ -n "$BATCH_SIZE" ] && EXTRA_ARGS="$EXTRA_ARGS --batch-size $BATCH_SIZE"
+
+          echo "Running training pipeline..."
+          if [ -f dvc.yaml ]; then
+            # Use DVC pipeline if defined
+            if [ "${{ github.event.inputs.stage }}" = "all" ]; then
+              dvc repro
+            else
+              dvc repro ${{ github.event.inputs.stage }}
+            fi
+          else
+            # Fallback to direct training script
+            python -m src.training.train $EXTRA_ARGS
+          fi
+
+      - name: Run download only
+        if: github.event.inputs.stage == 'download'
+        run: |
+          if [ -f dvc.yaml ]; then
+            dvc repro download
+          else
+            python -m src.data.download
+          fi
+
+      # -----------------------------------------------------------------------
+      # Evaluate — Generate metrics
+      # -----------------------------------------------------------------------
+      - name: Evaluate model
+        if: github.event.inputs.stage == 'all' || github.event.inputs.stage == 'train'
+        run: |
+          echo "### 📈 Evaluation Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # Display DVC metrics if available
+          if [ -f dvc.yaml ]; then
+            dvc metrics show --md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          fi
+
+          # Display metrics file if it exists
+          for f in metrics.json reports/metrics.json; do
+            if [ -f "$f" ]; then
+              echo "#### Metrics (\`$f\`)" >> "$GITHUB_STEP_SUMMARY"
+              echo '```json' >> "$GITHUB_STEP_SUMMARY"
+              cat "$f" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+      # -----------------------------------------------------------------------
+      # Upload — Model artifacts
+      # -----------------------------------------------------------------------
+      - name: Upload trained model
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-${{ github.sha }}
+          path: |
+            models/
+            metrics.json
+            reports/
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload training logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: training-logs-${{ github.sha }}
+          path: |
+            logs/
+            mlruns/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # -----------------------------------------------------------------------
+      # Summary
+      # -----------------------------------------------------------------------
+      - name: Pipeline summary
+        if: always()
+        run: |
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 🔬 Training Pipeline Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Stage:** ${{ github.event.inputs.stage }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Commit:** \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Python:** 3.11" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -n "${{ github.event.inputs.epochs }}" ]; then
+            echo "- **Epochs:** ${{ github.event.inputs.epochs }}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -n "${{ github.event.inputs.batch_size }}" ]; then
+            echo "- **Batch size:** ${{ github.event.inputs.batch_size }}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### DVC Status" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          dvc status 2>/dev/null >> "$GITHUB_STEP_SUMMARY" || echo "DVC status unavailable" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          # List model files if any
+          if [ -d models/ ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "#### Model Artifacts" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            find models/ -type f -exec ls -lh {} \; >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
