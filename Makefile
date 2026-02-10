@@ -1,40 +1,52 @@
 # Makefile for AI Product Photo Detector
 # Run `make help` for available commands
 
-.PHONY: help install dev lint format test train serve ui docker-build docker-run docker-up docker-down predict predict-batch clean
+.PHONY: help install dev lint format test train serve ui \
+        docker-build docker-run docker-up docker-down docker-logs \
+        predict predict-batch data dvc-repro mlflow deploy clean
 
 # Default target
 help:
 	@echo "AI Product Photo Detector - Available Commands"
 	@echo ""
 	@echo "Setup:"
-	@echo "  make install     Install production dependencies"
-	@echo "  make dev         Install development dependencies"
+	@echo "  make install       Install production dependencies"
+	@echo "  make dev           Install development dependencies + pre-commit"
 	@echo ""
 	@echo "Development:"
-	@echo "  make lint        Run linting (ruff + mypy)"
-	@echo "  make format      Format code with ruff"
-	@echo "  make test        Run tests with coverage"
+	@echo "  make lint          Run linting (ruff + mypy)"
+	@echo "  make format        Format code with ruff"
+	@echo "  make test          Run tests with coverage"
+	@echo ""
+	@echo "Data:"
+	@echo "  make data          Download CIFAKE dataset"
+	@echo "  make dvc-repro     Reproduce full DVC pipeline (download + train)"
 	@echo ""
 	@echo "Run:"
-	@echo "  make train       Train the model"
-	@echo "  make serve       Start API server"
-	@echo "  make ui          Start Streamlit UI"
+	@echo "  make train         Train the model"
+	@echo "  make serve         Start API server (dev mode with reload)"
+	@echo "  make ui            Start Streamlit UI"
+	@echo "  make mlflow        Start MLflow UI"
 	@echo ""
 	@echo "Docker:"
-	@echo "  make docker-build  Build Docker images"
+	@echo "  make docker-build  Build Docker images (train + serve)"
 	@echo "  make docker-run    Run API container locally"
-	@echo "  make docker-up     Start all services"
+	@echo "  make docker-up     Start all services (docker compose)"
 	@echo "  make docker-down   Stop all services"
+	@echo "  make docker-logs   Follow logs from all services"
 	@echo ""
 	@echo "Testing API:"
 	@echo "  make predict       Test single prediction (requires running API)"
 	@echo "  make predict-batch Test batch prediction (requires running API)"
 	@echo ""
+	@echo "Deploy:"
+	@echo "  make deploy        Trigger manual deploy via GitHub Actions"
+	@echo ""
 	@echo "Cleanup:"
-	@echo "  make clean       Remove build artifacts"
+	@echo "  make clean         Remove build artifacts"
 
-# Setup
+# ─── Setup ────────────────────────────────────────────────────────────────────
+
 install:
 	uv pip install -e . || pip install -e .
 
@@ -42,7 +54,8 @@ dev:
 	uv pip install -e ".[dev,ui]" || pip install -e ".[dev,ui]"
 	pre-commit install
 
-# Development
+# ─── Development ──────────────────────────────────────────────────────────────
+
 lint:
 	ruff check src/ tests/
 	mypy src/ --ignore-missing-imports
@@ -54,7 +67,16 @@ format:
 test:
 	pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html
 
-# Run
+# ─── Data ─────────────────────────────────────────────────────────────────────
+
+data:
+	python scripts/download_cifake.py --max-per-class 2500
+
+dvc-repro:
+	dvc repro
+
+# ─── Run ──────────────────────────────────────────────────────────────────────
+
 train:
 	python -m src.training.train --config configs/train_config.yaml
 
@@ -64,13 +86,17 @@ serve:
 ui:
 	streamlit run src/ui/app.py --server.port 8501
 
-# Docker
+mlflow:
+	mlflow ui --backend-store-uri mlruns --port 5000
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+
 docker-build:
+	docker build -f docker/Dockerfile -t ai-product-detector:1.0.0 .
 	docker build -f docker/train.Dockerfile -t ai-product-detector-train:1.0.0 .
-	docker build -f docker/serve.Dockerfile -t ai-product-detector:1.0.0 .
 
 docker-run:
-	docker run --rm -p 8000:8000 -v $(PWD)/models:/app/models ai-product-detector:1.0.0
+	docker run --rm -p 8080:8080 -v $(PWD)/models:/app/models:ro ai-product-detector:1.0.0
 
 docker-up:
 	docker compose up -d
@@ -78,7 +104,11 @@ docker-up:
 docker-down:
 	docker compose down
 
-# Quick prediction test (requires running API on localhost:8000)
+docker-logs:
+	docker compose logs -f
+
+# ─── Testing API ──────────────────────────────────────────────────────────────
+
 predict:
 	@echo "Testing prediction with sample image..."
 	curl -s -X POST http://localhost:8000/predict \
@@ -90,7 +120,13 @@ predict-batch:
 		-F "files=@tests/data/sample_real.jpg" \
 		-F "files=@tests/data/sample_ai.png" | python -m json.tool
 
-# Cleanup
+# ─── Deploy ───────────────────────────────────────────────────────────────────
+
+deploy:
+	gh workflow run deploy.yml -f image_tag=latest
+
+# ─── Cleanup ──────────────────────────────────────────────────────────────────
+
 clean:
 	rm -rf build/
 	rm -rf dist/

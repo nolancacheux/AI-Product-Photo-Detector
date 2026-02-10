@@ -5,6 +5,8 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](https://docs.docker.com/compose/)
+[![Terraform](https://img.shields.io/badge/IaC-Terraform-purple.svg)](https://www.terraform.io/)
 
 A MLOps system that classifies product images as **real** or **AI-generated**, helping e-commerce platforms detect fraudulent listings.
 
@@ -40,8 +42,13 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed component document
 | API | FastAPI + Uvicorn |
 | Web UI | Streamlit |
 | Experiment Tracking | MLflow |
+| Data Versioning | DVC (Data Version Control) |
 | Containerization | Docker + Docker Compose |
+| CI/CD | GitHub Actions |
+| Cloud | GCP (Cloud Run, Artifact Registry, GCS) |
+| IaC | Terraform |
 | Monitoring | prometheus_client + structlog |
+| Code Quality | Ruff (lint + format) + MyPy + pre-commit |
 
 ## Quick Start
 
@@ -169,8 +176,8 @@ streamlit run src/ui/app.py
 ### Docker
 
 ```bash
-docker-compose up -d
-# API:        http://localhost:8000
+docker compose up -d
+# API:        http://localhost:8080
 # UI:         http://localhost:8501
 # MLflow:     http://localhost:5000
 ```
@@ -275,6 +282,7 @@ Returns drift detection status (mean probability, low confidence ratio, drift sc
 
 ```
 mlops_project/
+├── .github/workflows/    # CI/CD (ci.yml, deploy.yml)
 ├── src/
 │   ├── data/             # Data processing
 │   ├── inference/        # FastAPI server & prediction
@@ -295,13 +303,16 @@ mlops_project/
 │   └── utils/            # Config & logging
 ├── tests/                # Unit tests
 ├── configs/              # Train/inference configs
-├── docker/               # Dockerfiles
-├── docs/                 # Documentation
+├── docker/               # Dockerfiles (serve, train)
+├── docs/                 # Architecture, contributing, incident scenario
 ├── models/               # Saved model checkpoints
-├── scripts/              # Utility scripts
-├── docker-compose.yml
-├── pyproject.toml
-└── Makefile
+├── notebooks/            # Colab training notebook
+├── scripts/              # Data download utilities
+├── terraform/            # GCP infrastructure as code
+├── docker-compose.yml    # Local dev stack (API + UI + MLflow)
+├── dvc.yaml              # DVC pipeline (download → train)
+├── pyproject.toml        # Python project config
+└── Makefile              # Dev commands
 ```
 
 ## Documentation

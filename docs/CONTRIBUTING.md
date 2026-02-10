@@ -135,21 +135,87 @@ test(api): add tests for health endpoint
 
 ```
 mlops_project/
+├── .github/workflows/ # CI/CD pipelines
 ├── src/
-│   ├── training/     # Model training
-│   ├── inference/    # API server
-│   ├── ui/           # Streamlit app
-│   └── utils/        # Shared utilities
-├── tests/            # Unit tests
-├── configs/          # Configuration files
-├── docker/           # Dockerfiles
-└── docs/             # Documentation
+│   ├── training/      # Model training
+│   ├── inference/     # API server
+│   ├── monitoring/    # Metrics & drift detection
+│   ├── ui/            # Streamlit app
+│   └── utils/         # Shared utilities
+├── tests/             # Unit tests
+├── configs/           # Configuration files
+├── docker/            # Dockerfiles
+├── docs/              # Documentation
+├── scripts/           # Data download utilities
+├── terraform/         # GCP infrastructure as code
+├── dvc.yaml           # DVC pipeline definition
+└── Makefile           # Dev commands (run `make help`)
+```
+
+## Makefile Commands
+
+The `Makefile` provides shortcuts for common tasks:
+
+```bash
+make help          # List all commands
+make dev           # Install dev dependencies + pre-commit
+make lint          # Ruff + MyPy
+make format        # Auto-format code
+make test          # Run pytest with coverage
+make data          # Download CIFAKE dataset
+make train         # Train model
+make serve         # Start API (dev mode)
+make docker-up     # Start full stack (API + UI + MLflow)
+make deploy        # Trigger Cloud Run deploy via GitHub Actions
+```
+
+## Data Management (DVC)
+
+Dataset files are tracked with DVC. Never commit raw data to Git.
+
+```bash
+# Pull existing data
+dvc pull
+
+# After adding new data
+dvc add data/processed
+git add data/processed.dvc
+git commit -m "data: update processed dataset"
+dvc push
+```
+
+## Docker
+
+```bash
+# Build images
+make docker-build
+
+# Run full stack
+make docker-up
+
+# Check logs
+make docker-logs
+
+# Tear down
+make docker-down
+```
+
+## Infrastructure (Terraform)
+
+The `terraform/` directory provisions GCP resources. See `terraform/README.md` for details.
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars  # Edit with your project ID
+terraform init
+terraform plan
+terraform apply
 ```
 
 ## Documentation
 
 - Update `README.md` for user-facing changes
-- Update `docs/` for technical details
+- Update `docs/ARCHITECTURE.md` for system design changes
 - Add docstrings to all public functions
 - Use Google-style docstrings
 
@@ -159,4 +225,4 @@ mlops_project/
 2. Update `CHANGELOG.md`
 3. Create release tag: `git tag v1.0.0`
 4. Push tag: `git push origin v1.0.0`
-5. Build and publish Docker images
+5. CI/CD automatically builds and deploys to Cloud Run
