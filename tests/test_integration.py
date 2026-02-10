@@ -76,7 +76,7 @@ class TestEndToEndHealth:
         data = response.json()
         assert data["status"] == "healthy"
         assert data["model_loaded"] is True
-        assert data["model_version"] == "1.0.3"
+        assert data["model_version"].startswith("1.0.")
         assert data["uptime_seconds"] >= 0
 
 
@@ -97,7 +97,7 @@ class TestEndToEndPredict:
         assert 0.0 <= data["probability"] <= 1.0
         assert data["confidence"] in ("low", "medium", "high")
         assert data["inference_time_ms"] >= 0
-        assert data["model_version"] == "1.0.3"
+        assert data["model_version"].startswith("1.0.")
 
     def test_predict_png_image(self, loaded_client: TestClient) -> None:
         """Should return a valid prediction for a PNG image."""

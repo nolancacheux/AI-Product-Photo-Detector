@@ -1,5 +1,6 @@
 """FastAPI application for AI Product Photo Detector."""
 
+import os
 import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -12,7 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import generate_latest
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from starlette.responses import Response
 
 from src.inference.auth import verify_api_key
@@ -51,8 +51,20 @@ from src.monitoring.metrics import (
 from src.utils.config import get_settings, load_yaml_config
 from src.utils.logger import get_logger, set_request_id, setup_logging
 
-# Rate limiting
-limiter = Limiter(key_func=get_remote_address)
+def _get_real_client_ip(request: Request) -> str:
+    """Extract real client IP behind Cloud Run / reverse proxies.
+
+    Cloud Run sets X-Forwarded-For with the real client IP as first entry.
+    Falls back to request.client.host if header is absent.
+    """
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "127.0.0.1"
+
+
+# Rate limiting — use real client IP behind proxies, with global default
+limiter = Limiter(key_func=_get_real_client_ip, default_limits=["200/minute"])
 
 # Global state
 predictor: Predictor | None = None
@@ -121,17 +133,31 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS middleware
+# CORS middleware — restricted origins from env var
+_default_origins = [
+    "https://ai-product-detector-714127049161.europe-west1.run.app",
+    "http://localhost:8080",
+    "http://localhost:8501",
+    "http://localhost:3000",
+]
+_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+# Support both comma and pipe as separator (pipe avoids gcloud --set-env-vars escaping issues)
+_separator = "|" if "|" in _origins_env else ","
+_allowed_origins = [
+    o.strip() for o in _origins_env.split(_separator) if o.strip()
+] or _default_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-API-Key", "Authorization"],
 )
 
 # Constants
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB (reduced for anti-spam)
+MAX_BATCH_TOTAL_SIZE = 50 * 1024 * 1024  # 50MB total for batch
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
@@ -238,7 +264,7 @@ async def health_check() -> HealthResponse:
     },
     tags=["Prediction"],
 )
-@limiter.limit("60/minute")
+@limiter.limit("30/minute")
 async def predict(
     request: Request,
     file: UploadFile = File(..., description="Image file to analyze"),
@@ -246,7 +272,7 @@ async def predict(
 ) -> PredictResponse:
     """Predict if an image is AI-generated.
 
-    Accepts JPEG, PNG, or WebP images up to 10MB.
+    Accepts JPEG, PNG, or WebP images up to 5MB.
     Requires authentication when API_KEYS or REQUIRE_AUTH is configured.
 
     Returns:
@@ -336,7 +362,7 @@ async def predict(
         ) from e
 
 
-MAX_BATCH_SIZE = 20
+MAX_BATCH_SIZE = 10
 
 
 @app.post(
@@ -350,16 +376,16 @@ MAX_BATCH_SIZE = 20
     },
     tags=["Prediction"],
 )
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 async def predict_batch(
     request: Request,
-    files: list[UploadFile] = File(..., description="Image files to analyze (max 20)"),
+    files: list[UploadFile] = File(..., description="Image files to analyze (max 10)"),
     _: Annotated[bool, Depends(verify_api_key)] = True,
 ) -> BatchPredictResponse:
     """Predict if multiple images are AI-generated.
 
-    Accepts up to 20 JPEG, PNG, or WebP images.
-    Each image must be under 10MB.
+    Accepts up to 10 JPEG, PNG, or WebP images.
+    Each image must be under 5MB. Total payload under 50MB.
     Requires authentication when API_KEYS or REQUIRE_AUTH is configured.
 
     Returns:
@@ -394,6 +420,7 @@ async def predict_batch(
     results: list[BatchItemResult] = []
     successful = 0
     failed = 0
+    total_bytes = 0
     batch_start = time.time()
 
     for file in files:
@@ -416,8 +443,19 @@ async def predict_batch(
 
         # Read file
         contents = await file.read()
+        total_bytes += len(contents)
 
-        # Check file size
+        # Check total batch payload size
+        if total_bytes > MAX_BATCH_TOTAL_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail={
+                    "error": "Batch payload too large",
+                    "detail": f"Total batch size exceeds {MAX_BATCH_TOTAL_SIZE // (1024 * 1024)}MB limit",
+                },
+            )
+
+        # Check individual file size
         if len(contents) > MAX_FILE_SIZE:
             results.append(
                 BatchItemResult(
@@ -425,7 +463,7 @@ async def predict_batch(
                     prediction=None,
                     probability=None,
                     confidence=None,
-                    error=f"File too large: {len(contents) / (1024 * 1024):.1f}MB. Max: 10MB",
+                    error=f"File too large: {len(contents) / (1024 * 1024):.1f}MB. Max: {MAX_FILE_SIZE // (1024 * 1024)}MB",
                 )
             )
             failed += 1
@@ -523,6 +561,24 @@ async def drift_status() -> dict:
     return asdict(metrics)
 
 
+@app.get("/privacy", tags=["Info"])
+async def privacy() -> dict:
+    """Privacy policy summary.
+
+    Returns:
+        Privacy information about data handling.
+    """
+    return {
+        "data_retention": "none",
+        "image_storage": "Images are processed in-memory only and never saved to disk.",
+        "logging": "Only operational metadata is logged (prediction result, latency). No image content or user-identifiable data.",
+        "metrics": "Prometheus metrics contain only aggregate counters and histograms. No personal data.",
+        "tracking": "No cookies, sessions, or user tracking.",
+        "gdpr": "No personal data is collected or stored. Fully stateless service.",
+        "details": "See /docs or PRIVACY.md in the repository for full privacy policy.",
+    }
+
+
 @app.get("/", tags=["Info"])
 async def root() -> dict:
     """API root endpoint.
@@ -538,6 +594,7 @@ async def root() -> dict:
         "healthz": "/healthz",
         "metrics": "/metrics",
         "drift": "/drift",
+        "privacy": "/privacy",
     }
 
 

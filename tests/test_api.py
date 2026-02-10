@@ -77,6 +77,31 @@ class TestRootEndpoint:
         assert data["name"] == "AI Product Photo Detector"
 
 
+class TestPrivacyEndpoint:
+    """Tests for /privacy endpoint."""
+
+    def test_privacy_returns_200(self, client: TestClient) -> None:
+        """Test privacy endpoint returns 200."""
+        response = client.get("/privacy")
+        assert response.status_code == 200
+
+    def test_privacy_response_structure(self, client: TestClient) -> None:
+        """Test privacy response has expected fields."""
+        response = client.get("/privacy")
+        data = response.json()
+
+        assert "image_storage" in data
+        assert "data_retention" in data
+        assert "gdpr" in data
+        assert data["data_retention"] == "none"
+
+    def test_privacy_confirms_no_storage(self, client: TestClient) -> None:
+        """Test privacy explicitly states no image storage."""
+        response = client.get("/privacy")
+        data = response.json()
+        assert "never saved" in data["image_storage"].lower() or "in-memory" in data["image_storage"].lower()
+
+
 class TestMetricsEndpoint:
     """Tests for /metrics endpoint."""
 

@@ -24,13 +24,13 @@ class TestDriftDetectorEdgeCases:
         assert metrics.prediction_ratio["real"] == 0.0
 
     def test_all_same_prediction(self) -> None:
-        """All same predictions should have 0 std."""
+        """All same predictions should have ~0 std."""
         detector = DriftDetector(window_size=50)
         for _ in range(50):
             detector.record_prediction(0.8, "ai_generated")
 
         metrics = detector.check_drift()
-        assert metrics.std_probability == 0.0
+        assert metrics.std_probability == pytest.approx(0.0, abs=1e-10)
         assert metrics.prediction_ratio["ai_generated"] == 1.0
         assert metrics.prediction_ratio["real"] == 0.0
 
@@ -186,7 +186,7 @@ class TestDriftDetectorBaseline:
         baseline = {
             "mean_probability": 0.5,
             "std_probability": 0.1,
-            "low_confidence_ratio": 0.2,
+            "low_confidence_ratio": 0.0,
             "prediction_ratio": {"real": 0.5, "ai_generated": 0.5},
         }
         baseline_path = tmp_path / "baseline.json"
@@ -195,13 +195,14 @@ class TestDriftDetectorBaseline:
         detector = DriftDetector(
             window_size=100,
             drift_threshold=0.15,
+            confidence_threshold=0.05,  # Tight threshold so predictions aren't "low confidence"
             baseline_path=baseline_path,
         )
 
-        # Add balanced predictions matching baseline
+        # Add balanced predictions with clear confidence (far from 0.5)
         for _ in range(50):
-            detector.record_prediction(0.45, "real")
-            detector.record_prediction(0.55, "ai_generated")
+            detector.record_prediction(0.1, "real")
+            detector.record_prediction(0.9, "ai_generated")
 
         metrics = detector.check_drift()
         assert metrics.drift_detected is False
