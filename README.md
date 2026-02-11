@@ -96,6 +96,12 @@ make train
 make dvc-repro
 ```
 
+**Google Colab (recommended for GPU training):**
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nolancacheux/AI-Product-Photo-Detector/blob/main/notebooks/train_colab.ipynb)
+
+The Colab notebook downloads a high-resolution dataset from HuggingFace, trains the model on a free T4 GPU, and exports the checkpoint. No local GPU required.
+
 Training configuration is in [`configs/train_config.yaml`](configs/train_config.yaml). Key hyperparameters:
 
 | Parameter | Value |
