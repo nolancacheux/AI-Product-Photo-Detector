@@ -91,45 +91,34 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
 
-      # Sync latest trained model from GCS (Vertex AI output) if newer than repo copy
-      - name: Sync latest model from GCS
+      # Fetch model checkpoint: try GCS direct path first, then DVC pull as fallback
+      - name: Fetch model checkpoint
         run: |
-          GCS_MODEL="gs://${{ secrets.GCS_BUCKET }}/models/best_model.pt"
           LOCAL_MODEL="models/checkpoints/best_model.pt"
+          GCS_MODEL="gs://${{ secrets.GCS_BUCKET }}/models/best_model.pt"
           mkdir -p models/checkpoints
 
-          # Check if a model exists in GCS
+          # Strategy 1: Direct GCS download (Vertex AI trained models)
           if gsutil ls "${GCS_MODEL}" > /dev/null 2>&1; then
-            GCS_UPDATED=$(gsutil stat "${GCS_MODEL}" | grep "Update time" | sed 's/.*Update time: *//')
-            echo "GCS model last updated: ${GCS_UPDATED}"
-
-            if [ -f "${LOCAL_MODEL}" ]; then
-              LOCAL_SIZE=$(stat -c%s "${LOCAL_MODEL}")
-              GCS_SIZE=$(gsutil stat "${GCS_MODEL}" | grep "Content-Length" | awk '{print $2}')
-              echo "Local model size: ${LOCAL_SIZE}, GCS model size: ${GCS_SIZE}"
-
-              # Download if sizes differ (indicates a newer model)
-              if [ "${LOCAL_SIZE}" != "${GCS_SIZE}" ]; then
-                echo "GCS model differs from local copy. Downloading..."
-                gsutil cp "${GCS_MODEL}" "${LOCAL_MODEL}"
-                echo "Downloaded latest model from GCS."
-              else
-                echo "Local model matches GCS. No download needed."
-              fi
-            else
-              echo "No local model found. Downloading from GCS..."
-              gsutil cp "${GCS_MODEL}" "${LOCAL_MODEL}"
-              echo "Downloaded model from GCS."
-            fi
-          else
-            echo "No model found in GCS bucket. Using repo model."
+            echo "Found model on GCS. Downloading..."
+            gsutil cp "${GCS_MODEL}" "${LOCAL_MODEL}"
+            echo "Downloaded from GCS."
           fi
 
-          # Verify a model exists for the build
+          # Strategy 2: DVC pull (original tracked model)
+          if [ ! -f "${LOCAL_MODEL}" ]; then
+            echo "No model on GCS. Trying DVC pull..."
+            pip install dvc[gs] -q
+            dvc pull models/checkpoints/best_model.pt.dvc -f || true
+          fi
+
+          # Verify
           if [ -f "${LOCAL_MODEL}" ]; then
-            echo "Model ready: $(ls -lh ${LOCAL_MODEL})"
+            SIZE=$(stat -c%s "${LOCAL_MODEL}")
+            echo "Model ready: ${LOCAL_MODEL} (${SIZE} bytes)"
           else
-            echo "WARNING: No model file found. Build may use a stale or missing model."
+            echo "ERROR: No model checkpoint available!"
+            exit 1
           fi
 
       - name: Determine image tag
