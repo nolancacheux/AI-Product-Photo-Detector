@@ -8,6 +8,7 @@
 [![DVC](https://img.shields.io/badge/DVC-Pipeline-945DD6?logo=dvc&logoColor=white)](https://dvc.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/nolancacheux/AI-Product-Photo-Detector/ci.yml?label=CI&logo=githubactions&logoColor=white)](https://github.com/nolancacheux/AI-Product-Photo-Detector/actions)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nolancacheux/AI-Product-Photo-Detector/blob/main/notebooks/train_colab.ipynb)
 
 **Production-grade MLOps pipeline for detecting AI-generated product photos in e-commerce listings.**
 
@@ -54,7 +55,8 @@ The system follows a modular architecture with clear separation between training
 | **Deep Learning** | PyTorch, torchvision, timm (EfficientNet-B0), Grad-CAM |
 | **API** | FastAPI, Uvicorn, Pydantic v2, slowapi (rate limiting) |
 | **MLOps** | DVC (pipelines + data versioning), MLflow (experiment tracking) |
-| **Training** | Vertex AI (T4 GPU), Kubeflow-style pipeline, Google Cloud Storage |
+| **Data** | HuggingFace Datasets (high-res images), CIFAKE, DVC-managed storage |
+| **Training** | Google Colab (free T4 GPU), Vertex AI (T4 GPU), Kubeflow-style pipeline, GCS |
 | **Monitoring** | Prometheus, Grafana, structlog (JSON), custom drift detection |
 | **Infrastructure** | Docker, Docker Compose, GCP Cloud Run, Artifact Registry, GCS |
 | **CI/CD** | GitHub Actions (lint → test → deploy), Vertex AI training workflow |
@@ -85,6 +87,53 @@ make dev            # development (includes linting, testing, pre-commit)
 
 ### Train a Model
 
+Three training options are available, from zero-setup to production-grade:
+
+| | **Google Colab** | **Vertex AI Pipeline** | **Local Training** |
+|---|---|---|---|
+| **GPU** | Free T4 (Google) | T4 on GCP (paid) | CPU or local GPU |
+| **Cost** | Free | ~$0.10-0.20 per run | Free (your hardware) |
+| **Training time** | ~20 min | ~25 min | ~1-2h (CPU) / ~20 min (GPU) |
+| **Dataset** | HuggingFace (high-res) | GCS (uploaded automatically) | CIFAKE (downloaded via DVC) |
+| **Setup required** | Google account | GCP project + GitHub secrets | Python environment |
+| **Automation** | Manual (notebook) | Fully automated (CI/CD) | Manual or DVC pipeline |
+| **Best for** | Quick experiments, no GPU | Production retraining | Development, debugging |
+
+---
+
+#### Option 1: Google Colab (Recommended for Quick Start)
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nolancacheux/AI-Product-Photo-Detector/blob/main/notebooks/train_colab.ipynb)
+
+No local setup required. The notebook downloads a high-resolution dataset from HuggingFace, trains on a free T4 GPU, and exports the checkpoint:
+
+- Open the notebook link above
+- Select **Runtime > Change runtime type > T4 GPU**
+- Run all cells (~20 minutes)
+- Download the trained model checkpoint
+
+---
+
+#### Option 2: Vertex AI Pipeline (Production)
+
+Fully automated GPU training on GCP, triggered via GitHub Actions:
+
+```bash
+# Trigger a training run with custom parameters
+gh workflow run model-training.yml \
+  -f epochs=15 \
+  -f batch_size=64 \
+  -f auto_deploy=true
+```
+
+The pipeline executes six stages automatically: data upload to GCS, Docker image build, GPU training on Vertex AI (n1-standard-4 + T4), evaluation, quality gate (accuracy >= 0.85, F1 >= 0.80), and conditional deployment to Cloud Run.
+
+Configuration: [`configs/pipeline_config.yaml`](configs/pipeline_config.yaml). See the [Vertex AI Training Pipeline](#vertex-ai-training-pipeline) section for full details.
+
+---
+
+#### Option 3: Local Training
+
 ```bash
 # Download the CIFAKE dataset (2500 images per class)
 make data
@@ -92,15 +141,20 @@ make data
 # Train with default config
 make train
 
-# Or reproduce the full DVC pipeline (download → validate → train)
+# Or run the full DVC pipeline (download -> validate -> train)
 make dvc-repro
+
+# Track experiments with MLflow
+make mlflow   # starts MLflow UI on http://localhost:5000
 ```
 
-**Google Colab (recommended for GPU training):**
+Alternatively, run the training script directly with a custom config:
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nolancacheux/AI-Product-Photo-Detector/blob/main/notebooks/train_colab.ipynb)
+```bash
+python -m src.training.train --config configs/train_config.yaml
+```
 
-The Colab notebook downloads a high-resolution dataset from HuggingFace, trains the model on a free T4 GPU, and exports the checkpoint. No local GPU required.
+---
 
 Training configuration is in [`configs/train_config.yaml`](configs/train_config.yaml). Key hyperparameters:
 
@@ -570,6 +624,7 @@ AI-Product-Photo-Detector/
 │   │   ├── dashboards/             # Grafana dashboard JSON definitions
 │   │   └── provisioning/           # Datasource and dashboard provisioning
 │   ├── inference_config.yaml       # API server configuration
+│   ├── pipeline_config.yaml        # Vertex AI pipeline configuration
 │   ├── prometheus.yml              # Prometheus scrape targets
 │   └── train_config.yaml           # Training hyperparameters
 ├── docker/
@@ -586,6 +641,8 @@ AI-Product-Photo-Detector/
 │   ├── COSTS.md                    # Cloud cost analysis
 │   ├── INCIDENT_SCENARIO.md        # Incident response playbook
 │   └── PRD.md                      # Product requirements document
+├── notebooks/
+│   └── train_colab.ipynb           # Google Colab training notebook (free T4 GPU)
 ├── scripts/
 │   ├── create_sample_data.py       # Generate sample test images
 │   ├── download_cifake.py          # Download CIFAKE dataset

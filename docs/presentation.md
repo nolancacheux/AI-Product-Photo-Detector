@@ -65,15 +65,18 @@ Online marketplaces are flooded with AI-generated product images that mislead co
 
 ---
 
-## Dataset: CIFAKE
+## Dataset: CIFAKE + HuggingFace
 
-| Split | Real | AI-Generated | Total |
-|-------|------|--------------|-------|
-| Train | 2,500 | 2,500 | 5,000 |
-| Val | 250 | 250 | 500 |
-| Test | 250 | 250 | 500 |
+Two data sources depending on the training environment:
 
-**Data pipeline with DVC:**
+| Source | Usage | Samples | Access |
+|--------|-------|---------|--------|
+| CIFAKE (local/DVC) | Local + Vertex AI training | 5,000 train / 500 val / 500 test | GCS via DVC |
+| HuggingFace `date3k2/raw_real_fake_images` | Colab training | Up to 8,000 (4k/class cap) | `datasets` library |
+
+Both datasets are balanced (50/50 real vs. AI-generated).
+
+**Data pipeline with DVC (local/cloud):**
 
 ```yaml
 stages:
@@ -87,9 +90,9 @@ stages:
     outs: [reports/data_validation.json]
 ```
 
-Data is versioned with **DVC** and stored on **Google Cloud Storage**, ensuring full reproducibility across local and cloud environments.
+**Colab path:** The notebook loads data directly from HuggingFace Hub with automatic train/val/test splitting (70/15/15).
 
-<!-- Speaker notes: Explain that CIFAKE is a well-known benchmark. DVC tracks data versions alongside git commits. -->
+<!-- Speaker notes: CIFAKE is the original benchmark used in local and cloud pipelines. The Colab notebook uses a HuggingFace dataset for zero-setup training -- no GCS credentials needed. -->
 
 ---
 
@@ -182,6 +185,26 @@ augmentation:
 - Local tracking URI: `mlruns/` directory
 
 <!-- Speaker notes: Cosine scheduler with warmup helps convergence. Early stopping prevents overfitting on this relatively small dataset. -->
+
+---
+
+## Three Training Paths
+
+| | Local (DVC) | Google Colab | Vertex AI |
+|---|---|---|---|
+| **Target** | Development / debug | Quick experiments | Production training |
+| **GPU** | CPU (or local GPU) | Free T4 (Colab) | T4 on n1-standard-4 |
+| **Data source** | CIFAKE via DVC | HuggingFace Hub | GCS bucket |
+| **Tracking** | MLflow (local) | Inline metrics + plots | MLflow (GCS artifacts) |
+| **Trigger** | `dvc repro` | Manual notebook run | GitHub Actions workflow |
+| **Cost** | Free | Free | ~$1-2 per run |
+| **Output** | `models/checkpoints/` | Download `.pt` manually | Model uploaded to GCS |
+
+**Same model architecture across all paths:** EfficientNet-B0 with identical classifier head.
+
+The Colab notebook (`notebooks/train_colab.ipynb`) is self-contained: installs dependencies, loads data from HuggingFace, trains, evaluates, and produces a downloadable checkpoint.
+
+<!-- Speaker notes: Three paths let you pick based on your situation. Local for iterating fast, Colab for free GPU access with zero setup, Vertex AI for reproducible production runs triggered by CI/CD. -->
 
 ---
 
@@ -390,6 +413,42 @@ Three workflows orchestrate the full lifecycle:
 - Security scan: `pip-audit` + `bandit`
 
 <!-- Speaker notes: CI runs on every push/PR. CD only on main after CI passes. Model training is triggered manually or on data changes. -->
+
+---
+
+## Infrastructure as Code
+
+**Terraform** (`terraform/`) provisions the full GCP environment:
+
+| Resource | Purpose |
+|----------|---------|
+| GCS Bucket | DVC data + model storage (versioned, lifecycle rules) |
+| Artifact Registry | Docker image repository with cleanup policies |
+| Cloud Run Service | FastAPI API with auto-scaling, health probes |
+| Service Account | Least-privilege IAM (storage, AR, logging, monitoring) |
+| Budget Alert | Monthly spending cap with 50/80/100% thresholds |
+| API Enablement | 6 GCP APIs activated automatically |
+
+```bash
+cd terraform/
+terraform init
+terraform plan -var="project_id=my-project"
+terraform apply
+```
+
+**Docker Compose** (`docker-compose.yml`) provides the full local stack:
+
+| Service | Port | Role |
+|---------|------|------|
+| FastAPI API | 8080 | Model serving + Prometheus metrics |
+| Streamlit UI | 8501 | Web interface (calls API) |
+| MLflow | 5000 | Experiment tracking (SQLite backend) |
+| Prometheus | 9090 | Metrics scraping and storage |
+| Grafana | 3000 | Dashboards and alerting |
+
+One command: `docker compose up -d` -- full MLOps stack running locally.
+
+<!-- Speaker notes: Terraform makes the cloud setup reproducible and avoids manual console clicking. Docker Compose replicates the full production stack on a laptop for development. Budget alerts are critical for student projects to avoid surprise bills. -->
 
 ---
 
@@ -686,5 +745,5 @@ curl -X POST \
 **Nolan Cacheux**
 Master 2 Data Science – MLOps
 
-Key technologies: PyTorch, FastAPI, Streamlit, DVC, MLflow,
-Vertex AI, Cloud Run, Prometheus, Grafana, GitHub Actions
+Key technologies: PyTorch, FastAPI, Streamlit, DVC, MLflow, Terraform,
+Docker Compose, Vertex AI, Cloud Run, Prometheus, Grafana, GitHub Actions
