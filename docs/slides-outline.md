@@ -1,6 +1,6 @@
-# AI Product Photo Detector -- Oral Presentation Cheat Sheet
+# AI Product Photo Detector – Oral Presentation Cheat Sheet
 
-**Nolan Cacheux | Master 2 Data Science -- MLOps | 2025**
+**Nolan Cacheux | Master 2 Data Science – MLOps | 2025**
 
 ---
 
