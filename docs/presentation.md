@@ -44,7 +44,7 @@ style: |
 ### Detecting AI-Generated Images in E-Commerce
 
 **Nolan Cacheux**
-Master 2 Data Science -- MLOps
+Master 2 Data Science – MLOps
 2025
 
 ---
@@ -431,7 +431,7 @@ GitHub Actions
 
 ## Monitoring and Observability
 
-**Prometheus** -- 20+ custom metrics across 5 categories:
+**Prometheus** – 20+ custom metrics across 5 categories:
 
 | Category | Metrics |
 |----------|---------|
@@ -441,7 +441,7 @@ GitHub Actions
 | HTTP | Request count by endpoint/status, request duration |
 | System | Active requests, concurrent max, rate limit events |
 
-**Grafana** -- 16 dashboard panels for real-time visualization
+**Grafana** – 16 dashboard panels for real-time visualization
 
 **Structured Logging** via `structlog`:
 - JSON-formatted logs with correlation IDs
@@ -684,7 +684,7 @@ curl -X POST \
 ### Questions?
 
 **Nolan Cacheux**
-Master 2 Data Science -- MLOps
+Master 2 Data Science – MLOps
 
 Key technologies: PyTorch, FastAPI, Streamlit, DVC, MLflow,
 Vertex AI, Cloud Run, Prometheus, Grafana, GitHub Actions

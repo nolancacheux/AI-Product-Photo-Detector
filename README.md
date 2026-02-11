@@ -11,7 +11,7 @@
 
 **Production-grade MLOps pipeline for detecting AI-generated product photos in e-commerce listings.**
 
-A complete end-to-end machine learning system -- from data ingestion and GPU training on Vertex AI to API serving, monitoring, and cloud deployment -- built with modern MLOps best practices.
+A complete end-to-end machine learning system – from data ingestion and GPU training on Vertex AI to API serving, monitoring, and cloud deployment – built with modern MLOps best practices.
 
 > **Live API** → [ai-product-detector-714127049161.europe-west1.run.app](https://ai-product-detector-714127049161.europe-west1.run.app)
 > &nbsp;|&nbsp; **Swagger UI** → [/docs](https://ai-product-detector-714127049161.europe-west1.run.app/docs)
@@ -21,19 +21,19 @@ A complete end-to-end machine learning system -- from data ingestion and GPU tra
 
 ## Features
 
-- **Binary image classification** -- Detects whether a product photo is real or AI-generated
-- **EfficientNet-B0 backbone** -- Transfer learning with pretrained ImageNet weights via `timm`
-- **Grad-CAM explainability** -- Visual heatmaps showing which image regions drive the prediction
-- **FastAPI serving** -- Async API with single, batch, and explainability endpoints
-- **Docker-first** -- Multi-service stack with Compose (API + UI + MLflow + Prometheus + Grafana)
-- **Full observability** -- Prometheus metrics, Grafana dashboards, structured JSON logging
-- **DVC pipelines** -- Reproducible data download, validation, and training workflow
-- **Vertex AI training pipeline** -- GPU training on GCP with automated six-stage Kubeflow-style workflow
-- **CI/CD to GCP Cloud Run** -- Automated deploy on push to `main` via GitHub Actions
-- **Production hardening** -- Rate limiting, API key auth, CORS, input validation, drift detection
-- **Comprehensive testing** -- Unit, integration, and load tests (Locust + k6)
-- **Data validation** -- Automated dataset integrity checks with detailed reporting
-- **Streamlit UI** -- Interactive web interface for drag-and-drop image analysis, deployed on Cloud Run
+- **Binary image classification** – Detects whether a product photo is real or AI-generated
+- **EfficientNet-B0 backbone** – Transfer learning with pretrained ImageNet weights via `timm`
+- **Grad-CAM explainability** – Visual heatmaps showing which image regions drive the prediction
+- **FastAPI serving** – Async API with single, batch, and explainability endpoints
+- **Docker-first** – Multi-service stack with Compose (API + UI + MLflow + Prometheus + Grafana)
+- **Full observability** – Prometheus metrics, Grafana dashboards, structured JSON logging
+- **DVC pipelines** – Reproducible data download, validation, and training workflow
+- **Vertex AI training pipeline** – GPU training on GCP with automated six-stage Kubeflow-style workflow
+- **CI/CD to GCP Cloud Run** – Automated deploy on push to `main` via GitHub Actions
+- **Production hardening** – Rate limiting, API key auth, CORS, input validation, drift detection
+- **Comprehensive testing** – Unit, integration, and load tests (Locust + k6)
+- **Data validation** – Automated dataset integrity checks with detailed reporting
+- **Streamlit UI** – Interactive web interface for drag-and-drop image analysis, deployed on Cloud Run
 
 ---
 
@@ -338,7 +338,7 @@ All errors follow a consistent format:
 
 ## MLOps Pipeline
 
-### DVC -- Reproducible Pipelines
+### DVC – Reproducible Pipelines
 
 The entire workflow is orchestrated with [DVC](https://dvc.org) for local development:
 
@@ -388,7 +388,7 @@ The pipeline can also be run locally using `src/training/vertex_submit.py`:
 python -m src.training.vertex_submit --epochs 15 --batch-size 64 --sync
 ```
 
-### CI/CD -- GitHub Actions
+### CI/CD – GitHub Actions
 
 Three workflows automate quality, training, and deployment:
 
@@ -400,7 +400,7 @@ Three workflows automate quality, training, and deployment:
 
 The CD pipeline automatically deploys to GCP Cloud Run on every push to `main` after CI passes. The Model Training pipeline handles the full training lifecycle on Vertex AI and conditionally deploys when the quality gate passes.
 
-### Experiment Tracking -- MLflow
+### Experiment Tracking – MLflow
 
 All training runs are logged to MLflow with hyperparameters, metrics, and model artifacts:
 

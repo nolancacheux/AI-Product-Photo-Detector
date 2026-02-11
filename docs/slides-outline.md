@@ -1,6 +1,6 @@
-# AI Product Photo Detector -- Oral Presentation Cheat Sheet
+# AI Product Photo Detector – Oral Presentation Cheat Sheet
 
-**Nolan Cacheux | Master 2 Data Science -- MLOps | 2025**
+**Nolan Cacheux | Master 2 Data Science – MLOps | 2025**
 
 ---
 
@@ -88,7 +88,7 @@
 
 ### 17. Testing
 - 183+ tests: unit, integration, load (Locust + k6)
-- pytest with coverage tracking (--cov=src)
+- pytest with coverage tracking (–cov=src)
 - Matrix: Python 3.11 + 3.12
 
 ### 18. Security
