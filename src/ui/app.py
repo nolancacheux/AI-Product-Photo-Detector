@@ -70,7 +70,7 @@ def compress_image(image_bytes: bytes, max_size_mb: float = 4.5) -> bytes:
     if len(image_bytes) <= max_size_mb * 1024 * 1024:
         return image_bytes
 
-    img = Image.open(io.BytesIO(image_bytes))
+    img: Image.Image = Image.open(io.BytesIO(image_bytes))
     if img.mode == "RGBA":
         img = img.convert("RGB")
 
@@ -79,7 +79,7 @@ def compress_image(image_bytes: bytes, max_size_mb: float = 4.5) -> bytes:
     if max(img.size) > max_dim:
         ratio = max_dim / max(img.size)
         new_size = (int(img.size[0] * ratio), int(img.size[1] * ratio))
-        img = img.resize(new_size, Image.LANCZOS)
+        img = img.resize(new_size, Image.Resampling.LANCZOS)
 
     # Compress with decreasing quality
     for quality in [90, 80, 70, 60]:

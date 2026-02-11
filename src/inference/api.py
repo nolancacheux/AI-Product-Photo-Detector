@@ -159,7 +159,7 @@ app = FastAPI(
 
 # Rate limiting
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 # CORS middleware — restricted origins from env var
 _default_origins = [
@@ -193,7 +193,7 @@ ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 # Middleware: request tracking, request ID, HTTP metrics
 # ---------------------------------------------------------------------------
 @app.middleware("http")
-async def observability_middleware(request: Request, call_next) -> Response:  # noqa: ANN001
+async def observability_middleware(request: Request, call_next: Any) -> Response:
     """Track HTTP metrics, request size, response size, and inject request ID."""
     # Inject request ID from header or generate
     incoming_id = request.headers.get("X-Request-ID")

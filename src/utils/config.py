@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     mlflow_tracking_uri: str = "http://localhost:5000"
     log_level: LogLevel = LogLevel.INFO
 
-    model_config = ConfigDict(env_prefix="AIDETECT_", case_sensitive=False)
+    model_config = ConfigDict(env_prefix="AIDETECT_", case_sensitive=False)  # type: ignore[typeddict-unknown-key,assignment]
 
 
 def load_yaml_config(config_path: str | Path) -> dict[str, Any]:

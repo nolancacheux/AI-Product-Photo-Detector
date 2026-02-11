@@ -133,10 +133,12 @@ class GradCAMExplainer:
 
         # Get prediction
         with torch.no_grad():
+            assert self.model is not None
             logit = self.model(input_tensor).squeeze()
             probability = torch.sigmoid(logit).item()
 
         # Generate heatmap (needs gradients, so outside no_grad)
+        assert self.cam is not None
         grayscale_cam = self.cam(input_tensor=input_tensor, targets=None)
         grayscale_cam = grayscale_cam[0, :]
 

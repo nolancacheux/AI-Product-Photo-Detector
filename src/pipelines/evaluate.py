@@ -180,7 +180,7 @@ def plot_confusion_matrix(
     cm = confusion_matrix(y_true, y_pred)
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    im = ax.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
+    im = ax.imshow(cm, interpolation="nearest", cmap="Blues")
     ax.figure.colorbar(im, ax=ax)
 
     ax.set(

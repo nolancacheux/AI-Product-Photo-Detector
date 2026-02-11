@@ -102,10 +102,10 @@ class Predictor:
 
                 if "classifier.1.weight" not in state_dict and "classifier.3.weight" in state_dict:
                     # Old format: Linear(in, 512) -> ReLU -> Dropout -> Linear(512, 1)
-                    in_features = self.model.classifier[0].in_features
+                    in_features = getattr(self.model.classifier[0], "in_features", 1280)
                     dropout = model_config.get("dropout", 0.3)
                     self.model.classifier = nn.Sequential(
-                        nn.Linear(in_features, 512),
+                        nn.Linear(int(in_features), 512),
                         nn.ReLU(inplace=True),
                         nn.Dropout(p=dropout),
                         nn.Linear(512, 1),

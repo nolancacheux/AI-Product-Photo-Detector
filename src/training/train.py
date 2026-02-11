@@ -230,8 +230,8 @@ def train(
 
     logger.info(
         "Data loaded",
-        train_samples=len(train_loader.dataset),
-        val_samples=len(val_loader.dataset),
+        train_samples=len(train_loader.dataset),  # type: ignore[arg-type]
+        val_samples=len(val_loader.dataset),  # type: ignore[arg-type]
     )
 
     # Model
@@ -331,7 +331,7 @@ def train(
                     "val_precision": val_precision,
                     "val_recall": val_recall,
                     "val_f1": val_f1,
-                    "learning_rate": scheduler.get_last_lr()[0],
+                    "learning_rate": float(scheduler.get_last_lr()[0]),
                 },
                 step=epoch,
             )

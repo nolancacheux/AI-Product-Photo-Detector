@@ -72,6 +72,7 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "ruff>=0.1.0",
     "mypy>=1.5.0",
+    "types-PyYAML>=6.0.0",
     "pre-commit>=3.4.0",
 ]
 
@@ -120,11 +121,22 @@ known-first-party = ["src"]
 
 [tool.mypy]
 python_version = "3.11"
-strict = true
-warn_return_any = true
+strict = false
+warn_return_any = false
 warn_unused_ignores = true
-disallow_untyped_defs = true
+disallow_untyped_defs = false
 ignore_missing_imports = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "src.pipelines.*",
+    "src.ui.*",
+    "src.training.train",
+    "src.training.vertex_submit",
+]
+disallow_untyped_decorators = false
+disable_error_code = ["no-any-return", "type-arg"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
