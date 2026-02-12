@@ -62,7 +62,7 @@ ENV MODEL_PATH=/app/models/checkpoints/best_model.pt \
 EXPOSE ${PORT}
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD python -c "import httpx; httpx.get('http://localhost:8080/healthz').raise_for_status()"
 
 # Default command

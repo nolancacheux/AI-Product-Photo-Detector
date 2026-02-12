@@ -32,10 +32,9 @@ services:
   ui:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-    image: ai-product-detector:1.0.0
+      dockerfile: docker/ui.Dockerfile
+    image: ai-product-detector-ui:1.0.0
     container_name: ai-detector-ui
-    command: ["streamlit", "run", "src/ui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
     ports:
       - "8501:8501"
     environment:

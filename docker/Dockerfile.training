@@ -5,7 +5,7 @@
 # Build: docker build -f docker/Dockerfile.training -t ai-product-detector-train .
 # Run:   docker run --gpus all ai-product-detector-train
 
-FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
+FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime
 
 LABEL maintainer="Nolan Cacheux <cachnolan@gmail.com>"
 LABEL version="1.0.0"
