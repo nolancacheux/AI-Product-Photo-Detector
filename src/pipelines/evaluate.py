@@ -39,6 +39,7 @@ from torch.utils.data import DataLoader
 
 from src.training.dataset import AIProductDataset
 from src.training.model import AIImageDetector
+from src.utils.model_loader import load_model as _load_model_from_checkpoint
 
 matplotlib.use("Agg")
 logger = logging.getLogger(__name__)
@@ -56,19 +57,9 @@ def load_model(model_path: str | Path, device: torch.device) -> AIImageDetector:
     Returns:
         Model loaded with trained weights, in eval mode.
     """
-    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
-
-    config = checkpoint.get("config", {})
-    model_config = config.get("model", {})
-
-    model = AIImageDetector(
-        model_name=model_config.get("name", "efficientnet_b0"),
-        pretrained=False,
-        dropout=model_config.get("dropout", 0.3),
+    model, checkpoint = _load_model_from_checkpoint(
+        model_path, device=device, eval_mode=True
     )
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.to(device)
-    model.eval()
 
     logger.info(
         "Loaded model from %s (epoch %d, val_accuracy=%.4f)",

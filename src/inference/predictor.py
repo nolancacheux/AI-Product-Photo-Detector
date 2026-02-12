@@ -11,6 +11,7 @@ from torchvision import transforms
 from src.inference.schemas import ConfidenceLevel, PredictionResult, PredictResponse
 from src.training.model import AIImageDetector
 from src.utils.logger import get_logger
+from src.utils.model_loader import load_model
 
 logger = get_logger(__name__)
 
@@ -75,50 +76,14 @@ class Predictor:
             return
 
         try:
-            checkpoint = torch.load(
-                self.model_path,
-                map_location=self.device,
-                weights_only=False,
+            model, checkpoint = load_model(
+                self.model_path, device=self.device, eval_mode=True
             )
-
-            # Get config from checkpoint
-            config = checkpoint.get("config", {})
-            model_config = config.get("model", {})
-
-            # Create model
-            self.model = AIImageDetector(
-                model_name=model_config.get("name", "efficientnet_b0"),
-                pretrained=False,
-                dropout=model_config.get("dropout", 0.3),
-            )
-
-            # Handle old checkpoints without BatchNorm in classifier
-            state_dict = checkpoint["model_state_dict"]
-            try:
-                self.model.load_state_dict(state_dict)
-            except RuntimeError:
-                # Rebuild classifier to match checkpoint format
-                import torch.nn as nn
-
-                if "classifier.1.weight" not in state_dict and "classifier.3.weight" in state_dict:
-                    # Old format: Linear(in, 512) -> ReLU -> Dropout -> Linear(512, 1)
-                    in_features = getattr(self.model.classifier[0], "in_features", 1280)
-                    dropout = model_config.get("dropout", 0.3)
-                    self.model.classifier = nn.Sequential(
-                        nn.Linear(int(in_features), 512),
-                        nn.ReLU(inplace=True),
-                        nn.Dropout(p=dropout),
-                        nn.Linear(512, 1),
-                    )
-                    self.model.load_state_dict(state_dict)
-            self.model = self.model.to(self.device)
-            self.model.eval()
-
-            # Set version
+            self.model = model
             self.model_version = f"1.0.{checkpoint.get('epoch', 0)}"
 
             logger.info(
-                "Model loaded successfully",
+                "Predictor ready",
                 model_path=str(self.model_path),
                 device=str(self.device),
                 version=self.model_version,

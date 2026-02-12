@@ -7,7 +7,6 @@ from typing import Any
 
 import numpy as np
 import torch
-import torch.nn as nn
 from PIL import Image
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
@@ -15,38 +14,9 @@ from torchvision import transforms
 
 from src.training.model import AIImageDetector
 from src.utils.logger import get_logger
+from src.utils.model_loader import load_model
 
 logger = get_logger(__name__)
-
-
-def _rebuild_classifier(
-    state_dict: dict[str, Any], feature_dim: int, dropout: float
-) -> nn.Sequential:
-    """Rebuild classifier head to match checkpoint structure.
-
-    Inspects state_dict keys to determine the original classifier layout,
-    handling older checkpoints that lack BatchNorm1d.
-    """
-    cls_keys = sorted(k for k in state_dict if k.startswith("classifier."))
-
-    # Current model: [Linear, BatchNorm, ReLU, Dropout, Linear] → indices 0,1,2,3,4
-    # Old model:     [Linear, ReLU, Dropout, Linear]             → indices 0,1,2,3
-    has_batchnorm = any(k for k in cls_keys if ".running_mean" in k or ".running_var" in k)
-
-    if has_batchnorm:
-        return nn.Sequential(
-            nn.Linear(feature_dim, 512),
-            nn.BatchNorm1d(512),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=dropout),
-            nn.Linear(512, 1),
-        )
-    return nn.Sequential(
-        nn.Linear(feature_dim, 512),
-        nn.ReLU(inplace=True),
-        nn.Dropout(p=dropout),
-        nn.Linear(512, 1),
-    )
 
 
 class GradCAMExplainer:
@@ -69,33 +39,10 @@ class GradCAMExplainer:
 
     def _load_model(self) -> None:
         try:
-            checkpoint = torch.load(
-                self.model_path,
-                map_location=self.device,
-                weights_only=False,
+            model, checkpoint = load_model(
+                self.model_path, device=self.device, eval_mode=True
             )
-
-            config = checkpoint.get("config", {})
-            model_config = config.get("model", {})
-
-            self.model = AIImageDetector(
-                model_name=model_config.get("name", "efficientnet_b0"),
-                pretrained=False,
-                dropout=model_config.get("dropout", 0.3),
-            )
-
-            # Rebuild classifier to match checkpoint structure (handles old checkpoints)
-            state_dict = checkpoint["model_state_dict"]
-            self.model.classifier = _rebuild_classifier(
-                state_dict,
-                self.model.feature_dim,
-                model_config.get("dropout", 0.3),
-            )
-
-            self.model.load_state_dict(state_dict)
-            self.model.to(self.device)
-            self.model.eval()
-
+            self.model = model
             self.model_version = f"1.0.{checkpoint.get('epoch', 0)}"
 
             # Target the last conv block before global pooling (timm EfficientNet)
