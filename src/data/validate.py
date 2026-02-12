@@ -13,7 +13,7 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 
 VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
-EXPECTED_CLASSES = {"real", "ai"}
+EXPECTED_CLASSES = {"real", "ai_generated"}
 
 
 def validate_dataset(data_dir: str) -> dict[str, Any]:

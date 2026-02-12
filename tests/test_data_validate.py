@@ -37,8 +37,8 @@ class TestValidateDataset:
         assert any("No split directories" in e for e in report["errors"])
 
     def test_valid_dataset(self, tmp_path: Path) -> None:
-        # Create train/real and train/ai
-        for cls in ("real", "ai"):
+        # Create train/real and train/ai_generated
+        for cls in ("real", "ai_generated"):
             for i in range(3):
                 _create_test_image(tmp_path / "train" / cls / f"img_{i}.jpg")
 
@@ -48,7 +48,7 @@ class TestValidateDataset:
         assert report["totals"]["corrupted"] == 0
 
     def test_missing_class_directory(self, tmp_path: Path) -> None:
-        # Only "real" class, no "ai"
+        # Only "real" class, no "ai_generated"
         for i in range(3):
             _create_test_image(tmp_path / "train" / "real" / f"img_{i}.jpg")
 
@@ -57,7 +57,7 @@ class TestValidateDataset:
         assert any("Missing expected classes" in e for e in report["errors"])
 
     def test_extra_class_directory(self, tmp_path: Path) -> None:
-        for cls in ("real", "ai", "extra"):
+        for cls in ("real", "ai_generated", "extra"):
             for i in range(3):
                 _create_test_image(tmp_path / "train" / cls / f"img_{i}.jpg")
 
@@ -65,7 +65,7 @@ class TestValidateDataset:
         assert any("Unexpected class" in w for w in report["warnings"])
 
     def test_corrupted_image(self, tmp_path: Path) -> None:
-        for cls in ("real", "ai"):
+        for cls in ("real", "ai_generated"):
             for i in range(3):
                 _create_test_image(tmp_path / "train" / cls / f"img_{i}.jpg")
 
@@ -78,7 +78,7 @@ class TestValidateDataset:
 
     def test_multiple_splits(self, tmp_path: Path) -> None:
         for split in ("train", "test"):
-            for cls in ("real", "ai"):
+            for cls in ("real", "ai_generated"):
                 for i in range(2):
                     _create_test_image(tmp_path / split / cls / f"img_{i}.jpg")
 
@@ -100,16 +100,16 @@ class TestValidateSplit:
 
     def test_empty_class(self, tmp_path: Path) -> None:
         (tmp_path / "train" / "real").mkdir(parents=True)
-        (tmp_path / "train" / "ai").mkdir(parents=True)
+        (tmp_path / "train" / "ai_generated").mkdir(parents=True)
         report = _validate_split(tmp_path / "train")
         assert any("has no images" in e for e in report["errors"])
 
     def test_class_imbalance_warning(self, tmp_path: Path) -> None:
-        # 10 real, 2 ai -> ratio < 0.5
+        # 10 real, 2 ai_generated -> ratio < 0.5
         for i in range(10):
             _create_test_image(tmp_path / "real" / f"img_{i}.jpg")
         for i in range(2):
-            _create_test_image(tmp_path / "ai" / f"img_{i}.jpg")
+            _create_test_image(tmp_path / "ai_generated" / f"img_{i}.jpg")
 
         report = _validate_split(tmp_path)
         assert any("imbalance" in w.lower() for w in report["warnings"])
@@ -200,7 +200,7 @@ class TestFinalizeReport:
 
         report = {
             "totals": {
-                "per_class": defaultdict(int, {"real": 5, "ai": 3}),
+                "per_class": defaultdict(int, {"real": 5, "ai_generated": 3}),
             },
         }
         result = _finalize_report(report)
