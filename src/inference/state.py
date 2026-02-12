@@ -1,16 +1,18 @@
 """Shared application state for the inference API.
 
-Central place for mutable singletons (predictor, drift detector, counters)
-so route modules can import them without circular dependencies.
+Central place for mutable singletons (predictor, explainer, drift detector,
+counters) so route modules can import them without circular dependencies.
 """
 
 import threading
 
+from src.inference.explainer import GradCAMExplainer
 from src.inference.predictor import Predictor
 from src.monitoring.drift import DriftDetector
 
 # Global singletons — set during lifespan startup
 predictor: Predictor | None = None
+explainer: GradCAMExplainer | None = None
 drift_detector: DriftDetector | None = None
 start_time: float = 0.0
 
