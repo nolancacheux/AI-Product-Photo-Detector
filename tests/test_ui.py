@@ -3,7 +3,10 @@
 import io
 from unittest.mock import MagicMock, patch
 
+import pytest
 from PIL import Image
+
+streamlit = pytest.importorskip("streamlit", reason="streamlit not installed")
 
 
 def _make_jpeg(size: tuple[int, int] = (100, 100), color: str = "red") -> bytes:
