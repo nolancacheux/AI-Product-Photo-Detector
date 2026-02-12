@@ -46,6 +46,17 @@ data/processed/ → PyTorch Dataset → EfficientNet-B0 → MLflow logs → best
 - `src/training/dataset.py` — PyTorch dataset with lazy loading
 - `src/training/augmentation.py` — Data augmentation transforms
 
+### Pipeline Orchestration
+
+The `src/pipelines/` module provides higher-level pipeline stages:
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Evaluation | `evaluate.py` | Model evaluation on test set with metrics reporting |
+| Training Pipeline | `training_pipeline.py` | End-to-end orchestrator for the full training workflow |
+
+These modules are used by both the DVC pipeline and the Vertex AI training workflow.
+
 ### 3. CI/CD Pipeline
 
 | Component | Technology | Purpose |
@@ -111,8 +122,9 @@ Client (cURL/Streamlit) → FastAPI → Validate → Preprocess (224×224) → E
 
 | Endpoint | Method | Description | Rate Limit |
 |----------|--------|-------------|------------|
-| `/predict` | POST | Classify a single image | 60/min |
-| `/predict/batch` | POST | Classify up to 20 images | 10/min |
+| `/predict` | POST | Classify a single image | 30/min |
+| `/predict/batch` | POST | Classify up to 10 images | 5/min |
+| `/predict/explain` | POST | Prediction with Grad-CAM heatmap | 10/min |
 | `/health` | GET | Service health check | — |
 | `/metrics` | GET | Prometheus-formatted metrics | — |
 | `/drift` | GET | Drift detection status | — |
@@ -135,9 +147,9 @@ Client (cURL/Streamlit) → FastAPI → Validate → Preprocess (224×224) → E
 | Parameter | Value |
 |-----------|-------|
 | Model | EfficientNet-B0 (pretrained) |
-| Image size | 128×128 |
+| Image size | 224×224 |
 | Batch size | 64 |
-| Epochs | 3 (increase for production) |
+| Epochs | 15 |
 | Learning rate | 0.001 |
 | Scheduler | Cosine with 2-epoch warmup |
 | Early stopping | 5 epochs patience |
@@ -177,8 +189,10 @@ terraform apply
 ```
 docker/
 ├── Dockerfile           # Production API image (used by CI/CD + compose)
+├── Dockerfile.training  # Vertex AI GPU training image
 ├── serve.Dockerfile     # Standalone inference server
-└── train.Dockerfile     # Training environment
+├── train.Dockerfile     # Local training environment
+└── ui.Dockerfile        # Streamlit UI image
 
 docker-compose.yml
 ├── api (FastAPI)        → :8080

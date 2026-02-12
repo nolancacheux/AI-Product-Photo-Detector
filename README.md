@@ -637,10 +637,15 @@ AI-Product-Photo-Detector/
 │   ├── architecture.svg            # System architecture diagram
 │   ├── ARCHITECTURE.md             # Detailed architecture documentation
 │   ├── AUDIT_ARCHITECTURE.md       # Architecture audit report
+│   ├── CICD.md                     # CI/CD pipeline documentation
 │   ├── CONTRIBUTING.md             # Contribution guidelines
 │   ├── COSTS.md                    # Cloud cost analysis
+│   ├── DEPLOYMENT.md               # Deployment guide
 │   ├── INCIDENT_SCENARIO.md        # Incident response playbook
-│   └── PRD.md                      # Product requirements document
+│   ├── INFRASTRUCTURE.md           # Infrastructure documentation
+│   ├── PRD.md                      # Product requirements document
+│   ├── presentation.md             # Marp presentation slides
+│   └── TRAINING.md                 # Training pipeline documentation
 ├── notebooks/
 │   └── train_colab.ipynb           # Google Colab training notebook (free T4 GPU)
 ├── scripts/
@@ -663,6 +668,9 @@ AI-Product-Photo-Detector/
 │   ├── monitoring/
 │   │   ├── drift.py                # Real-time drift detection
 │   │   └── metrics.py              # Prometheus metric definitions
+│   ├── pipelines/
+│   │   ├── evaluate.py             # Model evaluation pipeline stage
+│   │   └── training_pipeline.py    # End-to-end training pipeline orchestrator
 │   ├── training/
 │   │   ├── augmentation.py         # Data augmentation transforms
 │   │   ├── dataset.py              # PyTorch Dataset implementation
@@ -679,22 +687,35 @@ AI-Product-Photo-Detector/
 │   ├── load/
 │   │   ├── locustfile.py           # Locust load testing scenarios
 │   │   └── k6_test.js             # k6 load testing script
+│   ├── conftest.py                 # Shared test fixtures
 │   ├── test_api.py                 # API endpoint tests
 │   ├── test_augmentation.py        # Data augmentation tests
 │   ├── test_auth.py                # Authentication tests
 │   ├── test_batch.py               # Batch prediction tests
 │   ├── test_config.py              # Configuration tests
+│   ├── test_data_validate.py       # Data validation tests
 │   ├── test_dataset.py             # Dataset tests
 │   ├── test_drift.py               # Drift detection tests
 │   ├── test_drift_extended.py      # Extended drift detection tests
+│   ├── test_evaluate_extended.py   # Evaluation pipeline tests
 │   ├── test_explainer.py           # Grad-CAM tests
+│   ├── test_gcs.py                 # GCS upload/download tests
 │   ├── test_integration.py         # Integration tests
 │   ├── test_logger.py              # Logging tests
 │   ├── test_metrics.py             # Prometheus metrics tests
 │   ├── test_model.py               # Model architecture tests
+│   ├── test_pipelines.py           # Pipeline orchestration tests
 │   ├── test_predictor.py           # Inference engine tests
 │   ├── test_predictor_extended.py  # Extended predictor tests
-│   └── test_validation.py          # Image validation tests
+│   ├── test_routes.py              # Route module tests
+│   ├── test_shadow.py              # Shadow A/B testing tests
+│   ├── test_state.py               # Application state tests
+│   ├── test_train.py               # Training loop tests
+│   ├── test_training_pipeline_extended.py # Extended training pipeline tests
+│   ├── test_ui.py                  # Streamlit UI tests
+│   ├── test_validation.py          # Image validation tests
+│   ├── test_validation_extended.py # Extended validation tests
+│   └── test_vertex_submit.py       # Vertex AI submission tests
 ├── docker-compose.yml              # Full stack orchestration
 ├── dvc.yaml                        # DVC pipeline definition
 ├── Makefile                        # Development commands
