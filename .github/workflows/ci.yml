@@ -94,6 +94,8 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Run tests with coverage
+        env:
+          RATE_LIMIT_ENABLED: "false"
         run: |
           pytest tests/ -v --tb=short \
             --cov=src \

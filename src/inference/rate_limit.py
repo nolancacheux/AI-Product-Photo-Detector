@@ -1,5 +1,7 @@
 """Rate limiter instance shared between api.py and route modules."""
 
+import os
+
 from fastapi import Request
 
 from slowapi import Limiter
@@ -17,4 +19,10 @@ def _get_real_client_ip(request: Request) -> str:
     return request.client.host if request.client else "127.0.0.1"
 
 
-limiter = Limiter(key_func=_get_real_client_ip, default_limits=["200/minute"])
+_enabled = os.environ.get("RATE_LIMIT_ENABLED", "true").lower() != "false"
+
+limiter = Limiter(
+    key_func=_get_real_client_ip,
+    default_limits=["200/minute"],
+    enabled=_enabled,
+)
