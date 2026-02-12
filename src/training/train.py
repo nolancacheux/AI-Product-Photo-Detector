@@ -299,7 +299,7 @@ def train(
         )
 
         for epoch in range(epochs):
-            logger.info(f"Epoch {epoch + 1}/{epochs}")
+            logger.info("Epoch started", epoch=epoch + 1, total_epochs=epochs)
 
             # Train
             train_loss, train_acc = train_epoch(
@@ -372,7 +372,7 @@ def train(
 
             # Early stopping
             if patience_counter >= patience:
-                logger.info(f"Early stopping at epoch {epoch + 1}")
+                logger.info("Early stopping triggered", epoch=epoch + 1)
                 break
 
         # Log best metrics
