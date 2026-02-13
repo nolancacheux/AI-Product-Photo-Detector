@@ -25,6 +25,21 @@ on:
         required: false
         default: false
         type: boolean
+      use_gpu:
+        description: "Use GPU for training (falls back to CPU if quota unavailable)"
+        required: false
+        default: true
+        type: boolean
+      region:
+        description: "GCP region for training"
+        required: false
+        default: "us-central1"
+        type: choice
+        options:
+          - us-central1
+          - europe-west1
+          - europe-west4
+          - asia-east1
 
   push:
     branches: [main]
@@ -37,13 +52,17 @@ concurrency:
 
 env:
   GCP_PROJECT: ai-product-detector-487013
+  # Training region (configurable via input, default us-central1 for better GPU quota)
+  TRAINING_REGION: ${{ github.event.inputs.region || 'us-central1' }}
+  # Storage/deployment region (always europe-west1)
   REGION: europe-west1
   GCS_BUCKET: ai-product-detector-487013
   REGISTRY: europe-west1-docker.pkg.dev
   REPO: europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector
   SERVICE: ai-product-detector
   # Vertex AI training machine type
-  MACHINE_TYPE: n1-standard-4
+  MACHINE_TYPE: n1-standard-8
+  USE_GPU: ${{ github.event.inputs.use_gpu || 'true' }}
   ACCELERATOR_TYPE: NVIDIA_TESLA_T4
   ACCELERATOR_COUNT: "1"
 
@@ -178,66 +197,150 @@ jobs:
           EPOCHS: ${{ github.event.inputs.epochs || '15' }}
           BATCH_SIZE: ${{ github.event.inputs.batch_size || '64' }}
           IMAGE_URI: ${{ needs.build-training-image.outputs.image_uri }}
+          TRAINING_REGION: ${{ env.TRAINING_REGION }}
+          USE_GPU: ${{ env.USE_GPU }}
         run: |
           python - <<'PYTHON_SCRIPT'
           import os
-          import json
+          import sys
           from google.cloud import aiplatform
+          from google.api_core.exceptions import ResourceExhausted, FailedPrecondition
 
-          project = os.environ["GCP_PROJECT"] if "GCP_PROJECT" in os.environ else "ai-product-detector-487013"
-          region = "europe-west1"
+          project = os.environ.get("GCP_PROJECT", "ai-product-detector-487013")
+          training_region = os.environ.get("TRAINING_REGION", "us-central1")
           bucket = os.environ.get("GCS_BUCKET", "ai-product-detector-487013")
           image_uri = os.environ["IMAGE_URI"]
           epochs = os.environ.get("EPOCHS", "15")
           batch_size = os.environ.get("BATCH_SIZE", "64")
           sha = os.environ.get("GITHUB_SHA", "local")[:8]
+          use_gpu = os.environ.get("USE_GPU", "true").lower() == "true"
 
           staging_bucket = f"gs://{bucket}"
           model_output = f"gs://{bucket}/models/training-{sha}"
 
-          aiplatform.init(
-              project=project,
-              location=region,
-              staging_bucket=staging_bucket,
-          )
+          def submit_job(region, machine_type, accelerator_type=None, accelerator_count=0):
+              """Submit training job with specified configuration."""
+              aiplatform.init(
+                  project=project,
+                  location=region,
+                  staging_bucket=staging_bucket,
+              )
 
-          job = aiplatform.CustomContainerTrainingJob(
-              display_name=f"ai-product-detector-{sha}",
-              container_uri=image_uri,
-              command=["python", "-m", "src.training.train", "--config", "configs/train_config.yaml"],
-          )
+              job = aiplatform.CustomContainerTrainingJob(
+                  display_name=f"ai-product-detector-{sha}",
+                  container_uri=image_uri,
+                  command=["python", "-m", "src.training.train", "--config", "configs/train_config.yaml"],
+              )
 
-          # Environment variables passed to the training container
-          env_vars = [
-              {"name": "EPOCHS", "value": epochs},
-              {"name": "BATCH_SIZE", "value": batch_size},
-              {"name": "GCS_DATA_PATH", "value": f"gs://{bucket}/data/processed"},
-              {"name": "GCS_MODEL_OUTPUT", "value": model_output},
-          ]
+              env_vars = {
+                  "EPOCHS": epochs,
+                  "BATCH_SIZE": batch_size,
+                  "GCS_DATA_PATH": f"gs://{bucket}/data/processed",
+                  "GCS_MODEL_OUTPUT": model_output,
+              }
 
-          print(f"Submitting Vertex AI training job...")
-          print(f"  Image: {image_uri}")
-          print(f"  Epochs: {epochs}, Batch size: {batch_size}")
-          print(f"  Model output: {model_output}")
+              config_str = f"{machine_type}"
+              if accelerator_type:
+                  config_str += f" + {accelerator_count}x {accelerator_type}"
+              else:
+                  config_str += " (CPU-only)"
 
-          model = job.run(
-              base_output_dir=model_output,
-              args=[
-                  "--epochs", epochs,
-                  "--batch-size", batch_size,
-              ],
-              environment_variables={e["name"]: e["value"] for e in env_vars},
-              machine_type=os.environ.get("MACHINE_TYPE", "n1-standard-4"),
-              accelerator_type=os.environ.get("ACCELERATOR_TYPE", "NVIDIA_TESLA_T4"),
-              accelerator_count=int(os.environ.get("ACCELERATOR_COUNT", "1")),
-              replica_count=1,
-          )
+              print(f"Submitting Vertex AI training job...")
+              print(f"  Region: {region}")
+              print(f"  Image: {image_uri}")
+              print(f"  Config: {config_str}")
+              print(f"  Epochs: {epochs}, Batch size: {batch_size}")
+              print(f"  Model output: {model_output}")
 
-          print(f"Training job completed. Model output: {model_output}")
+              run_kwargs = {
+                  "base_output_dir": model_output,
+                  "args": ["--epochs", epochs, "--batch-size", batch_size],
+                  "environment_variables": env_vars,
+                  "machine_type": machine_type,
+                  "replica_count": 1,
+              }
 
-          # Write outputs for subsequent steps
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write(f"model_gcs_path={model_output}\n")
+              if accelerator_type and accelerator_count > 0:
+                  run_kwargs["accelerator_type"] = accelerator_type
+                  run_kwargs["accelerator_count"] = accelerator_count
+
+              return job.run(**run_kwargs)
+
+          # Training configuration attempts
+          attempts = []
+
+          if use_gpu:
+              # Try GPU configurations first
+              attempts.append({
+                  "region": training_region,
+                  "machine_type": "n1-standard-4",
+                  "accelerator_type": "NVIDIA_TESLA_T4",
+                  "accelerator_count": 1,
+                  "desc": f"T4 GPU in {training_region}"
+              })
+              # Fallback to CPU in same region
+              attempts.append({
+                  "region": training_region,
+                  "machine_type": "n1-standard-8",
+                  "accelerator_type": None,
+                  "accelerator_count": 0,
+                  "desc": f"CPU-only (n1-standard-8) in {training_region}"
+              })
+          else:
+              # CPU-only mode requested
+              attempts.append({
+                  "region": training_region,
+                  "machine_type": "n1-standard-8",
+                  "accelerator_type": None,
+                  "accelerator_count": 0,
+                  "desc": f"CPU-only (n1-standard-8) in {training_region}"
+              })
+
+          last_error = None
+          for attempt in attempts:
+              try:
+                  print(f"\n{'='*60}")
+                  print(f"Attempting: {attempt['desc']}")
+                  print(f"{'='*60}\n")
+
+                  model = submit_job(
+                      region=attempt["region"],
+                      machine_type=attempt["machine_type"],
+                      accelerator_type=attempt["accelerator_type"],
+                      accelerator_count=attempt["accelerator_count"],
+                  )
+
+                  print(f"\nTraining job completed successfully!")
+                  print(f"Configuration used: {attempt['desc']}")
+                  print(f"Model output: {model_output}")
+
+                  with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                      f.write(f"model_gcs_path={model_output}\n")
+                      f.write(f"training_config={attempt['desc']}\n")
+
+                  sys.exit(0)
+
+              except (ResourceExhausted, FailedPrecondition) as e:
+                  error_msg = str(e)
+                  if "quota" in error_msg.lower() or "exceed" in error_msg.lower():
+                      print(f"\nQuota exceeded for {attempt['desc']}: {error_msg}")
+                      print("Trying fallback configuration...")
+                      last_error = e
+                      continue
+                  raise
+              except Exception as e:
+                  error_msg = str(e)
+                  if "quota" in error_msg.lower() or "exceed" in error_msg.lower():
+                      print(f"\nQuota error for {attempt['desc']}: {error_msg}")
+                      print("Trying fallback configuration...")
+                      last_error = e
+                      continue
+                  raise
+
+          # All attempts failed
+          print(f"\nAll training configurations failed!")
+          print(f"Last error: {last_error}")
+          sys.exit(1)
           PYTHON_SCRIPT
 
       - name: Download trained model from GCS
@@ -267,9 +370,10 @@ jobs:
         run: |
           echo "### 🏋️ Vertex AI Training" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Job output:** \`${{ steps.training.outputs.model_gcs_path }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Training config:** ${{ steps.training.outputs.training_config }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Region:** ${{ env.TRAINING_REGION }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Epochs:** ${{ github.event.inputs.epochs || '15' }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Batch size:** ${{ github.event.inputs.batch_size || '64' }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Machine:** ${{ env.MACHINE_TYPE }} + ${{ env.ACCELERATOR_TYPE }}" >> "$GITHUB_STEP_SUMMARY"
 
   # --------------------------------------------------------------------------
   # Evaluate the trained model
