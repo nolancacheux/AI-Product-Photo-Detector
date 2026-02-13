@@ -145,6 +145,451 @@ graph LR
 
 ---
 
+## Development Modes
+
+The project supports **three distinct development modes**, each optimized for different use cases:
+
+```mermaid
+graph TB
+    subgraph Local["🖥️ Mode 1: Local Development"]
+        LOCAL_DEV[make dev] --> LOCAL_COMPOSE[Docker Compose Stack]
+        LOCAL_COMPOSE --> LOCAL_API[API :8080]
+        LOCAL_COMPOSE --> LOCAL_UI[Streamlit :8501]
+        LOCAL_COMPOSE --> LOCAL_PROM[Prometheus :9090]
+        LOCAL_COMPOSE --> LOCAL_GRAF[Grafana :3000]
+        LOCAL_TRAIN[make train] --> LOCAL_CPU[CPU Training]
+        LOCAL_CPU --> LOCAL_MODEL[models/checkpoints/]
+    end
+
+    subgraph Colab["☁️ Mode 2: Google Colab"]
+        COLAB_NB[train_colab.ipynb] --> COLAB_GPU[Free T4/A100 GPU]
+        COLAB_GPU --> COLAB_TRAIN[Training]
+        COLAB_TRAIN --> COLAB_GCS[Export to GCS]
+    end
+
+    subgraph Prod["🚀 Mode 3: Production GCP"]
+        GH_PUSH[git push main] --> GH_CI[GitHub Actions CI]
+        GH_CI --> GH_CD[GitHub Actions CD]
+        GH_CD --> CLOUD_RUN[Cloud Run Deploy]
+        GH_DISPATCH[workflow_dispatch] --> VERTEX[Vertex AI Pipeline]
+        VERTEX --> VERTEX_GPU[T4 GPU Training]
+        VERTEX_GPU --> QUALITY_GATE{Quality Gate}
+        QUALITY_GATE -->|Pass| AUTO_DEPLOY[Auto Deploy]
+        QUALITY_GATE -->|Fail| BLOCK[Block]
+    end
+
+    style Local fill:#e8f5e9,stroke:#2e7d32
+    style Colab fill:#fff3e0,stroke:#ef6c00
+    style Prod fill:#e3f2fd,stroke:#1565c0
+```
+
+### Mode Comparison
+
+| Feature | Local Development | Google Colab | Production GCP |
+|---------|-------------------|--------------|----------------|
+| **Purpose** | Development, debugging, quick tests | Free GPU training experiments | Production deployment & training |
+| **GPU** | CPU (or local GPU) | Free T4/A100 | Paid T4 (Vertex AI) |
+| **Cost** | Free | Free | ~$0.10-0.50/training run |
+| **Training Time** | 1-2h (CPU) | ~20 min (T4) | ~25 min (T4) |
+| **Hot Reload** | ✅ Yes | ❌ No | ❌ No |
+| **CI/CD** | Manual | Manual | Fully automated |
+| **Monitoring** | Local Prometheus/Grafana | ❌ None | Cloud Monitoring |
+| **Best For** | Daily development | Quick experiments | Production releases |
+
+---
+
+### Mode 1: Local Development (Docker Compose)
+
+Full-stack local development with hot reload, debugging, and monitoring.
+
+#### Architecture
+
+```mermaid
+graph TB
+    subgraph Host["Developer Machine"]
+        CODE[Source Code] --> |volume mount| API
+        CODE --> |volume mount| UI
+    end
+
+    subgraph Compose["Docker Compose Stack"]
+        API[FastAPI API\n:8080] --> |healthcheck| UI[Streamlit UI\n:8501]
+        API --> |scrape /metrics| PROM[Prometheus\n:9090]
+        PROM --> GRAF[Grafana\n:3000]
+        API --> MLFLOW[MLflow\n:5000]
+    end
+
+    subgraph Volumes["Persistent Volumes"]
+        V_MODELS[models/]
+        V_DATA[data/]
+        V_MLRUNS[mlruns/]
+        V_PROM[prometheus_data/]
+        V_GRAF[grafana_data/]
+    end
+
+    API --> V_MODELS
+    API --> V_DATA
+    MLFLOW --> V_MLRUNS
+    PROM --> V_PROM
+    GRAF --> V_GRAF
+
+    style Compose fill:#e8f5e9,stroke:#2e7d32
+    style Host fill:#e3f2fd,stroke:#1565c0
+```
+
+#### Quick Start
+
+```bash
+# 1. Clone and setup
+git clone https://github.com/nolancacheux/AI-Product-Photo-Detector.git
+cd AI-Product-Photo-Detector
+
+# 2. Install dependencies (includes pre-commit hooks)
+make dev
+
+# 3. Download dataset
+make data
+
+# 4. Start the full stack
+make docker-up
+
+# 5. Open services in browser
+# API:        http://localhost:8080
+# Streamlit:  http://localhost:8501
+# MLflow:     http://localhost:5000
+# Prometheus: http://localhost:9090
+# Grafana:    http://localhost:3000 (admin/admin)
+```
+
+#### Services
+
+| Service | Port | URL | Description |
+|---------|------|-----|-------------|
+| **API** | 8080 | http://localhost:8080 | FastAPI inference server with hot reload |
+| **Streamlit UI** | 8501 | http://localhost:8501 | Drag-and-drop image analysis interface |
+| **MLflow** | 5000 | http://localhost:5000 | Experiment tracking and model registry |
+| **Prometheus** | 9090 | http://localhost:9090 | Metrics collection and alerting |
+| **Grafana** | 3000 | http://localhost:3000 | Monitoring dashboards |
+
+#### Development Commands
+
+```bash
+# Start/stop stack
+make docker-up          # Start all services
+make docker-down        # Stop all services
+make docker-logs        # Follow logs
+
+# Dev environment with hot reload
+make docker-dev         # Start dev stack (docker-compose.dev.yml)
+make docker-dev-down    # Stop dev stack
+make docker-dev-logs    # Follow dev logs
+
+# Code quality
+make lint               # Run ruff + mypy
+make format             # Auto-format code
+make test               # Run pytest with coverage
+
+# Local training (CPU)
+make train              # Train with configs/train_config.yaml
+make mlflow             # View training experiments
+
+# Direct API server (without Docker)
+make serve              # uvicorn with --reload on :8000
+```
+
+#### Local Training (CPU)
+
+```bash
+# Default configuration
+python -m src.training.train --config configs/train_config.yaml
+
+# Override hyperparameters
+python -m src.training.train --config configs/train_config.yaml \
+  --epochs 10 \
+  --batch-size 32 \
+  --learning-rate 0.0005
+
+# With GCS upload after training
+python -m src.training.train --config configs/train_config.yaml \
+  --gcs-bucket ai-product-detector-487013
+```
+
+#### Environment Files
+
+| File | Purpose |
+|------|---------|
+| `.env.development` | Development environment variables |
+| `.env.production` | Production environment variables |
+| `docker-compose.yml` | Base compose configuration |
+| `docker-compose.dev.yml` | Dev overrides (hot reload, debug) |
+| `docker-compose.prod.yml` | Prod overrides (optimized settings) |
+
+---
+
+### Mode 2: Google Colab (Free GPU Training)
+
+Free GPU training using Google Colab's T4/A100 GPUs.
+
+#### Architecture
+
+```mermaid
+graph LR
+    subgraph Colab["Google Colab"]
+        NB[train_colab.ipynb] --> RUNTIME[T4/A100 GPU Runtime]
+        RUNTIME --> TRAIN[Training Loop]
+        TRAIN --> CKPT[Checkpoint]
+    end
+
+    subgraph GCS["Google Cloud Storage"]
+        DATA_IN[Training Data] --> TRAIN
+        CKPT --> MODEL_OUT[Trained Model]
+    end
+
+    subgraph Local["Local Machine"]
+        DOWNLOAD[Download Model] --> LOCAL_MODEL[models/checkpoints/]
+    end
+
+    MODEL_OUT --> DOWNLOAD
+
+    style Colab fill:#fff3e0,stroke:#ef6c00
+    style GCS fill:#e3f2fd,stroke:#1565c0
+```
+
+#### Quick Start
+
+1. **Open the notebook:**
+   [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nolancacheux/AI-Product-Photo-Detector/blob/main/notebooks/train_colab.ipynb)
+
+2. **Select GPU runtime:**
+   - Go to **Runtime → Change runtime type → T4 GPU** (or A100 if available)
+
+3. **Configure and run:**
+   - Set your GCS bucket name (optional, for model upload)
+   - Adjust hyperparameters if needed
+   - Run all cells
+
+4. **Export the model:**
+   - Download from Colab file browser, or
+   - Auto-upload to GCS bucket
+
+#### Notebook Sections
+
+| Section | Description |
+|---------|-------------|
+| **1. Setup** | Install dependencies, authenticate GCS |
+| **2. Data** | Download dataset from HuggingFace or mount GCS |
+| **3. Model** | Initialize EfficientNet-B0 with pretrained weights |
+| **4. Training** | Training loop with progress bars and metrics |
+| **5. Evaluation** | Test set evaluation and confusion matrix |
+| **6. Export** | Save checkpoint locally or upload to GCS |
+
+#### Colab-Specific Configuration
+
+```python
+# In the notebook
+CONFIG = {
+    "epochs": 15,
+    "batch_size": 64,  # T4 can handle 64; reduce to 32 if OOM
+    "learning_rate": 0.001,
+    "image_size": 224,
+    "gcs_bucket": "ai-product-detector-487013",  # Optional
+    "gcs_model_path": "models/colab_trained.pt",
+}
+```
+
+#### Tips for Colab
+
+| Issue | Solution |
+|-------|----------|
+| Session timeout | Save checkpoints to Google Drive periodically |
+| OOM errors | Reduce batch_size to 32 or 16 |
+| Slow data loading | Use HuggingFace datasets (pre-cached) |
+| Need more GPU time | Use Colab Pro for longer sessions |
+
+---
+
+### Mode 3: Production GCP
+
+Full production deployment with CI/CD, Vertex AI training, and Cloud Run serving.
+
+#### Architecture
+
+```mermaid
+graph TB
+    subgraph GitHub["GitHub"]
+        REPO[Repository] --> |push to main| CI[CI Workflow]
+        REPO --> |workflow_dispatch| TRAIN_WF[Training Workflow]
+        CI --> |on success| CD[CD Workflow]
+    end
+
+    subgraph CICD["CI/CD Pipeline"]
+        CI --> LINT[Ruff Lint]
+        CI --> TYPE[mypy Type Check]
+        CI --> TEST[pytest 3.11+3.12]
+        CI --> SEC[Security Scan]
+        CD --> BUILD[Docker Build]
+        BUILD --> PUSH[Push to Artifact Registry]
+        PUSH --> DEPLOY[Deploy to Cloud Run]
+        DEPLOY --> SMOKE[Smoke Test]
+    end
+
+    subgraph VertexAI["Vertex AI Training"]
+        TRAIN_WF --> VERIFY[Verify GCS Data]
+        VERIFY --> BUILD_TRAIN[Build Training Image]
+        BUILD_TRAIN --> SUBMIT[Submit Training Job]
+        SUBMIT --> GPU_TRAIN[n1-standard-4 + T4 GPU]
+        GPU_TRAIN --> EVAL[Evaluate Model]
+        EVAL --> GATE{Quality Gate\nacc≥0.85\nF1≥0.80}
+        GATE -->|Pass| AUTO_DEPLOY[Auto Deploy]
+        GATE -->|Fail| BLOCK[Block Deploy]
+    end
+
+    subgraph CloudRun["Cloud Run"]
+        API_SERVICE[API Service\nauto-scale 0→N]
+        UI_SERVICE[UI Service\nauto-scale 0→N]
+    end
+
+    subgraph Monitoring["Monitoring"]
+        PROM_CLOUD[Prometheus]
+        GRAF_CLOUD[Grafana Dashboards]
+        UPTIME[Uptime Checks]
+        ALERTS[Alert Policies]
+    end
+
+    DEPLOY --> API_SERVICE
+    DEPLOY --> UI_SERVICE
+    AUTO_DEPLOY --> API_SERVICE
+    API_SERVICE --> PROM_CLOUD
+    PROM_CLOUD --> GRAF_CLOUD
+    API_SERVICE --> UPTIME
+    UPTIME --> ALERTS
+
+    style GitHub fill:#f5f5f5,stroke:#333
+    style CICD fill:#e8f5e9,stroke:#2e7d32
+    style VertexAI fill:#e3f2fd,stroke:#1565c0
+    style CloudRun fill:#fff3e0,stroke:#ef6c00
+    style Monitoring fill:#fce4ec,stroke:#c62828
+```
+
+#### GitHub Actions Workflows
+
+| Workflow | File | Trigger | Description |
+|----------|------|---------|-------------|
+| **CI** | `ci.yml` | Push/PR to `main` | Lint, type check, test, security scan |
+| **CD** | `cd.yml` | Push to `main` + CI pass | Build, push, deploy to Cloud Run |
+| **Model Training** | `model-training.yml` | Manual / data changes | Vertex AI GPU training pipeline |
+| **PR Preview** | `pr-preview.yml` | PR open/update | Deploy preview environment |
+
+#### CI Pipeline
+
+```yaml
+# Triggered on: push/PR to main
+jobs:
+  lint:       ruff check src/ tests/
+  typecheck:  mypy src/ --strict
+  test:       pytest (Python 3.11 + 3.12 matrix)
+  security:   pip-audit + bandit
+  docker:     docker build --target test
+```
+
+#### CD Pipeline
+
+```yaml
+# Triggered on: push to main (after CI passes)
+jobs:
+  build:
+    - Build Docker image
+    - Push to Artifact Registry
+  deploy:
+    - Deploy to Cloud Run (API + UI)
+    - Run smoke test on /health
+```
+
+#### Vertex AI Training Pipeline
+
+```bash
+# Manual trigger via GitHub Actions UI
+gh workflow run model-training.yml \
+  -f epochs=15 \
+  -f batch_size=64 \
+  -f auto_deploy=true
+
+# Or via gcloud CLI
+python -m src.training.vertex_submit \
+  --epochs 15 \
+  --batch-size 64 \
+  --sync
+```
+
+**Pipeline stages:**
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Verify Data    │ → │  Build Image    │ → │  Submit Job     │
+│  (GCS bucket)   │    │  (Artifact Reg) │    │  (Vertex AI)    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                      │
+                                                      ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Auto Deploy    │ ← │  Quality Gate   │ ← │  Evaluate       │
+│  (if enabled)   │    │  acc≥0.85 F1≥0.8│    │  (CPU runner)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+#### Terraform Infrastructure
+
+```
+terraform/
+├── environments/
+│   ├── dev/                  # Development (scale-to-zero, 512Mi)
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── terraform.tfvars
+│   └── prod/                 # Production (min 1 instance, 1Gi)
+│       ├── main.tf
+│       ├── variables.tf
+│       └── terraform.tfvars
+└── modules/
+    ├── cloud-run/            # Cloud Run service configuration
+    ├── storage/              # GCS buckets with versioning
+    ├── registry/             # Artifact Registry with cleanup
+    ├── monitoring/           # Uptime checks, alert policies
+    └── iam/                  # Service accounts, IAM bindings
+```
+
+#### Cloud Run Configuration
+
+| Setting | Dev | Prod |
+|---------|-----|------|
+| Min instances | 0 | 1 |
+| Max instances | 2 | 10 |
+| Memory | 512Mi | 1Gi |
+| CPU | 1 | 2 |
+| Timeout | 60s | 300s |
+| Concurrency | 80 | 100 |
+
+#### Monitoring Stack
+
+| Component | Purpose |
+|-----------|---------|
+| **Prometheus** | Metrics collection from `/metrics` endpoint |
+| **Grafana** | Pre-configured dashboards (auto-provisioned) |
+| **Cloud Logging** | Structured JSON logs with request IDs |
+| **Uptime Checks** | Health monitoring on `/healthz` |
+| **Alert Policies** | Latency, error rate, availability alerts |
+| **Budget Alerts** | Cost monitoring (50%, 80%, 100% thresholds) |
+
+#### Production URLs
+
+| Resource | URL |
+|----------|-----|
+| **REST API** | https://ai-product-detector-714127049161.europe-west1.run.app |
+| **Web UI** | https://ai-product-detector-ui-714127049161.europe-west1.run.app |
+| **Swagger Docs** | https://ai-product-detector-714127049161.europe-west1.run.app/docs |
+| **Health Check** | https://ai-product-detector-714127049161.europe-west1.run.app/health |
+| **Metrics** | https://ai-product-detector-714127049161.europe-west1.run.app/metrics |
+
+---
+
 ## Project Structure
 
 ```
@@ -205,6 +650,7 @@ AI-Product-Photo-Detector/
 │   └── modules/                # Reusable Terraform modules
 ├── scripts/                    # Data download utilities
 ├── notebooks/                  # Jupyter notebooks (Colab training)
+│   └── train_colab.ipynb       # Free T4/A100 GPU training
 ├── data/                       # Local data directory (DVC tracked)
 ├── models/                     # Model checkpoints
 ├── dvc.yaml                    # DVC pipeline definition
@@ -469,37 +915,3 @@ terraform/
 | Monitoring | Optional | Always enabled |
 
 See [INFRASTRUCTURE.md](INFRASTRUCTURE.md) for full details.
-
----
-
-## Deployment Modes
-
-### Local Development
-
-```bash
-# API only (with hot reload)
-make serve              # → http://localhost:8000
-
-# Full stack (Docker Compose)
-make docker-up          # API + UI + MLflow + Prometheus + Grafana
-make docker-logs        # Follow logs
-make docker-down        # Tear down
-```
-
-### Production (Cloud Run)
-
-```bash
-# Automated: push to main triggers CI → CD → deploy
-git push origin main
-
-# Manual deploy
-make deploy
-# or: gh workflow run cd.yml -f image_tag=latest
-
-# Rollback to specific version
-gh workflow run cd.yml -f image_tag=<commit-sha>
-
-# Terraform provisioning
-cd terraform/environments/dev  # or prod
-terraform init && terraform plan && terraform apply
-```

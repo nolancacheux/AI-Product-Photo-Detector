@@ -268,30 +268,36 @@ graph LR
 
 ## 🚀 Quick Start
 
-### Local Development
+The project supports **three development modes** — choose based on your needs:
+
+| Mode | Best For | GPU | Time |
+|------|----------|-----|------|
+| **🖥️ Local** | Development, debugging | CPU | 1-2h |
+| **☁️ Colab** | Free GPU experiments | T4/A100 | ~20 min |
+| **🚀 Production** | CI/CD, production releases | T4 (Vertex AI) | ~25 min |
+
+### 🖥️ Mode 1: Local Development (Docker Compose)
+
+Full-stack local development with hot reload, debugging, and monitoring.
 
 **Prerequisites:** Python 3.11+, [uv](https://docs.astral.sh/uv/) (recommended) or pip, Docker & Docker Compose
 
 ```bash
-# Clone the repository
+# 1. Clone and setup
 git clone https://github.com/nolancacheux/AI-Product-Photo-Detector.git
 cd AI-Product-Photo-Detector
 
-# Install all dependencies (dev + ui + pre-commit hooks)
+# 2. Install dependencies (includes pre-commit hooks)
 make dev
 
-# Download dataset and train a model
-make data           # Download CIFAKE (2500 images/class)
-make train          # Train EfficientNet-B0
+# 3. Download dataset
+make data           # CIFAKE (2500 images/class)
 
-# Start the API server with hot reload
-make serve          # → http://localhost:8000
-
-# Or start the full stack with Docker Compose
+# 4. Start the full stack
 make docker-up      # API + UI + MLflow + Prometheus + Grafana
 ```
 
-**Service URLs (Docker Compose):**
+**Service URLs:**
 
 | Service | URL | Description |
 |---------|-----|-------------|
@@ -299,12 +305,62 @@ make docker-up      # API + UI + MLflow + Prometheus + Grafana
 | **Streamlit UI** | http://localhost:8501 | Drag-and-drop image analysis |
 | **MLflow** | http://localhost:5000 | Experiment tracking UI |
 | **Prometheus** | http://localhost:9090 | Metrics collection |
-| **Grafana** | http://localhost:3000 | Monitoring dashboards |
+| **Grafana** | http://localhost:3000 | Monitoring dashboards (admin/admin) |
 
-### Production Deployment
+**Development commands:**
 
 ```bash
-# 1. Provision infrastructure with Terraform
+# Training (CPU)
+make train              # Train with configs/train_config.yaml
+python -m src.training.train --config configs/train_config.yaml --epochs 10
+
+# Code quality
+make lint               # ruff + mypy
+make test               # pytest with coverage
+make format             # Auto-format code
+
+# Docker
+make docker-logs        # Follow logs
+make docker-down        # Stop all services
+make docker-dev         # Dev stack with hot reload
+```
+
+### ☁️ Mode 2: Google Colab (Free GPU Training)
+
+Train on free T4/A100 GPUs without local setup.
+
+1. **Open the notebook:**
+   [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nolancacheux/AI-Product-Photo-Detector/blob/main/notebooks/train_colab.ipynb)
+
+2. **Select GPU runtime:**
+   - Go to **Runtime → Change runtime type → T4 GPU**
+
+3. **Run all cells** — the notebook handles:
+   - Environment setup
+   - Data loading (HuggingFace or GCS)
+   - Training with progress bars
+   - Model export
+
+4. **Export model:**
+   - Download from Colab, or
+   - Auto-upload to GCS bucket
+
+**Configuration in notebook:**
+```python
+CONFIG = {
+    "epochs": 15,
+    "batch_size": 64,      # Reduce to 32 if OOM
+    "learning_rate": 0.001,
+    "gcs_bucket": "ai-product-detector-487013",  # Optional
+}
+```
+
+### 🚀 Mode 3: Production GCP (CI/CD)
+
+Automated deployment with GitHub Actions, Vertex AI training, and Cloud Run serving.
+
+```bash
+# 1. Provision infrastructure
 cd terraform/environments/prod
 terraform init && terraform apply
 
@@ -319,6 +375,34 @@ gh workflow run model-training.yml \
   -f batch_size=64 \
   -f auto_deploy=true
 ```
+
+**Training pipeline stages:**
+```
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│ Verify Data  │ → │ Build Image  │ → │ Vertex AI    │ → │ Evaluate     │
+│ (GCS)        │   │ (Artifact    │   │ GPU Training │   │ (Quality     │
+│              │   │  Registry)   │   │ (T4)         │   │  Gate)       │
+└──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘
+                                                                │
+                                              ┌─────────────────┼─────────────────┐
+                                              │                 │                 │
+                                            PASS              FAIL
+                                              │                 │
+                                        Auto Deploy        Block Deploy
+                                        (Cloud Run)
+```
+
+**Quality Gate:** Accuracy ≥ 0.85, F1 ≥ 0.80
+
+**Production URLs:**
+
+| Resource | URL |
+|----------|-----|
+| **API** | https://ai-product-detector-714127049161.europe-west1.run.app |
+| **UI** | https://ai-product-detector-ui-714127049161.europe-west1.run.app |
+| **Swagger** | https://ai-product-detector-714127049161.europe-west1.run.app/docs |
+
+See [docs/TRAINING.md](docs/TRAINING.md) for detailed instructions on each mode.
 
 ---
 
