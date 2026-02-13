@@ -9,8 +9,8 @@ import torch
 from PIL import Image
 
 from src.inference.explainer import GradCAMExplainer
-from src.utils.model_loader import _rebuild_classifier
 from src.training.model import AIImageDetector
+from src.utils.model_loader import _rebuild_classifier
 
 
 # ---------------------------------------------------------------------------

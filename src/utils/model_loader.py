@@ -37,9 +37,7 @@ def _rebuild_classifier(
         Sequential classifier matching the checkpoint structure.
     """
     cls_keys = [k for k in state_dict if k.startswith("classifier.")]
-    has_batchnorm = any(
-        ".running_mean" in k or ".running_var" in k for k in cls_keys
-    )
+    has_batchnorm = any(".running_mean" in k or ".running_var" in k for k in cls_keys)
 
     if has_batchnorm:
         return nn.Sequential(
@@ -124,9 +122,7 @@ def load_model(
     try:
         model.load_state_dict(state_dict)
     except RuntimeError:
-        model.classifier = _rebuild_classifier(
-            state_dict, model.feature_dim, dropout
-        )
+        model.classifier = _rebuild_classifier(state_dict, model.feature_dim, dropout)
         model.load_state_dict(state_dict)
 
     model = model.to(device)

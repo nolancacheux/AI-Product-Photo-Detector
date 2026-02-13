@@ -39,9 +39,7 @@ class GradCAMExplainer:
 
     def _load_model(self) -> None:
         try:
-            model, checkpoint = load_model(
-                self.model_path, device=self.device, eval_mode=True
-            )
+            model, checkpoint = load_model(self.model_path, device=self.device, eval_mode=True)
             self.model = model
             self.model_version = f"1.0.{checkpoint.get('epoch', 0)}"
 

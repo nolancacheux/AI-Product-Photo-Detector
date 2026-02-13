@@ -57,9 +57,7 @@ def load_model(model_path: str | Path, device: torch.device) -> AIImageDetector:
     Returns:
         Model loaded with trained weights, in eval mode.
     """
-    model, checkpoint = _load_model_from_checkpoint(
-        model_path, device=device, eval_mode=True
-    )
+    model, checkpoint = _load_model_from_checkpoint(model_path, device=device, eval_mode=True)
 
     logger.info(
         "Loaded model from %s (epoch %d, val_accuracy=%.4f)",
