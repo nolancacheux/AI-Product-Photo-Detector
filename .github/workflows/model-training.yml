@@ -298,7 +298,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-eval-${{ runner.os }}-py3.11-${{ hashFiles('pyproject.toml', 'setup.cfg', 'requirements*.txt') }}
+          restore-keys: |
+            pip-eval-${{ runner.os }}-py3.11-
 
       - name: Install dependencies
         run: |

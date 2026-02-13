@@ -1,7 +1,8 @@
 # ==============================================================================
-# CI — Tests + Lint
+# CI — Lint, Type Check, Tests, Security Scanning
 # Runs on every push and PR to main.
 # Matrix: Python 3.11 & 3.12
+# Includes: CodeQL SAST, Trivy container scan, pip-audit, bandit
 # ==============================================================================
 
 name: CI
@@ -15,6 +16,10 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
 
 jobs:
   # --------------------------------------------------------------------------
@@ -31,7 +36,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-lint-${{ runner.os }}-py3.11-${{ hashFiles('pyproject.toml', 'setup.cfg', 'requirements*.txt') }}
+          restore-keys: |
+            pip-lint-${{ runner.os }}-py3.11-
 
       - name: Install dependencies
         run: |
@@ -58,7 +70,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-typecheck-${{ runner.os }}-py3.11-${{ hashFiles('pyproject.toml', 'setup.cfg', 'requirements*.txt') }}
+          restore-keys: |
+            pip-typecheck-${{ runner.os }}-py3.11-
 
       - name: Install dependencies
         run: |
@@ -79,6 +98,9 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12"]
 
+    outputs:
+      coverage-pct: ${{ steps.coverage-badge.outputs.coverage }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -86,7 +108,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-test-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'setup.cfg', 'requirements*.txt') }}
+          restore-keys: |
+            pip-test-${{ runner.os }}-py${{ matrix.python-version }}-
 
       - name: Install dependencies
         run: |
@@ -101,7 +130,8 @@ jobs:
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
-            --cov-report=html:htmlcov/
+            --cov-report=html:htmlcov/ \
+            --junitxml=test-results.xml
 
       - name: Upload coverage report
         if: matrix.python-version == '3.11' && always()
@@ -111,20 +141,44 @@ jobs:
           path: |
             coverage.xml
             htmlcov/
+            test-results.xml
           retention-days: 14
 
-      - name: Coverage summary
+      - name: Extract coverage percentage
+        if: matrix.python-version == '3.11' && always()
+        id: coverage-badge
+        run: |
+          COVERAGE=$(python -m coverage report --format=total 2>/dev/null || echo "0")
+          echo "coverage=${COVERAGE}" >> "$GITHUB_OUTPUT"
+          echo "Coverage: ${COVERAGE}%"
+
+      - name: Coverage summary with badge
         if: matrix.python-version == '3.11' && always()
         run: |
+          COVERAGE=$(python -m coverage report --format=total 2>/dev/null || echo "0")
+
+          # Determine badge color
+          if [ "${COVERAGE}" -ge 80 ]; then
+            COLOR="brightgreen"
+          elif [ "${COVERAGE}" -ge 60 ]; then
+            COLOR="yellow"
+          elif [ "${COVERAGE}" -ge 40 ]; then
+            COLOR="orange"
+          else
+            COLOR="red"
+          fi
+
           echo "### 📊 Coverage Report" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "![Coverage](https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || \
-            echo "Coverage summary unavailable" >> "$GITHUB_STEP_SUMMARY"
+            echo "Coverage details unavailable" >> "$GITHUB_STEP_SUMMARY"
 
   # --------------------------------------------------------------------------
-  # Security Scan
+  # Security Scan — Dependency Audit + Static Analysis
   # --------------------------------------------------------------------------
-  security:
+  security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
 
@@ -135,23 +189,160 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
 
-      - name: Install dependencies
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-security-${{ runner.os }}-py3.11-${{ hashFiles('pyproject.toml', 'setup.cfg', 'requirements*.txt') }}
+          restore-keys: |
+            pip-security-${{ runner.os }}-py3.11-
+
+      - name: Install project and audit tools
         run: |
           python -m pip install --upgrade pip
-          pip install pip-audit bandit
+          pip install -e "."
+          pip install pip-audit bandit safety
 
       - name: Run pip-audit (dependency vulnerabilities)
-        run: pip install -e "." && pip-audit --strict
-        continue-on-error: true
+        run: pip-audit --strict --desc
 
-      - name: Run bandit (code security)
-        run: bandit -r src/ -s B101,B601
-        continue-on-error: true
+      - name: Run bandit (code security analysis)
+        run: |
+          bandit -r src/ -s B101,B601 -f json -o bandit-report.json || true
+          bandit -r src/ -s B101,B601 -f screen
+
+      - name: Upload bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+          retention-days: 14
+
+      - name: Security scan summary
+        if: always()
+        run: |
+          echo "### 🔒 Security Scan Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+
+          # pip-audit result
+          if pip-audit --strict --desc > /dev/null 2>&1; then
+            echo "| pip-audit (deps) | ✅ No vulnerabilities |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| pip-audit (deps) | ⚠️ Vulnerabilities found |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # bandit result
+          if bandit -r src/ -s B101,B601 -q 2>/dev/null; then
+            echo "| bandit (SAST) | ✅ No issues |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| bandit (SAST) | ⚠️ Issues found |" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   # --------------------------------------------------------------------------
-  # Docker Build (PR only — validates Dockerfile)
+  # CodeQL — GitHub Advanced Security SAST
+  # --------------------------------------------------------------------------
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+          queries: security-and-quality
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python"
+
+  # --------------------------------------------------------------------------
+  # Trivy — Container Image Vulnerability Scan
+  # --------------------------------------------------------------------------
+  trivy-scan:
+    name: Trivy Container Scan
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: false
+          load: true
+          tags: ai-product-detector:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: "ai-product-detector:scan"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+          output: "trivy-results.txt"
+
+      - name: Upload Trivy scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results.txt
+          retention-days: 14
+
+      - name: Run Trivy (SARIF for GitHub Security tab)
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: "ai-product-detector:scan"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy results to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-results.sarif"
+          category: "trivy"
+
+      - name: Trivy scan summary
+        if: always()
+        run: |
+          echo "### 🐳 Container Security (Trivy)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f trivy-results.txt ]; then
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            head -100 trivy-results.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "✅ No CRITICAL/HIGH vulnerabilities found" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # --------------------------------------------------------------------------
+  # Docker Build Validation (PR only)
   # --------------------------------------------------------------------------
   docker-build:
     name: Docker Build Validation
