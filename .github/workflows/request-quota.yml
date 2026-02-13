@@ -15,35 +15,65 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Check current quotas
+      - name: Install alpha components
+        run: gcloud components install alpha --quiet
+
+      - name: Check current Vertex AI quotas
         run: |
-          echo "=== Checking Vertex AI quotas ==="
+          echo "=== Enabled Vertex AI API ==="
           gcloud services list --enabled --filter="name:aiplatform" --project=ai-product-detector-487013
+
           echo ""
-          echo "=== Current quota for custom_model_training ==="
+          echo "=== Listing all Vertex AI consumer quota overrides ==="
+          gcloud alpha services quota list \
+            --service=aiplatform.googleapis.com \
+            --consumer=projects/ai-product-detector-487013 2>&1 | head -60 || true
+
+          echo ""
+          echo "=== Specific training quotas ==="
           gcloud alpha services quota list \
             --service=aiplatform.googleapis.com \
             --consumer=projects/ai-product-detector-487013 \
             --filter="metric:custom_model_training" 2>&1 || true
-          echo ""
-          echo "=== All Vertex AI quotas ==="
-          gcloud compute project-info describe --project=ai-product-detector-487013 2>&1 | grep -i "aiplatform\|training\|gpu\|NVIDIA" || true
-          echo ""
-          echo "=== Try requesting quota increase ==="
-          # Request 8 CPUs for custom model training
+
+      - name: Request CPU quota increase
+        run: |
           gcloud alpha services quota update \
             --service=aiplatform.googleapis.com \
             --consumer=projects/ai-product-detector-487013 \
             --metric=aiplatform.googleapis.com/custom_model_training_cpus \
-            --unit=1/{project}/{region} \
+            --unit="1/{project}/{region}" \
             --dimensions=region=us-central1 \
-            --value=8 2>&1 || echo "Failed to request CPU quota via gcloud"
-          
-          # Request 1 T4 GPU
+            --value=8 \
+            --force --quiet 2>&1 || echo "CPU quota request failed - may need manual approval"
+
+      - name: Request T4 GPU quota increase
+        run: |
           gcloud alpha services quota update \
             --service=aiplatform.googleapis.com \
             --consumer=projects/ai-product-detector-487013 \
             --metric=aiplatform.googleapis.com/custom_model_training_nvidia_t4_gpus \
-            --unit=1/{project}/{region} \
+            --unit="1/{project}/{region}" \
             --dimensions=region=us-central1 \
-            --value=1 2>&1 || echo "Failed to request GPU quota via gcloud"
+            --value=1 \
+            --force --quiet 2>&1 || echo "GPU quota request failed - may need manual approval"
+
+      - name: Try europe-west1 too
+        run: |
+          gcloud alpha services quota update \
+            --service=aiplatform.googleapis.com \
+            --consumer=projects/ai-product-detector-487013 \
+            --metric=aiplatform.googleapis.com/custom_model_training_cpus \
+            --unit="1/{project}/{region}" \
+            --dimensions=region=europe-west1 \
+            --value=8 \
+            --force --quiet 2>&1 || echo "CPU quota (eu) request failed"
+          
+          gcloud alpha services quota update \
+            --service=aiplatform.googleapis.com \
+            --consumer=projects/ai-product-detector-487013 \
+            --metric=aiplatform.googleapis.com/custom_model_training_nvidia_t4_gpus \
+            --unit="1/{project}/{region}" \
+            --dimensions=region=europe-west1 \
+            --value=1 \
+            --force --quiet 2>&1 || echo "GPU quota (eu) request failed"
