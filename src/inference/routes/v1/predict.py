@@ -5,7 +5,7 @@ This module creates a separate APIRouter so FastAPI can mount it
 under the /v1 prefix without duplicating endpoint functions.
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 
@@ -29,7 +29,7 @@ from src.inference.schemas import (
 
 router = APIRouter(tags=["Prediction"])
 
-_error_responses = {
+_error_responses: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     413: {"model": ErrorResponse},
     429: {"model": ErrorResponse, "description": "Rate limit exceeded"},

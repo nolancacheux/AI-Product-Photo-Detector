@@ -152,8 +152,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
         loop.call_soon_threadsafe(shutdown_event.set)
 
-    signal.signal(signal.SIGTERM, _handle_sigterm)
-    signal.signal(signal.SIGINT, _handle_sigterm)
+    try:
+        signal.signal(signal.SIGTERM, _handle_sigterm)
+        signal.signal(signal.SIGINT, _handle_sigterm)
+    except ValueError:
+        pass  # signal only works in main thread; skip in test/worker threads
 
     yield
 
