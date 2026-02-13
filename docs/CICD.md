@@ -1,8 +1,8 @@
 # CI/CD Pipeline Documentation
 
-This project uses three GitHub Actions workflows to automate code quality checks,
-application deployment, and model training. All workflow definitions live in
-`.github/workflows/`.
+This project uses four GitHub Actions workflows to automate code quality checks,
+application deployment, model training, and PR previews. All workflow definitions
+live in `.github/workflows/`.
 
 ---
 
@@ -12,11 +12,12 @@ application deployment, and model training. All workflow definitions live in
 2. [Workflow: CI](#workflow-ci)
 3. [Workflow: CD](#workflow-cd)
 4. [Workflow: Model Training](#workflow-model-training)
-5. [Pipeline Flow Diagram](#pipeline-flow-diagram)
-6. [Required Secrets](#required-secrets)
-7. [Triggering Workflows](#triggering-workflows)
-8. [Modifying Workflows](#modifying-workflows)
-9. [Branch Protection Rules](#branch-protection-rules)
+5. [Workflow: PR Preview](#workflow-pr-preview)
+6. [Pipeline Flow Diagram](#pipeline-flow-diagram)
+7. [Required Secrets](#required-secrets)
+8. [Triggering Workflows](#triggering-workflows)
+9. [Modifying Workflows](#modifying-workflows)
+10. [Branch Protection Rules](#branch-protection-rules)
 
 ---
 
@@ -27,6 +28,7 @@ application deployment, and model training. All workflow definitions live in
 | CI | `.github/workflows/ci.yml` | Push/PR to `main` | Lint, type check, test, security scan, Docker build validation |
 | CD | `.github/workflows/cd.yml` | Push to `main` or manual dispatch | Build Docker image, push to Artifact Registry, deploy to Cloud Run |
 | Model Training | `.github/workflows/model-training.yml` | Manual dispatch or data changes on `main` | Train on Vertex AI, evaluate, conditionally deploy |
+| PR Preview | `.github/workflows/pr-preview.yml` | PR open/update | Deploy preview environment for testing |
 
 All workflows use concurrency groups to prevent duplicate runs. CI cancels
 in-progress runs on the same branch; CD and Model Training do not cancel
@@ -321,6 +323,25 @@ The service account referenced by `GCP_SA_KEY` requires the following IAM roles:
 
 ---
 
+## Workflow: PR Preview
+
+**File:** `.github/workflows/pr-preview.yml`
+
+The PR Preview workflow deploys a temporary preview environment for each pull
+request, allowing reviewers to test changes before merging.
+
+### Trigger
+
+- Runs on pull request open, synchronize (new commits), and reopen events.
+
+### Features
+
+- **Ephemeral environment:** Each PR gets its own Cloud Run revision.
+- **Automatic cleanup:** Preview environments are deleted when the PR is closed.
+- **Comment integration:** Posts the preview URL as a PR comment.
+
+---
+
 ## Triggering Workflows
 
 ### CI (automatic)
@@ -341,6 +362,11 @@ action required.
   Configure epochs, batch size, and whether to auto-deploy.
 - **Automatic:** Triggers on push to `main` when files under `data/**` are
   modified.
+
+### PR Preview (automatic)
+
+Triggers automatically when a pull request is opened or updated. The preview
+URL is posted as a comment on the PR.
 
 ---
 

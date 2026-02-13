@@ -145,6 +145,76 @@ graph LR
 
 ---
 
+## Project Structure
+
+```
+AI-Product-Photo-Detector/
+├── .github/workflows/          # CI/CD pipelines
+│   ├── ci.yml                  # Lint, type check, test, security scan
+│   ├── cd.yml                  # Build, push, deploy to Cloud Run
+│   ├── model-training.yml      # Vertex AI GPU training pipeline
+│   └── pr-preview.yml          # PR preview deployments
+├── src/
+│   ├── data/                   # Data download and validation
+│   ├── inference/              # API server
+│   │   ├── routes/             # API route handlers
+│   │   │   ├── predict.py      # /predict, /predict/batch, /predict/explain
+│   │   │   ├── monitoring.py   # /health, /healthz, /readyz, /metrics, /drift
+│   │   │   ├── info.py         # /, /privacy
+│   │   │   └── v1/             # API v1 versioned routes
+│   │   ├── api.py              # FastAPI application
+│   │   ├── predictor.py        # Model loading and inference
+│   │   ├── explainer.py        # Grad-CAM heatmap generation
+│   │   ├── auth.py             # API key authentication
+│   │   ├── validation.py       # Input validation
+│   │   ├── schemas.py          # Pydantic request/response models
+│   │   ├── shadow.py           # Shadow model comparison (A/B testing)
+│   │   ├── state.py            # Application state management
+│   │   └── rate_limit.py       # Rate limiting configuration
+│   ├── training/               # Model training
+│   │   ├── train.py            # Training loop with MLflow
+│   │   ├── model.py            # EfficientNet-B0 architecture
+│   │   ├── dataset.py          # PyTorch dataset with lazy loading
+│   │   ├── augmentation.py     # Data augmentation transforms
+│   │   ├── gcs.py              # GCS integration for models
+│   │   └── vertex_submit.py    # Vertex AI job submission
+│   ├── pipelines/              # Pipeline orchestration
+│   │   ├── evaluate.py         # Model evaluation
+│   │   └── training_pipeline.py # End-to-end training orchestrator
+│   ├── monitoring/             # Observability
+│   │   ├── metrics.py          # Prometheus metrics
+│   │   └── drift.py            # Drift detection
+│   ├── ui/                     # Streamlit web interface
+│   └── utils/                  # Shared utilities
+├── tests/                      # Unit and integration tests
+├── configs/                    # Configuration files
+│   ├── train_config.yaml       # Training hyperparameters
+│   ├── inference_config.yaml   # API configuration
+│   ├── pipeline_config.yaml    # Pipeline configuration
+│   ├── prometheus.yml          # Prometheus scrape config
+│   ├── prometheus/             # Prometheus alerting rules
+│   └── grafana/                # Grafana dashboards and provisioning
+├── docker/                     # Dockerfiles
+│   ├── Dockerfile              # Production API image
+│   ├── Dockerfile.training     # Vertex AI GPU training image
+│   ├── serve.Dockerfile        # Serving-optimized image
+│   ├── train.Dockerfile        # Local training environment
+│   └── ui.Dockerfile           # Streamlit UI image
+├── terraform/                  # Infrastructure as Code
+│   ├── environments/           # Per-environment configs (dev/prod)
+│   └── modules/                # Reusable Terraform modules
+├── scripts/                    # Data download utilities
+├── notebooks/                  # Jupyter notebooks (Colab training)
+├── data/                       # Local data directory (DVC tracked)
+├── models/                     # Model checkpoints
+├── dvc.yaml                    # DVC pipeline definition
+├── docker-compose.yml          # Local development stack
+├── Makefile                    # Development commands
+└── pyproject.toml              # Python dependencies
+```
+
+---
+
 ## Pipeline Stages
 
 ### 1. Data Pipeline
@@ -219,13 +289,14 @@ The `src/pipelines/` module provides higher-level pipeline stages:
 
 ### 3. CI/CD Pipeline
 
-Three GitHub Actions workflows automate quality, training, and deployment:
+Four GitHub Actions workflows automate quality, training, and deployment:
 
-| Workflow | Trigger | Jobs |
-|----------|---------|------|
-| **CI** (`ci.yml`) | Push / PR to `main` | Lint, type check, test (3.11 + 3.12), security scan, Docker build |
-| **CD** (`cd.yml`) | Push to `main` / manual | Wait CI → build image → push to Artifact Registry → deploy Cloud Run → smoke test |
-| **Model Training** (`model-training.yml`) | Manual / data changes | Verify data → build training image → Vertex AI GPU → evaluate → quality gate → deploy |
+| Workflow | File | Trigger | Jobs |
+|----------|------|---------|------|
+| **CI** | `ci.yml` | Push / PR to `main` | Lint, type check, test (3.11 + 3.12), security scan, Docker build |
+| **CD** | `cd.yml` | Push to `main` / manual | Wait CI → build image → push to Artifact Registry → deploy Cloud Run → smoke test |
+| **Model Training** | `model-training.yml` | Manual / data changes | Verify data → build training image → Vertex AI GPU → evaluate → quality gate → deploy |
+| **PR Preview** | `pr-preview.yml` | PR open/update | Deploy preview environment for testing |
 
 **CI/CD flow:**
 
@@ -243,7 +314,7 @@ Trigger → Verify GCS Data → Build Training Image → Vertex AI (n1-standard-
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| Framework | FastAPI + Uvicorn | Async REST API |
+| Framework | FastAPI + Uvicorn | Async REST API with versioning |
 | Deployment | Google Cloud Run | Serverless, auto-scaling (0→N) |
 | Local | Docker Compose | Multi-service local development |
 | UI | Streamlit | Interactive web interface for testing |
@@ -263,14 +334,22 @@ Client → FastAPI → Auth → Rate Limit → Validate Image → Preprocess (22
 | `/predict` | POST | Single image classification | 30/min |
 | `/predict/batch` | POST | Batch (up to 10 images) | 5/min |
 | `/predict/explain` | POST | Prediction + Grad-CAM heatmap | 10/min |
-| `/health` | GET | Readiness probe | — |
-| `/healthz` | GET | Liveness probe | — |
+| `/health` | GET | Detailed health check with metrics | — |
+| `/healthz` | GET | Liveness probe (process alive) | — |
+| `/readyz` | GET | Readiness probe (model loaded) | — |
+| `/startup` | GET | Startup probe (model loading complete) | — |
 | `/metrics` | GET | Prometheus metrics | — |
 | `/drift` | GET | Drift detection status | — |
 | `/privacy` | GET | Privacy policy | — |
 
+**API versioning:**
+- All endpoints are available at both root (`/predict`) and versioned (`/v1/predict`)
+- Backward-compatible root routes maintained for existing clients
+
 **Key files:**
-- `src/inference/api.py` — FastAPI application and endpoint definitions
+- `src/inference/api.py` — FastAPI application and middleware
+- `src/inference/routes/predict.py` — Prediction endpoints
+- `src/inference/routes/monitoring.py` — Health and metrics endpoints
 - `src/inference/predictor.py` — Model loading, preprocessing, inference
 - `src/inference/schemas.py` — Pydantic request/response models
 - `src/inference/auth.py` — API key authentication (HMAC, constant-time)
@@ -352,37 +431,44 @@ All services share a `detector-network` bridge network. The API container mounts
 
 ## Infrastructure (Terraform)
 
+The Terraform configuration uses a modular architecture with per-environment
+configurations:
+
 ```
 terraform/
-├── main.tf                     # GCS + Artifact Registry + Cloud Run + IAM + Budget
-├── variables.tf                # Configurable inputs
-├── outputs.tf                  # Cloud Run URL, bucket name
-└── terraform.tfvars.example    # Example variable values
+├── environments/           # Per-environment configurations
+│   ├── dev/                # Development (scale-to-zero, 512Mi, 10€ budget)
+│   └── prod/               # Production (min 1 instance, 1Gi, 50€ budget)
+└── modules/                # Reusable infrastructure modules
+    ├── cloud-run/          # Cloud Run service
+    ├── storage/            # GCS buckets
+    ├── registry/           # Artifact Registry
+    ├── monitoring/         # Uptime checks, alerts
+    └── iam/                # Service accounts
 ```
 
 **Provisioned resources:**
 
-| Resource | Type | Purpose |
-|----------|------|---------|
-| GCS Bucket | `google_storage_bucket` | DVC data & model storage (versioned) |
-| Artifact Registry | `google_artifact_registry_repository` | Docker image registry |
-| Cloud Run Service | `google_cloud_run_v2_service` | Serverless API (auto-scaling, health probes) |
-| Service Account | `google_service_account` | Least-privilege identity for Cloud Run |
-| IAM Bindings | `google_project_iam_member` | Storage, logging, monitoring roles |
-| Budget Alert | `google_billing_budget` | Monthly spend alerts (50%, 80%, 100%) |
-| Public Access | `google_cloud_run_v2_service_iam_member` | Unauthenticated API access |
+| Resource | Module | Purpose |
+|----------|--------|---------|
+| GCS Bucket | `storage` | DVC data & model storage (versioned) |
+| Artifact Registry | `registry` | Docker image registry with cleanup |
+| Cloud Run Service | `cloud-run` | Serverless API (auto-scaling, health probes) |
+| Service Account | `iam` | Least-privilege identity for Cloud Run |
+| Monitoring | `monitoring` | Uptime checks, alerting (prod only) |
+| Budget Alert | (environment) | Monthly spend alerts (50%, 80%, 100%) |
 
-**Configuration:**
+**Environment differences:**
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `API_KEYS` | Comma-separated API keys | (auth disabled) |
-| `REQUIRE_AUTH` | Enforce authentication | `false` |
-| `LOG_LEVEL` | Logging level | `INFO` |
-| `MODEL_PATH` | Path to model checkpoint | `models/checkpoints/best_model.pt` |
-| `PORT` | Server port | `8080` |
-| `ENVIRONMENT` | Deployment environment | `dev` |
-| `GCS_BUCKET` | GCS bucket name | Set by Terraform |
+| Setting | Dev | Prod |
+|---------|-----|------|
+| Min instances | 0 | 1 |
+| Max instances | 2 | 10 |
+| Memory | 512Mi | 1Gi |
+| Budget | 10€/month | 50€/month |
+| Monitoring | Optional | Always enabled |
+
+See [INFRASTRUCTURE.md](INFRASTRUCTURE.md) for full details.
 
 ---
 
@@ -414,6 +500,6 @@ make deploy
 gh workflow run cd.yml -f image_tag=<commit-sha>
 
 # Terraform provisioning
-cd terraform
+cd terraform/environments/dev  # or prod
 terraform init && terraform plan && terraform apply
 ```

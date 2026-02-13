@@ -13,7 +13,7 @@
 ```bash
 # Clone repository
 git clone https://github.com/nolancacheux/AI-Product-Photo-Detector.git
-cd mlops_project
+cd AI-Product-Photo-Detector
 
 # With uv (recommended)
 uv venv
@@ -45,7 +45,7 @@ ruff format src/ tests/
 
 ### Type Checking
 
-We use **MyPy** for static type checking:
+We use **mypy** for static type checking:
 
 ```bash
 mypy src/
@@ -88,10 +88,10 @@ pytest tests/test_model.py::TestAIImageDetector::test_model_creation
 
 ### Branch Naming
 
-- `feature/description` - New features
-- `fix/description` - Bug fixes
-- `docs/description` - Documentation
-- `refactor/description` - Code refactoring
+- `feature/description` — New features
+- `fix/description` — Bug fixes
+- `docs/description` — Documentation
+- `refactor/description` — Code refactoring
 
 ### Commit Messages
 
@@ -105,7 +105,7 @@ type(scope): description
 [optional footer]
 ```
 
-**Types**:
+**Types:**
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation
@@ -114,7 +114,7 @@ type(scope): description
 - `test`: Tests
 - `chore`: Maintenance
 
-**Examples**:
+**Examples:**
 ```
 feat(api): add batch prediction endpoint
 fix(model): handle empty image input
@@ -134,22 +134,67 @@ test(api): add tests for health endpoint
 ## Project Structure
 
 ```
-mlops_project/
-├── .github/workflows/ # CI/CD pipelines
+AI-Product-Photo-Detector/
+├── .github/workflows/      # CI/CD pipelines
+│   ├── ci.yml              # Lint, type check, test, security scan
+│   ├── cd.yml              # Build, push, deploy to Cloud Run
+│   ├── model-training.yml  # Vertex AI GPU training pipeline
+│   └── pr-preview.yml      # PR preview deployments
 ├── src/
-│   ├── training/      # Model training
-│   ├── inference/     # API server
-│   ├── monitoring/    # Metrics & drift detection
-│   ├── ui/            # Streamlit app
-│   └── utils/         # Shared utilities
-├── tests/             # Unit tests
-├── configs/           # Configuration files
-├── docker/            # Dockerfiles
-├── docs/              # Documentation
-├── scripts/           # Data download utilities
-├── terraform/         # GCP infrastructure as code
-├── dvc.yaml           # DVC pipeline definition
-└── Makefile           # Dev commands (run `make help`)
+│   ├── data/               # Data download and validation
+│   ├── inference/          # API server
+│   │   ├── routes/         # API route handlers
+│   │   │   ├── predict.py  # Prediction endpoints
+│   │   │   ├── monitoring.py # Health and metrics endpoints
+│   │   │   ├── info.py     # Root and privacy endpoints
+│   │   │   └── v1/         # API v1 versioned routes
+│   │   ├── api.py          # FastAPI application
+│   │   ├── predictor.py    # Model loading and inference
+│   │   ├── explainer.py    # Grad-CAM heatmap generation
+│   │   ├── auth.py         # API key authentication
+│   │   ├── validation.py   # Input validation
+│   │   ├── schemas.py      # Pydantic models
+│   │   ├── shadow.py       # Shadow model comparison
+│   │   ├── state.py        # Application state
+│   │   └── rate_limit.py   # Rate limiting
+│   ├── training/           # Model training
+│   │   ├── train.py        # Training loop with MLflow
+│   │   ├── model.py        # EfficientNet-B0 architecture
+│   │   ├── dataset.py      # PyTorch dataset
+│   │   ├── augmentation.py # Data augmentation
+│   │   ├── gcs.py          # GCS integration
+│   │   └── vertex_submit.py # Vertex AI job submission
+│   ├── pipelines/          # Pipeline orchestration
+│   │   ├── evaluate.py     # Model evaluation
+│   │   └── training_pipeline.py # End-to-end training
+│   ├── monitoring/         # Observability
+│   │   ├── metrics.py      # Prometheus metrics
+│   │   └── drift.py        # Drift detection
+│   ├── ui/                 # Streamlit web interface
+│   └── utils/              # Shared utilities
+├── tests/                  # Unit and integration tests
+├── configs/                # Configuration files
+│   ├── train_config.yaml   # Training hyperparameters
+│   ├── inference_config.yaml # API configuration
+│   ├── pipeline_config.yaml  # Pipeline configuration
+│   ├── prometheus.yml      # Prometheus scrape config
+│   ├── prometheus/         # Alerting rules
+│   └── grafana/            # Dashboards and provisioning
+├── docker/                 # Dockerfiles
+│   ├── Dockerfile          # Production API image
+│   ├── Dockerfile.training # Vertex AI GPU training
+│   ├── serve.Dockerfile    # Serving-optimized image
+│   ├── train.Dockerfile    # Local training
+│   └── ui.Dockerfile       # Streamlit UI
+├── terraform/              # Infrastructure as Code
+│   ├── environments/       # Per-environment configs (dev/prod)
+│   └── modules/            # Reusable Terraform modules
+├── scripts/                # Data download utilities
+├── notebooks/              # Jupyter notebooks (Colab training)
+├── dvc.yaml                # DVC pipeline definition
+├── docker-compose.yml      # Local development stack
+├── Makefile                # Development commands
+└── pyproject.toml          # Python dependencies
 ```
 
 ## Makefile Commands
@@ -159,7 +204,7 @@ The `Makefile` provides shortcuts for common tasks:
 ```bash
 make help          # List all commands
 make dev           # Install dev dependencies + pre-commit
-make lint          # Ruff + MyPy
+make lint          # Ruff + mypy
 make format        # Auto-format code
 make test          # Run pytest with coverage
 make data          # Download CIFAKE dataset
@@ -202,11 +247,17 @@ make docker-down
 
 ## Infrastructure (Terraform)
 
-The `terraform/` directory provisions GCP resources. See `terraform/README.md` for details.
+The `terraform/` directory provisions GCP resources using a modular structure.
+See [INFRASTRUCTURE.md](INFRASTRUCTURE.md) for full details.
 
 ```bash
-cd terraform
+# Choose environment
+cd terraform/environments/dev   # or prod
+
+# Configure
 cp terraform.tfvars.example terraform.tfvars  # Edit with your project ID
+
+# Deploy
 terraform init
 terraform plan
 terraform apply

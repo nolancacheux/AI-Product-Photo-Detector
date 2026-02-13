@@ -9,13 +9,15 @@ cost considerations, and teardown procedures.
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
-2. [GCP Resources](#gcp-resources)
-3. [Terraform Setup](#terraform-setup)
-4. [Configuration Reference](#configuration-reference)
-5. [Service Account Permissions](#service-account-permissions)
-6. [Cost Estimation](#cost-estimation)
-7. [Remote State (Optional)](#remote-state-optional)
-8. [Teardown](#teardown)
+2. [Module Structure](#module-structure)
+3. [Environment Comparison](#environment-comparison)
+4. [GCP Resources](#gcp-resources)
+5. [Terraform Setup](#terraform-setup)
+6. [Configuration Reference](#configuration-reference)
+7. [Service Account Permissions](#service-account-permissions)
+8. [Cost Estimation](#cost-estimation)
+9. [Remote State](#remote-state)
+10. [Teardown](#teardown)
 
 ---
 
@@ -59,6 +61,62 @@ cost considerations, and teardown procedures.
 
 ---
 
+## Module Structure
+
+The Terraform configuration follows a modular architecture with per-environment
+configurations:
+
+```
+terraform/
+├── environments/          # Per-environment configurations
+│   ├── dev/               # Development (scale-to-zero, 512Mi, 10€ budget)
+│   │   ├── main.tf        # Module calls with dev values
+│   │   ├── variables.tf   # Dev-specific variables
+│   │   ├── outputs.tf     # Dev outputs
+│   │   └── terraform.tfvars
+│   └── prod/              # Production (min 1 instance, 1Gi, 50€ budget)
+│       ├── main.tf        # Module calls with prod values
+│       ├── variables.tf   # Prod-specific variables
+│       ├── outputs.tf     # Prod outputs
+│       └── terraform.tfvars
+├── modules/               # Reusable infrastructure modules
+│   ├── cloud-run/         # Cloud Run service (FastAPI API)
+│   ├── storage/           # GCS buckets (DVC data & models)
+│   ├── registry/          # Artifact Registry (Docker images)
+│   ├── monitoring/        # Uptime checks, alerts, notifications
+│   └── iam/               # Service accounts & role bindings
+├── backend.tf             # Remote state documentation
+├── versions.tf            # Required providers
+└── README.md              # Module documentation
+```
+
+### Modules Overview
+
+| Module | Purpose |
+|--------|---------|
+| `cloud-run` | Cloud Run v2 service with configurable scaling, resources, and health probes |
+| `storage` | GCS bucket with versioning, lifecycle rules, and enforced public access prevention |
+| `registry` | Artifact Registry Docker repository with automatic cleanup policies |
+| `monitoring` | Uptime checks on `/health`, alert policies for downtime and error rate |
+| `iam` | Service account with least-privilege roles for Cloud Run |
+
+---
+
+## Environment Comparison
+
+| Setting               | Dev                    | Prod                        |
+|-----------------------|------------------------|-----------------------------|
+| Min instances         | 0 (scale-to-zero)      | 1 (always-on)               |
+| Max instances         | 2                      | 10                          |
+| Memory                | 512Mi                  | 1Gi                         |
+| Budget                | 10€/month              | 50€/month                   |
+| Monitoring            | Optional (off)         | Always enabled              |
+| Bucket force_destroy  | true                   | false                       |
+| Image retention       | 5 recent / 3d untagged | 20 recent / 14d untagged    |
+| Custom domain         | N/A                    | Supported                   |
+
+---
+
 ## GCP Resources
 
 ### Enabled APIs
@@ -66,26 +124,25 @@ cost considerations, and teardown procedures.
 Terraform enables the following GCP APIs automatically:
 
 | API | Purpose |
-|---|---|
+|-----|---------|
 | `run.googleapis.com` | Cloud Run service deployment |
 | `artifactregistry.googleapis.com` | Docker image storage |
 | `storage.googleapis.com` | GCS bucket operations |
 | `iam.googleapis.com` | Service account and role management |
 | `cloudresourcemanager.googleapis.com` | Project-level resource management |
 | `billingbudgets.googleapis.com` | Budget alerts |
-
-**Source:** `terraform/main.tf` -- `google_project_service.required_apis`
+| `monitoring.googleapis.com` | Uptime checks and alerting |
 
 ### Google Cloud Storage Bucket
 
 | Property | Value |
-|---|---|
-| Resource | `google_storage_bucket.mlops_data` |
+|----------|-------|
+| Module | `modules/storage` |
 | Name | `<project_id>-mlops-data` |
 | Location | Same as `var.region` (default: `europe-west1`) |
 | Access | Uniform bucket-level, public access prevented |
 | Versioning | Enabled |
-| Lifecycle | Delete after 5 newer versions; delete archived objects after 90 days |
+| Lifecycle | Configurable version retention and archive cleanup |
 
 **Purpose:** Stores DVC-tracked training data, model checkpoints, and MLflow
 artifacts.
@@ -93,11 +150,11 @@ artifacts.
 ### Artifact Registry Repository
 
 | Property | Value |
-|---|---|
-| Resource | `google_artifact_registry_repository.docker_repo` |
+|----------|-------|
+| Module | `modules/registry` |
 | Name | `ai-product-detector` |
 | Format | Docker |
-| Cleanup | Keep 10 most recent versions; delete untagged images after 7 days |
+| Cleanup | Configurable retention for recent and untagged images |
 
 **Purpose:** Stores Docker images for both the inference API and the training
 container.
@@ -105,53 +162,61 @@ container.
 ### Cloud Run Service
 
 | Property | Value |
-|---|---|
-| Resource | `google_cloud_run_v2_service.api` |
+|----------|-------|
+| Module | `modules/cloud-run` |
 | Name | `ai-product-detector` |
-| Container port | 8000 |
+| Container port | 8080 |
 | CPU | Configurable (default: `1000m` = 1 vCPU) |
-| Memory | Configurable (default: `512Mi`) |
-| Min instances | Configurable (default: `0` -- scale to zero) |
-| Max instances | Configurable (default: `2`) |
+| Memory | Configurable (default: `512Mi` in dev, `1Gi` in prod) |
+| Min instances | Configurable (default: `0` in dev, `1` in prod) |
+| Max instances | Configurable (default: `2` in dev, `10` in prod) |
 | Service account | Dedicated least-privilege SA |
-| Public access | Unauthenticated (`allUsers` as `roles/run.invoker`) |
+| Public access | Configurable (default: unauthenticated) |
 
-**Probes:**
+**Health Probes:**
 
 | Probe | Path | Config |
-|---|---|---|
-| Startup | `/health` | 5s initial delay, 10s period, 3 failure threshold |
-| Liveness | `/health` | 30s period |
+|-------|------|--------|
+| Startup | `/startup` | Initial delay, failure threshold configurable |
+| Liveness | `/healthz` | Periodic check that process is alive |
+| Readiness | `/readyz` | Checks model is loaded and ready |
 
 **Environment variables injected:**
 
-- `ENVIRONMENT` -- deployment environment (dev/staging/prod)
-- `GCS_BUCKET` -- bucket name for model/data access
+- `ENVIRONMENT` — deployment environment (dev/staging/prod)
+- `GCS_BUCKET` — bucket name for model/data access
 
 ### IAM Service Account
 
 | Property | Value |
-|---|---|
-| Resource | `google_service_account.app_sa` |
+|----------|-------|
+| Module | `modules/iam` |
 | Account ID | `ai-product-detector-sa` |
 | Roles | See table below |
 
 | IAM Role | Purpose |
-|---|---|
+|----------|---------|
 | `roles/storage.objectAdmin` | Read/write GCS objects |
 | `roles/artifactregistry.reader` | Pull Docker images |
 | `roles/logging.logWriter` | Write application logs |
 | `roles/monitoring.metricWriter` | Write custom metrics |
 
+### Monitoring (Production)
+
+| Property | Value |
+|----------|-------|
+| Module | `modules/monitoring` |
+| Uptime check | HTTP GET `/health` every 60s |
+| Downtime alert | Fires after configurable duration |
+| Error rate alert | Fires when 5xx rate exceeds threshold |
+| Notifications | Email to configured recipients |
+
 ### Billing Budget Alert
 
 | Property | Value |
-|---|---|
-| Resource | `google_billing_budget.monthly_budget` |
-| Currency | EUR |
-| Default amount | 10 EUR |
+|----------|-------|
+| Budget amount | 10€ (dev) / 50€ (prod) |
 | Alert thresholds | 50%, 80%, 100% of budget |
-| Condition | Requires `billing_account` variable to be set |
 
 ---
 
@@ -164,7 +229,7 @@ container.
 - A GCP project with billing enabled
 - A service account key or `gcloud auth application-default login`
 
-### Step-by-step
+### Step-by-Step
 
 #### 1. Authenticate
 
@@ -176,21 +241,30 @@ gcloud auth application-default login
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/sa-key.json"
 ```
 
-#### 2. Create the variables file
+#### 2. Choose your environment
 
 ```bash
-cd terraform/
-cp terraform.tfvars.example terraform.tfvars
+# Development
+cd terraform/environments/dev
+
+# Or production
+cd terraform/environments/prod
 ```
 
-Edit `terraform.tfvars` with your project ID and desired configuration. At
-minimum, set `project_id`:
+#### 3. Configure variables
+
+```bash
+# Edit terraform.tfvars with your project ID
+vim terraform.tfvars
+```
+
+At minimum, set `project_id`:
 
 ```hcl
 project_id = "my-gcp-project-id"
 ```
 
-#### 3. Initialize Terraform
+#### 4. Initialize Terraform
 
 ```bash
 terraform init
@@ -198,7 +272,7 @@ terraform init
 
 This downloads the Google provider plugin and initializes the working directory.
 
-#### 4. Preview changes
+#### 5. Preview changes
 
 ```bash
 terraform plan
@@ -206,7 +280,7 @@ terraform plan
 
 Review the output. Terraform will show every resource it intends to create.
 
-#### 5. Apply
+#### 6. Apply
 
 ```bash
 terraform apply
@@ -215,45 +289,49 @@ terraform apply
 Type `yes` when prompted. Terraform will provision all resources and print
 outputs including the Cloud Run URL, bucket name, and registry URL.
 
-#### 6. Verify outputs
+#### 7. Verify outputs
 
 ```bash
 terraform output
 ```
 
-Expected outputs:
-
-| Output | Description |
-|---|---|
-| `project_id` | GCP project ID |
-| `region` | GCP region |
-| `cloud_run_url` | Deployed Cloud Run service URL |
-| `cloud_run_service_name` | Cloud Run service name |
-| `gcs_bucket_name` | GCS bucket name |
-| `gcs_bucket_url` | GCS bucket URL (`gs://...`) |
-| `artifact_registry_url` | Artifact Registry repository URL |
-| `service_account_email` | Cloud Run service account email |
-| `docker_push_command` | Example Docker push command |
-
 ---
 
 ## Configuration Reference
 
-All variables are defined in `terraform/variables.tf`.
+### Module: cloud-run
 
 | Variable | Type | Default | Description |
-|---|---|---|---|
-| `project_id` | string | (required) | GCP project ID |
-| `region` | string | `europe-west1` | GCP region |
-| `app_name` | string | `ai-product-detector` | Application name for resource naming |
-| `environment` | string | `dev` | Environment (`dev`, `staging`, `prod`) |
-| `cloud_run_container_image` | string | `""` | Custom container image (empty = use Artifact Registry default) |
-| `cloud_run_cpu` | string | `1000m` | CPU allocation (1000m = 1 vCPU) |
-| `cloud_run_memory` | string | `512Mi` | Memory allocation |
-| `cloud_run_max_instances` | number | `2` | Maximum Cloud Run instances (1--10) |
-| `cloud_run_min_instances` | number | `0` | Minimum instances (0 = scale to zero) |
-| `billing_account` | string | `""` | Billing account ID (empty = skip budget) |
-| `budget_amount` | number | `10` | Monthly budget alert threshold (EUR) |
+|----------|------|---------|-------------|
+| `cpu` | string | `1000m` | CPU allocation (1000m = 1 vCPU) |
+| `memory` | string | `512Mi` | Memory allocation |
+| `min_instances` | number | `0` | Min instances (0 = scale-to-zero) |
+| `max_instances` | number | `2` | Maximum instances |
+| `allow_unauthenticated` | bool | `true` | Public access |
+
+### Module: storage
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `force_destroy` | bool | `false` | Allow bucket deletion with objects |
+| `versioning_max_versions` | number | `5` | Versions to keep |
+| `archive_retention_days` | number | `90` | Archive retention |
+
+### Module: registry
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `keep_count` | number | `10` | Recent images to keep |
+| `untagged_max_age_seconds` | number | `604800` | Max untagged image age (7d) |
+
+### Module: monitoring
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enable_monitoring` | bool | `true` | Enable/disable all monitoring |
+| `health_check_path` | string | `/health` | HTTP path to check |
+| `alert_downtime_duration` | string | `60s` | Downtime before alert |
+| `error_rate_threshold` | number | `5` | 5xx error rate % threshold |
 
 ---
 
@@ -272,13 +350,14 @@ account) needs:
   - `roles/iam.projectIamAdmin`
   - `roles/serviceusage.serviceUsageAdmin`
   - `roles/billing.viewer` (if using budget alerts)
+  - `roles/monitoring.admin` (if using monitoring module)
 
 ### CI/CD Service Account (GitHub Actions)
 
 The service account key stored in `GCP_SA_KEY` needs:
 
 | Role | Purpose |
-|---|---|
+|------|---------|
 | `roles/run.admin` | Deploy Cloud Run services |
 | `roles/artifactregistry.writer` | Push Docker images |
 | `roles/storage.objectAdmin` | Read/write GCS data and models |
@@ -290,7 +369,7 @@ The service account key stored in `GCP_SA_KEY` needs:
 Provisioned by Terraform with minimal permissions:
 
 | Role | Purpose |
-|---|---|
+|------|---------|
 | `roles/storage.objectAdmin` | Read model checkpoints and data |
 | `roles/artifactregistry.reader` | Pull container images |
 | `roles/logging.logWriter` | Application logging |
@@ -305,18 +384,18 @@ These estimates assume a student or small-scale project with minimal traffic.
 ### Cloud Run
 
 | Component | Cost | Notes |
-|---|---|---|
+|-----------|------|-------|
 | CPU (idle) | Free | Scale-to-zero with `min_instances = 0` |
 | CPU (active) | ~$0.00002400/vCPU-second | Billed only when handling requests |
 | Memory (active) | ~$0.00000250/GiB-second | |
-| Free tier | 2M requests/month, 360K vCPU-seconds, 180K GiB-seconds | Generous free tier covers most student usage |
+| Free tier | 2M requests/month, 360K vCPU-seconds | Generous free tier covers most student usage |
 
-**Estimated monthly cost (low traffic):** $0 -- $2
+**Estimated monthly cost (low traffic):** $0 – $2
 
 ### Google Cloud Storage
 
 | Component | Cost | Notes |
-|---|---|---|
+|-----------|------|-------|
 | Storage (Standard) | ~$0.020/GB/month | Training data + model checkpoints |
 | Operations | ~$0.005 per 1K Class A ops | Writes |
 | Egress | Free within same region | Cross-region egress charged |
@@ -326,7 +405,7 @@ These estimates assume a student or small-scale project with minimal traffic.
 ### Artifact Registry
 
 | Component | Cost | Notes |
-|---|---|---|
+|-----------|------|-------|
 | Storage | ~$0.10/GB/month | Docker images (cleanup policies help) |
 
 **Estimated monthly cost (5 images):** ~$0.50
@@ -334,7 +413,7 @@ These estimates assume a student or small-scale project with minimal traffic.
 ### Vertex AI Training
 
 | Component | Cost | Notes |
-|---|---|---|
+|-----------|------|-------|
 | `n1-standard-4` | ~$0.19/hour | 4 vCPUs, 15 GB RAM |
 | NVIDIA Tesla T4 | ~$0.35/hour | 1 GPU |
 | **Total per hour** | **~$0.54/hour** | |
@@ -343,45 +422,48 @@ These estimates assume a student or small-scale project with minimal traffic.
 
 ### Budget Alert
 
-The Terraform configuration includes a budget alert (default: 10 EUR/month) with
-notifications at 50%, 80%, and 100% thresholds.
+The Terraform configuration includes a budget alert (default: 10€/month for dev,
+50€/month for prod) with notifications at 50%, 80%, and 100% thresholds.
 
 ### Total Estimated Monthly Cost
 
 | Scenario | Estimate |
-|---|---|
-| Development (occasional training, low traffic) | $1 -- $5 |
-| Active development (weekly training, moderate traffic) | $5 -- $15 |
+|----------|----------|
+| Development (occasional training, low traffic) | $1 – $5 |
+| Active development (weekly training, moderate traffic) | $5 – $15 |
 
 ---
 
-## Remote State (Optional)
+## Remote State
 
-By default, Terraform stores state locally in `terraform/terraform.tfstate`.
-For team environments, enable remote state in GCS:
+By default, Terraform stores state locally. For team collaboration, enable GCS
+remote state.
 
-#### 1. Create the state bucket
+### Setup (one-time)
 
 ```bash
-gsutil mb -l europe-west1 gs://<PROJECT_ID>-tfstate
-gsutil versioning set on gs://<PROJECT_ID>-tfstate
+# Replace with your project ID
+PROJECT_ID="your-project-id"
+
+# Create state bucket
+gsutil mb -l europe-west1 gs://${PROJECT_ID}-tfstate
+gsutil versioning set on gs://${PROJECT_ID}-tfstate
 ```
 
-#### 2. Uncomment the backend block
+### Enable
 
-In `terraform/main.tf`, uncomment the `backend "gcs"` block and set your bucket
-name:
+Uncomment the `backend "gcs"` block in your environment's `main.tf`:
 
 ```hcl
 terraform {
   backend "gcs" {
-    bucket = "<PROJECT_ID>-tfstate"
-    prefix = "terraform/state"
+    bucket = "your-project-id-tfstate"
+    prefix = "terraform/state/dev"  # or "terraform/state/prod"
   }
 }
 ```
 
-#### 3. Re-initialize
+Then migrate:
 
 ```bash
 terraform init -migrate-state
@@ -394,7 +476,7 @@ terraform init -migrate-state
 ### Destroy all Terraform-managed resources
 
 ```bash
-cd terraform/
+cd terraform/environments/dev  # or prod
 terraform destroy
 ```
 
@@ -402,10 +484,12 @@ Type `yes` when prompted. This removes:
 - Cloud Run service
 - Artifact Registry repository (and all images)
 - IAM service account and role bindings
+- Monitoring resources (uptime checks, alerts)
 - Billing budget alert
 
-**Note:** The GCS bucket has `force_destroy = false` by default, meaning
-Terraform will refuse to delete it if it contains objects. To force deletion:
+**Note:** The GCS bucket has `force_destroy = false` by default in production,
+meaning Terraform will refuse to delete it if it contains objects. To force
+deletion:
 
 ```bash
 # Empty the bucket first
@@ -414,8 +498,6 @@ gsutil -m rm -r gs://<PROJECT_ID>-mlops-data/**
 # Then destroy
 terraform destroy
 ```
-
-Alternatively, set `force_destroy = true` in `main.tf` before destroying.
 
 ### Manual cleanup
 
@@ -443,7 +525,45 @@ gcloud iam service-accounts delete \
 ```bash
 gcloud services disable run.googleapis.com \
   artifactregistry.googleapis.com \
-  storage.googleapis.com
+  storage.googleapis.com \
+  monitoring.googleapis.com
 ```
 
 This is usually unnecessary and may affect other resources in the project.
+
+---
+
+## Common Operations
+
+### Deploy a new image
+
+```bash
+# Build and push
+IMAGE="europe-west1-docker.pkg.dev/YOUR_PROJECT/ai-product-detector/ai-product-detector:v1.0.0"
+docker build -f docker/Dockerfile -t $IMAGE .
+docker push $IMAGE
+
+# Deploy via Terraform
+cd terraform/environments/prod
+terraform apply -var="cloud_run_container_image=$IMAGE"
+```
+
+### Format all Terraform files
+
+```bash
+terraform fmt -recursive terraform/
+```
+
+### Validate configuration
+
+```bash
+cd terraform/environments/dev
+terraform validate
+```
+
+### Import existing resource
+
+```bash
+terraform import module.cloud_run.google_cloud_run_v2_service.api \
+  projects/PROJECT/locations/REGION/services/SERVICE
+```
