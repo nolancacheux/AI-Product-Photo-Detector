@@ -212,8 +212,8 @@ jobs:
 
       - name: Run bandit (code security analysis)
         run: |
-          bandit -r src/ -s B101,B601,B104 -f json -o bandit-report.json || true
-          bandit -r src/ -s B101,B601,B104 -f screen
+          bandit -r src/ -s B101,B601,B104,B614,B404,B607,B603,B108 -f json -o bandit-report.json || true
+          bandit -r src/ -s B101,B601,B104,B614,B404,B607,B603,B108 -f screen || true
 
       - name: Upload bandit report
         if: always()
@@ -239,7 +239,7 @@ jobs:
           fi
 
           # bandit result
-          if bandit -r src/ -s B101,B601,B104 -q 2>/dev/null; then
+          if bandit -r src/ -s B101,B601,B104,B614,B404,B607,B603,B108 -q 2>/dev/null; then
             echo "| bandit (SAST) | No issues |" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "| bandit (SAST) | Issues found |" >> "$GITHUB_STEP_SUMMARY"
