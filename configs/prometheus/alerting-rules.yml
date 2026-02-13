@@ -1,0 +1,208 @@
+# Prometheus Alerting Rules
+# AI Product Photo Detector — Production Monitoring
+
+groups:
+  - name: ai-detector-api
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: >
+          100 * sum(rate(aidetect_http_requests_total{status_code=~"5.."}[5m]))
+          / clamp_min(sum(rate(aidetect_http_requests_total[5m])), 0.001)
+          > 5
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+          service: ai-detector
+        annotations:
+          summary: "High error rate on AI Detector API"
+          description: >
+            Error rate is {{ $value | printf "%.1f" }}% (threshold: 5%).
+            This means more than 1 in 20 requests is failing with a 5xx status code.
+          runbook_url: "https://github.com/your-org/ai-detector/blob/main/docs/INCIDENT_SCENARIO.md#runbook-high-error-rate"
+          dashboard_url: "http://localhost:3000/d/ai-detector-api"
+
+      - alert: HighLatency
+        expr: >
+          histogram_quantile(0.95, sum(rate(aidetect_http_request_duration_seconds_bucket[5m])) by (le))
+          > 2
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+          service: ai-detector
+        annotations:
+          summary: "High P95 latency on AI Detector API"
+          description: >
+            P95 latency is {{ $value | printf "%.2f" }}s (threshold: 2s).
+            Users are experiencing significantly degraded response times.
+          runbook_url: "https://github.com/your-org/ai-detector/blob/main/docs/INCIDENT_SCENARIO.md#runbook-high-latency"
+          dashboard_url: "http://localhost:3000/d/ai-detector-api"
+
+      - alert: ServiceDown
+        expr: up{job="ai-detector-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: infrastructure
+          service: ai-detector
+        annotations:
+          summary: "AI Detector API is down"
+          description: >
+            The AI Detector API health check has been failing for more than 1 minute.
+            The /metrics endpoint is not responding. Immediate investigation required.
+          runbook_url: "https://github.com/your-org/ai-detector/blob/main/docs/INCIDENT_SCENARIO.md#runbook-service-down"
+          dashboard_url: "http://localhost:3000/d/ai-detector-infra"
+
+      - alert: HighRateLimiting
+        expr: sum(rate(aidetect_rate_limit_exceeded_total[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+          service: ai-detector
+        annotations:
+          summary: "High rate limiting on AI Detector API"
+          description: >
+            Rate limit is being hit at {{ $value | printf "%.2f" }} req/s.
+            Clients may be experiencing 429 errors.
+
+  - name: ai-detector-model
+    interval: 60s
+    rules:
+      - alert: DriftDetected
+        expr: aidetect_drift_score > 0.15
+        for: 10m
+        labels:
+          severity: warning
+          team: ml-engineering
+          service: ai-detector
+        annotations:
+          summary: "Data drift detected in AI Detector model"
+          description: >
+            Drift score is {{ $value | printf "%.3f" }} (threshold: 0.15).
+            The model's prediction distribution has shifted significantly from baseline.
+            This may indicate the model needs retraining.
+          runbook_url: "https://github.com/your-org/ai-detector/blob/main/docs/INCIDENT_SCENARIO.md#runbook-drift-detected"
+          dashboard_url: "http://localhost:3000/d/ai-detector-model"
+
+      - alert: DriftCritical
+        expr: aidetect_drift_score > 0.30
+        for: 5m
+        labels:
+          severity: critical
+          team: ml-engineering
+          service: ai-detector
+        annotations:
+          summary: "Critical data drift in AI Detector model"
+          description: >
+            Drift score is {{ $value | printf "%.3f" }} (threshold: 0.30).
+            Model accuracy is likely severely degraded. Immediate action required.
+          runbook_url: "https://github.com/your-org/ai-detector/blob/main/docs/INCIDENT_SCENARIO.md#runbook-drift-detected"
+
+      - alert: ModelNotLoaded
+        expr: aidetect_model_loaded == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: ml-engineering
+          service: ai-detector
+        annotations:
+          summary: "AI Detector model is not loaded"
+          description: >
+            The ML model has not been loaded for over 2 minutes.
+            All prediction requests will fail. Check model artifacts and loading logs.
+
+      - alert: HighPredictionErrorRate
+        expr: >
+          sum(rate(aidetect_predictions_total{status="error"}[5m]))
+          / clamp_min(sum(rate(aidetect_predictions_total[5m])), 0.001)
+          > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: ml-engineering
+          service: ai-detector
+        annotations:
+          summary: "High prediction error rate"
+          description: >
+            {{ $value | printf "%.1f" }}% of predictions are failing.
+            Check model inference logs for errors.
+
+  - name: ai-detector-infrastructure
+    interval: 30s
+    rules:
+      - alert: HighMemoryUsage
+        expr: >
+          process_resident_memory_bytes{job="ai-detector-api"}
+          / (1024 * 1024 * 1024)
+          > 0.8 * 2
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+          service: ai-detector
+        annotations:
+          summary: "High memory usage on AI Detector API"
+          description: >
+            Process RSS is {{ $value | printf "%.2f" }} GB (threshold: 80% of 2GB limit).
+            The service may be experiencing a memory leak or handling unusually large payloads.
+          runbook_url: "https://github.com/your-org/ai-detector/blob/main/docs/INCIDENT_SCENARIO.md#runbook-high-memory-usage"
+          dashboard_url: "http://localhost:3000/d/ai-detector-infra"
+
+      - alert: MemoryLeakSuspected
+        expr: >
+          deriv(process_resident_memory_bytes{job="ai-detector-api"}[30m]) > 1048576
+        for: 30m
+        labels:
+          severity: warning
+          team: infrastructure
+          service: ai-detector
+        annotations:
+          summary: "Possible memory leak in AI Detector API"
+          description: >
+            Memory is growing at {{ $value | printf "%.0f" }} bytes/s consistently over 30 minutes.
+            This pattern suggests a memory leak.
+
+      - alert: HighFileDescriptorUsage
+        expr: >
+          process_open_fds{job="ai-detector-api"}
+          / process_max_fds{job="ai-detector-api"}
+          > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+          service: ai-detector
+        annotations:
+          summary: "High file descriptor usage"
+          description: >
+            Using {{ $value | printf "%.0f" }}% of available file descriptors.
+            The service may soon fail to open new connections.
+
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total{job="ai-detector-api"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+          service: ai-detector
+        annotations:
+          summary: "High CPU usage on AI Detector API"
+          description: >
+            CPU usage is {{ $value | printf "%.1f" }} cores (threshold: 0.8 cores).
+            The service may be under heavy load or experiencing a performance issue.
+
+      - alert: PrometheusTargetDown
+        expr: up{job="ai-detector-api"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: infrastructure
+          service: monitoring
+        annotations:
+          summary: "Prometheus cannot scrape AI Detector API"
+          description: >
+            Prometheus has failed to scrape the /metrics endpoint.
+            Monitoring data is not being collected.

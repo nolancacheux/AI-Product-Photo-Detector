@@ -1,12 +1,340 @@
-# Incident Scenario: Data Drift Detection and Response
+# Incident Response Playbook
 
-## Executive Summary
+## Table of Contents
 
-This document describes a realistic production incident involving **data drift** in the AI Product Photo Detector system. It covers the full incident lifecycle: detection, analysis, remediation, and prevention measures. This scenario is based on the monitoring infrastructure implemented in `src/monitoring/drift.py`.
+1. [Severity Levels](#severity-levels)
+2. [Escalation Matrix](#escalation-matrix)
+3. [Incident Response Process](#incident-response-process)
+4. [Runbooks](#runbooks)
+5. [Incident Scenario: Data Drift](#incident-scenario-data-drift)
+6. [Post-Mortem Template](#post-mortem-template)
 
 ---
 
-## 1. Scenario Description
+## Severity Levels
+
+| Level | Name | Description | Response Time | Examples |
+|-------|------|-------------|---------------|----------|
+| **P1** | Critical | Service is down or completely unusable. Data loss or security breach. | **15 min** | API returning 5xx for all requests, model not loaded, security breach |
+| **P2** | High | Major feature degraded. Significant impact on users. | **1 hour** | Error rate > 5%, P95 latency > 5s, drift score > 0.30 |
+| **P3** | Medium | Minor feature degraded. Limited user impact. | **4 hours** | Drift score > 0.15, memory growing steadily, rate limiting triggered |
+| **P4** | Low | Cosmetic issue or minor inconvenience. No user impact. | **24 hours** | Dashboard missing data, non-critical log warnings |
+
+### Severity Decision Tree
+
+```
+Is the service completely down?
+├── YES → P1
+└── NO → Are >5% of requests failing?
+    ├── YES → P2
+    └── NO → Is core functionality degraded?
+        ├── YES → P3
+        └── NO → P4
+```
+
+---
+
+## Escalation Matrix
+
+| Severity | First Responder | Escalation (30 min) | Escalation (2 hours) |
+|----------|-----------------|----------------------|----------------------|
+| **P1** | On-call engineer | Team lead + second engineer | Engineering manager |
+| **P2** | On-call engineer | Team lead | Engineering manager (if unresolved 4h) |
+| **P3** | On-call engineer | — | Team lead (next business day) |
+| **P4** | Assigned engineer | — | — |
+
+### Team Responsibilities
+
+| Team | Scope | Alerts Owned |
+|------|-------|-------------|
+| **Backend** | API server, HTTP layer, rate limiting | HighErrorRate, HighLatency, HighRateLimiting |
+| **ML Engineering** | Model inference, predictions, drift | DriftDetected, DriftCritical, ModelNotLoaded, HighPredictionErrorRate |
+| **Infrastructure** | Runtime, containers, resources | ServiceDown, HighMemoryUsage, HighCPUUsage, HighFileDescriptorUsage |
+
+---
+
+## Incident Response Process
+
+### 1. Detection
+
+- Prometheus alert fires → notification sent to on-call
+- User report received through support channel
+- Anomaly spotted on Grafana dashboard
+
+### 2. Acknowledge
+
+- Acknowledge the alert within the response time SLA
+- Create an incident channel/thread for communication
+- Post initial status: what is known so far
+
+### 3. Triage
+
+- Determine severity level using the decision tree
+- Identify which runbook applies
+- Check recent deployments or changes (last 24h)
+
+### 4. Mitigate
+
+- Apply the relevant runbook steps
+- Focus on restoring service first, root cause later
+- Communicate status updates every 30 minutes (P1) or every hour (P2)
+
+### 5. Resolve
+
+- Confirm the issue is resolved via metrics
+- Monitor for 30 minutes to ensure stability
+- Close the incident
+
+### 6. Post-Mortem
+
+- Schedule within 48 hours of resolution (P1/P2)
+- Use the template below
+- Track action items to completion
+
+---
+
+## Runbooks
+
+### Runbook: High Error Rate
+
+**Alert:** `HighErrorRate` — 5xx error rate exceeds 5% for 5 minutes.
+
+**Dashboard:** [API Performance](http://localhost:3000/d/ai-detector-api)
+
+**Diagnosis Steps:**
+
+1. Check which endpoints are failing:
+   ```bash
+   # Check error breakdown by endpoint
+   curl -s http://localhost:9090/api/v1/query \
+     --data-urlencode 'query=sum(rate(aidetect_http_requests_total{status_code=~"5.."}[5m])) by (endpoint)' \
+     | python -m json.tool
+   ```
+
+2. Check API logs for error details:
+   ```bash
+   docker compose logs api --tail=100 | grep -i "error\|exception\|traceback"
+   ```
+
+3. Check if the model is loaded:
+   ```bash
+   curl http://localhost:8080/health
+   ```
+
+4. Check resource utilization:
+   ```bash
+   docker stats --no-stream
+   ```
+
+**Resolution Steps:**
+
+| Cause | Action |
+|-------|--------|
+| Model not loaded | Restart the API container: `docker compose restart api` |
+| Out of memory | Increase memory limit or reduce batch sizes |
+| Upstream dependency failure | Check network connectivity, restart affected services |
+| Code bug (after deployment) | Rollback: `docker compose up -d --force-recreate api` with previous image |
+
+---
+
+### Runbook: High Latency
+
+**Alert:** `HighLatency` — P95 latency exceeds 2 seconds for 5 minutes.
+
+**Dashboard:** [API Performance](http://localhost:3000/d/ai-detector-api)
+
+**Diagnosis Steps:**
+
+1. Check latency by endpoint:
+   ```bash
+   curl -s http://localhost:9090/api/v1/query \
+     --data-urlencode 'query=histogram_quantile(0.95, sum(rate(aidetect_http_request_duration_seconds_bucket[5m])) by (le, endpoint))' \
+     | python -m json.tool
+   ```
+
+2. Check concurrent request count:
+   ```bash
+   curl -s http://localhost:9090/api/v1/query \
+     --data-urlencode 'query=aidetect_active_requests' \
+     | python -m json.tool
+   ```
+
+3. Check CPU and memory pressure:
+   ```bash
+   docker stats --no-stream
+   ```
+
+4. Check image sizes (large images = slow inference):
+   ```bash
+   curl -s http://localhost:9090/api/v1/query \
+     --data-urlencode 'query=histogram_quantile(0.95, sum(rate(aidetect_image_size_bytes_bucket[5m])) by (le))' \
+     | python -m json.tool
+   ```
+
+**Resolution Steps:**
+
+| Cause | Action |
+|-------|--------|
+| High traffic spike | Scale horizontally or enable rate limiting |
+| Large images | Enforce stricter image size limits |
+| CPU saturation | Scale vertically (more CPU) or horizontally (more replicas) |
+| Memory pressure (GC) | Check GC metrics, consider memory optimization |
+| Slow model inference | Profile inference pipeline, consider model optimization |
+
+---
+
+### Runbook: Service Down
+
+**Alert:** `ServiceDown` — Health check fails for 1 minute.
+
+**Dashboard:** [Infrastructure](http://localhost:3000/d/ai-detector-infra)
+
+**Diagnosis Steps:**
+
+1. Check container status:
+   ```bash
+   docker compose ps
+   ```
+
+2. Check container logs:
+   ```bash
+   docker compose logs api --tail=200
+   ```
+
+3. Check if the process is running:
+   ```bash
+   docker compose exec api ps aux
+   ```
+
+4. Check system resources:
+   ```bash
+   df -h          # Disk space
+   free -h        # System memory
+   docker stats   # Container resources
+   ```
+
+**Resolution Steps:**
+
+| Cause | Action |
+|-------|--------|
+| Container crashed | `docker compose up -d api` |
+| OOM killed | Increase memory limits, check for leaks |
+| Disk full | Clean up logs/temp files, increase disk |
+| Port conflict | Check `docker compose ps`, resolve conflicts |
+| Configuration error | Check env vars, config files, rollback if recent change |
+
+**Immediate Mitigation:**
+```bash
+# Quick restart
+docker compose restart api
+
+# Full recreate
+docker compose up -d --force-recreate api
+
+# Check health after restart
+sleep 10 && curl http://localhost:8080/health
+```
+
+---
+
+### Runbook: Drift Detected
+
+**Alert:** `DriftDetected` — Drift score exceeds 0.15 for 10 minutes.
+
+**Dashboard:** [Model Performance](http://localhost:3000/d/ai-detector-model)
+
+**Diagnosis Steps:**
+
+1. Check current drift status:
+   ```bash
+   curl http://localhost:8080/monitoring/drift
+   ```
+
+2. Analyze prediction distribution:
+   ```bash
+   # Check AI vs Real ratio
+   curl -s http://localhost:9090/api/v1/query \
+     --data-urlencode 'query=sum(rate(aidetect_predictions_total{status="success"}[1h])) by (prediction)' \
+     | python -m json.tool
+   ```
+
+3. Check confidence levels:
+   ```bash
+   curl -s http://localhost:9090/api/v1/query \
+     --data-urlencode 'query=sum(rate(aidetect_predictions_total{status="success"}[1h])) by (confidence)' \
+     | python -m json.tool
+   ```
+
+4. Sample low-confidence predictions for manual review.
+
+**Resolution Steps:**
+
+| Drift Score | Action |
+|-------------|--------|
+| 0.15 – 0.25 | Monitor closely, begin data collection for retraining |
+| 0.25 – 0.40 | Lower decision threshold (0.5 → 0.35) as temporary measure, fast-track retraining |
+| > 0.40 | **Critical:** Enable human-in-the-loop for low-confidence predictions, emergency retraining |
+
+**Retraining Process:**
+```bash
+# 1. Collect new training data
+# 2. Retrain model
+python -m src.training.train --config configs/train_config.yaml
+
+# 3. Validate on held-out set
+# 4. Deploy with canary (10% traffic)
+# 5. Monitor drift score — should decrease
+# 6. Full rollout
+# 7. Update baseline
+```
+
+---
+
+### Runbook: High Memory Usage
+
+**Alert:** `HighMemoryUsage` — RSS exceeds 80% of limit for 5 minutes.
+
+**Dashboard:** [Infrastructure](http://localhost:3000/d/ai-detector-infra)
+
+**Diagnosis Steps:**
+
+1. Check current memory usage:
+   ```bash
+   docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}"
+   ```
+
+2. Check memory growth rate:
+   ```bash
+   curl -s http://localhost:9090/api/v1/query \
+     --data-urlencode 'query=deriv(process_resident_memory_bytes{job="ai-detector-api"}[30m])' \
+     | python -m json.tool
+   ```
+
+3. Check GC activity:
+   ```bash
+   curl -s http://localhost:9090/api/v1/query \
+     --data-urlencode 'query=rate(python_gc_collections_total{job="ai-detector-api"}[5m])' \
+     | python -m json.tool
+   ```
+
+**Resolution Steps:**
+
+| Cause | Action |
+|-------|--------|
+| Memory leak | Restart service as mitigation, investigate code |
+| Large batch requests | Enforce smaller batch size limits |
+| Model loaded multiple times | Check singleton pattern, restart service |
+| Image processing buffers | Verify buffers are freed after use |
+
+**Immediate Mitigation:**
+```bash
+# Graceful restart to reclaim memory
+docker compose restart api
+```
+
+---
+
+## Incident Scenario: Data Drift
 
 ### Context
 
@@ -37,154 +365,71 @@ These newer models produce images with fundamentally different characteristics:
 
 The model increasingly **misclassifies newer AI-generated images as real**, allowing fraudulent product listings to pass undetected. An estimated **3,200 fraudulent listings per day** are slipping through the detection system.
 
----
+### Detection
 
-## 2. Detection
-
-### How the DriftDetector Caught It
-
-The `DriftDetector` class (`src/monitoring/drift.py`) monitors a sliding window of the last 1,000 predictions and compares current statistics against a saved baseline established during initial deployment.
+The `DriftDetector` class (`src/monitoring/drift.py`) monitors a sliding window of the last 1,000 predictions and compares current statistics against a saved baseline.
 
 #### Step 1 — Probability Distribution Shift
-
-The detector tracks the **mean prediction probability** across the sliding window. During normal operation, the mean probability hovered around **0.72** (indicating confident predictions leaning toward correct classification). After the drift:
 
 ```
 Baseline mean probability:     0.72
 Current mean probability:      0.54
-Probability drift:             0.18  (threshold: 0.15)
-```
-
-The `check_drift()` method flagged this as **probability drift exceeded threshold**:
-
-```python
-if prob_drift > self.drift_threshold:
-    alerts.append(f"Probability drift: {prob_drift:.3f}")
+Probability drift:             0.18  (threshold: 0.15) ⚠️ EXCEEDED
 ```
 
 #### Step 2 — Increased Low-Confidence Predictions
 
-The detector monitors the ratio of predictions falling within the **low-confidence zone** (probability between 0.2 and 0.8, i.e., within `confidence_threshold=0.3` of the 0.5 decision boundary):
-
 ```
 Baseline low confidence ratio: 0.123
 Current low confidence ratio:  0.348
-Confidence drift:              0.225  (threshold: 0.15)
+Confidence drift:              0.225  (threshold: 0.15) ⚠️ EXCEEDED
 ```
 
-This spike indicates the model is increasingly uncertain about its predictions — a clear sign of out-of-distribution data.
-
 #### Step 3 — Prediction Ratio Drift
-
-The class distribution of predictions shifted:
 
 ```
 Baseline AI prediction ratio:  0.48
 Current AI prediction ratio:   0.26
-Ratio shift:                   0.22  (threshold: 0.20)
+Ratio shift:                   0.22  (threshold: 0.20) ⚠️ EXCEEDED
 ```
-
-The model was classifying far fewer images as AI-generated, consistent with failing to detect new-generation AI images.
 
 #### Alert Timeline
 
 | Day | Event |
 |-----|-------|
-| Day 0 | DALL-E 3 / Midjourney v6 images start appearing on platform |
+| Day 0 | New-generation AI images start appearing on platform |
 | Day 3 | Low confidence ratio rises from 12% to 18% |
 | Day 5 | Mean probability drops below 0.65 — first drift alert triggered |
 | Day 7 | All three drift indicators exceed thresholds — **DRIFT_DETECTED** |
 | Day 8 | On-call engineer investigates the alert |
 
-### Monitoring Endpoint
+### Root Cause Analysis
 
-The `/metrics` endpoint exposed the drift status via `get_status()`:
-
-```json
-{
-  "window_size": 1000,
-  "window_capacity": 1000,
-  "mean_probability": 0.5412,
-  "low_confidence_ratio": 0.3480,
-  "drift_detected": true,
-  "drift_score": 0.2250,
-  "has_baseline": true
-}
-```
-
----
-
-## 3. Root Cause Analysis
-
-### Investigation
-
-The engineering team performed the following analysis:
-
-1. **Sampled misclassified images** — Extracted 200 images from the low-confidence predictions flagged in the last 7 days. Manual review confirmed 73% were AI-generated images incorrectly classified as real.
-
-2. **Identified image sources** — Reverse image search and metadata analysis revealed the misclassified images were primarily generated by DALL-E 3 and Midjourney v6, which were not represented in the training data.
-
-3. **Feature analysis** — Ran the misclassified images through the EfficientNet-B0 feature extractor. The intermediate feature distributions showed significant divergence from the training set distribution, confirming **covariate shift**.
-
-### Root Cause
-
-**The training dataset only contained images from older AI generators** (Stable Diffusion 1.5/2.1, DALL-E 2, Midjourgy v4/v5). The newer generation of AI tools produces images that lack the artifacts the model learned to detect:
+**The training dataset only contained images from older AI generators.** The newer generation produces images that lack the artifacts the model learned to detect:
 
 - **Texture patterns**: Older generators produced subtle repetitive textures; newer models do not
-- **Edge consistency**: Older generators had inconsistent edges around objects; newer models handle this correctly
+- **Edge consistency**: Older generators had inconsistent edges; newer models handle this correctly
 - **Color space distribution**: The color histogram of newer AI images is closer to real photos
-- **Frequency domain**: High-frequency noise patterns used by the model as features are absent in newer generators
+- **Frequency domain**: High-frequency noise patterns used by the model are absent in newer generators
 
-### Classification
+**Classification:** Data drift (covariate shift) — Severity P2
 
-- **Type**: Data drift (covariate shift)
-- **Severity**: High (directly impacts fraud detection capability)
-- **Scope**: Affects ~40% of incoming AI-generated images (those from new generators)
+### Remediation
 
----
+**Immediate (Day 8-9):**
+1. Lowered decision threshold from 0.5 to 0.35
+2. Enabled enhanced logging for low-confidence predictions
+3. Notified platform moderation team
 
-## 4. Remediation
+**Short-Term (Day 9-15):**
+1. Collected 5,000 new AI-generated images from latest generators
+2. Augmented training dataset, maintaining class balance
+3. Retrained model — accuracy recovered to **87.4%**
 
-### Immediate Actions (Day 8-9)
-
-1. **Lowered the decision threshold** from 0.5 to 0.35 to catch more borderline cases. This increased false positives but reduced fraudulent listing leakage as a temporary measure.
-
-2. **Enabled enhanced logging** to capture all low-confidence predictions with associated image hashes for later analysis.
-
-3. **Notified the platform moderation team** to increase manual review of product images in high-risk categories.
-
-### Short-Term Fix (Day 9-15)
-
-1. **Data collection**: Gathered 5,000 new AI-generated images from DALL-E 3, Midjourney v6, and SDXL Turbo across product categories (electronics, fashion, furniture, food).
-
-2. **Dataset augmentation**: Combined new samples with existing training data, maintaining class balance (50/50 real vs AI-generated).
-
-3. **Model retraining**:
-   ```bash
-   python -m src.training.train --config configs/train_config.yaml
-   ```
-   - Tracked experiment in MLflow with tag `retrain-drift-2026-q1`
-   - New model accuracy: **87.4%** (up from 65.1% on drifted data)
-
-4. **Validation**: Tested specifically against a held-out set of new-generator images:
-   - DALL-E 3 detection rate: 84.2%
-   - Midjourney v6 detection rate: 81.7%
-   - SDXL Turbo detection rate: 86.1%
-
-### Deployment (Day 15-17)
-
-1. **A/B testing**: Deployed the new model to 10% of traffic using a canary deployment strategy.
-   - Monitored for 48 hours
-   - Confirmed improved detection with no regression on older AI images
-
-2. **Full rollout**: Promoted the new model to 100% of traffic.
-
-3. **Baseline update**: Saved new drift baseline reflecting updated model behavior:
-   ```python
-   drift_detector.save_baseline(Path("configs/drift_baseline.json"))
-   ```
-
-4. **Threshold restored**: Reverted the decision threshold from 0.35 back to 0.5.
+**Deployment (Day 15-17):**
+1. Canary deployment to 10% traffic for 48h
+2. Full rollout after validation
+3. Updated drift baseline
 
 ### Results
 
@@ -195,69 +440,85 @@ The engineering team performed the following analysis:
 | **Recall (AI class)** | 71.2% | 85.6% |
 | **Low Confidence Ratio** | 34.8% | 9.7% |
 
----
+### Prevention Measures
 
-## 5. Prevention
-
-### Automated Monitoring Alerts
-
-The following alerting rules were implemented:
-
-| Alert | Condition | Severity | Action |
-|-------|-----------|----------|--------|
-| Probability Drift | `drift_score > 0.10` | Warning | Slack notification to ML team |
-| Probability Drift | `drift_score > 0.15` | Critical | PagerDuty alert to on-call engineer |
-| Low Confidence Spike | `low_confidence_ratio > 0.20` | Warning | Log analysis triggered |
-| Prediction Ratio Shift | `class_ratio_delta > 0.15` | Warning | Manual review of sample predictions |
-
-### Scheduled Retraining Pipeline
-
-A monthly retraining pipeline was established:
-
-1. **Week 1**: Automated data collection — scrape latest AI-generated images from public datasets and known AI generators
-2. **Week 2**: Data validation — automated quality checks and class balance verification
-3. **Week 3**: Retraining — triggered via CI/CD pipeline with MLflow experiment tracking
-4. **Week 4**: Evaluation and deployment — A/B test and gradual rollout
-
-```
-┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
-│  Collect  │--->│ Validate │--->│ Retrain  │--->│  Deploy  │
-│   Data    │    │   Data   │    │  Model   │    │  (A/B)   │
-└──────────┘    └──────────┘    └──────────┘    └──────────┘
-     DVC            pytest         MLflow        Canary 10%
-```
-
-### Baseline Management
-
-- **Automatic baseline updates** after each successful model deployment
-- **Baseline versioning** tracked in DVC alongside model artifacts
-- **Historical baselines** retained for trend analysis
-
-### Additional Safeguards
-
-1. **AI generator tracking**: Maintain a registry of known AI image generators and their release dates. Cross-reference with training data coverage.
-
-2. **Synthetic drift testing**: Periodically inject known out-of-distribution samples to verify the drift detector is functioning correctly.
-
-3. **Model ensemble consideration**: Evaluate using an ensemble of models trained on different generator epochs to improve robustness against future drift.
-
-4. **Human-in-the-loop fallback**: When drift is detected, automatically route low-confidence predictions to human moderators until the model is updated.
+1. **Automated monitoring alerts** for drift score > 0.10 (warning) and > 0.15 (critical)
+2. **Monthly retraining pipeline** with latest AI-generated samples
+3. **AI generator registry** tracking new releases vs training data coverage
+4. **Synthetic drift testing** to verify detector functionality
 
 ---
+
+## Post-Mortem Template
+
+Use this template for all P1 and P2 incidents. P3 incidents should use a simplified version.
+
+```markdown
+# Post-Mortem: [Incident Title]
+
+## Metadata
+- **Date:** YYYY-MM-DD
+- **Duration:** HH:MM (from detection to resolution)
+- **Severity:** P1 / P2 / P3
+- **Author:** [Name]
+- **Reviewers:** [Names]
+
+## Summary
+[1-2 sentence summary of what happened and the impact]
+
+## Timeline (all times UTC)
+| Time | Event |
+|------|-------|
+| HH:MM | Alert fired: [alert name] |
+| HH:MM | On-call acknowledged |
+| HH:MM | Root cause identified |
+| HH:MM | Mitigation applied |
+| HH:MM | Service restored |
+| HH:MM | Incident closed |
+
+## Impact
+- **Duration of impact:** X minutes/hours
+- **Users affected:** X% / all
+- **Requests affected:** X failed out of Y total
+- **Revenue impact:** $X (if applicable)
+- **Data loss:** None / Description
+
+## Root Cause
+[Detailed technical explanation of why the incident occurred]
+
+## Detection
+- How was the incident detected? (alert / user report / manual observation)
+- Was detection timely? If not, why?
+- Time from incident start to detection: X minutes
+
+## Mitigation
+[What was done to restore service]
+
+## Resolution
+[What was done to fix the underlying issue]
+
+## What Went Well
+- [Thing 1]
+- [Thing 2]
+
+## What Went Wrong
+- [Thing 1]
+- [Thing 2]
+
+## Where We Got Lucky
+- [Thing 1]
+
+## Action Items
+| Priority | Action | Owner | Due Date | Status |
+|----------|--------|-------|----------|--------|
+| P1 | [Action] | [Name] | YYYY-MM-DD | Open |
+| P2 | [Action] | [Name] | YYYY-MM-DD | Open |
 
 ## Lessons Learned
-
-1. **Drift detection is essential** — Without the `DriftDetector`, the accuracy drop would have gone unnoticed for weeks, allowing thousands of fraudulent listings.
-
-2. **AI evolves fast** — The training data needs to keep pace with advances in generative AI. A static dataset becomes obsolete within months.
-
-3. **Monitoring baselines must be maintained** — The baseline saved during initial deployment was critical for quantifying the drift.
-
-4. **Graceful degradation matters** — Having a threshold adjustment as a quick lever allowed immediate risk reduction while the proper fix was developed.
-
-5. **Retraining pipelines should be ready** — The ability to quickly retrain and deploy prevented this from becoming a prolonged incident.
+[Key takeaways that should inform future work]
+```
 
 ---
 
-*Document created as part of the MLOps incident response framework.*
+*Document maintained as part of the MLOps incident response framework.*
 *AI Product Photo Detector — M2 MLOps Project, JUNIA 2026*

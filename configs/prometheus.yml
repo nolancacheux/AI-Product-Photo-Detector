@@ -10,7 +10,8 @@ alerting:
     - static_configs:
         - targets: []
 
-rule_files: []
+rule_files:
+  - "/etc/prometheus/alerting-rules.yml"
 
 scrape_configs:
   # Prometheus self-monitoring
