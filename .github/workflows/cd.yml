@@ -64,7 +64,7 @@ jobs:
           ref: ${{ github.sha }}
           running-workflow-name: "Wait for CI"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          check-regexp: "^(Lint|Tests|Type Checking|Security Scan)"
+          check-regexp: "^Lint, Type Check & Tests"
           wait-interval: 15
           allowed-conclusions: success
 
