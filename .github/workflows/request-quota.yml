@@ -1,0 +1,49 @@
+name: Request Vertex AI Quota
+
+on:
+  workflow_dispatch:
+
+jobs:
+  request-quota:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Check current quotas
+        run: |
+          echo "=== Checking Vertex AI quotas ==="
+          gcloud services list --enabled --filter="name:aiplatform" --project=ai-product-detector-487013
+          echo ""
+          echo "=== Current quota for custom_model_training ==="
+          gcloud alpha services quota list \
+            --service=aiplatform.googleapis.com \
+            --consumer=projects/ai-product-detector-487013 \
+            --filter="metric:custom_model_training" 2>&1 || true
+          echo ""
+          echo "=== All Vertex AI quotas ==="
+          gcloud compute project-info describe --project=ai-product-detector-487013 2>&1 | grep -i "aiplatform\|training\|gpu\|NVIDIA" || true
+          echo ""
+          echo "=== Try requesting quota increase ==="
+          # Request 8 CPUs for custom model training
+          gcloud alpha services quota update \
+            --service=aiplatform.googleapis.com \
+            --consumer=projects/ai-product-detector-487013 \
+            --metric=aiplatform.googleapis.com/custom_model_training_cpus \
+            --unit=1/{project}/{region} \
+            --dimensions=region=us-central1 \
+            --value=8 2>&1 || echo "Failed to request CPU quota via gcloud"
+          
+          # Request 1 T4 GPU
+          gcloud alpha services quota update \
+            --service=aiplatform.googleapis.com \
+            --consumer=projects/ai-product-detector-487013 \
+            --metric=aiplatform.googleapis.com/custom_model_training_nvidia_t4_gpus \
+            --unit=1/{project}/{region} \
+            --dimensions=region=us-central1 \
+            --value=1 2>&1 || echo "Failed to request GPU quota via gcloud"
