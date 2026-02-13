@@ -1,209 +1,314 @@
-# AI Product Photo Detector
-
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://python.org)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![GCP Cloud Run](https://img.shields.io/badge/GCP-Cloud%20Run-4285F4?logo=googlecloud&logoColor=white)](https://cloud.google.com/run)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://docker.com)
-[![DVC](https://img.shields.io/badge/DVC-Pipeline-945DD6?logo=dvc&logoColor=white)](https://dvc.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/nolancacheux/AI-Product-Photo-Detector/ci.yml?label=CI&logo=githubactions&logoColor=white)](https://github.com/nolancacheux/AI-Product-Photo-Detector/actions)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nolancacheux/AI-Product-Photo-Detector/blob/main/notebooks/train_colab.ipynb)
-
-**Production-grade MLOps pipeline for detecting AI-generated product photos in e-commerce listings.**
-
-A complete end-to-end machine learning system – from data ingestion and GPU training on Vertex AI to API serving, monitoring, and cloud deployment – built with modern MLOps best practices.
-
-> **Live API** → [ai-product-detector-714127049161.europe-west1.run.app](https://ai-product-detector-714127049161.europe-west1.run.app)
-> &nbsp;|&nbsp; **Swagger UI** → [/docs](https://ai-product-detector-714127049161.europe-west1.run.app/docs)
-> &nbsp;|&nbsp; **Web UI** → [ai-product-detector-ui-714127049161.europe-west1.run.app](https://ai-product-detector-ui-714127049161.europe-west1.run.app)
-
----
-
-## Features
-
-- **Binary image classification** – Detects whether a product photo is real or AI-generated
-- **EfficientNet-B0 backbone** – Transfer learning with pretrained ImageNet weights via `timm`
-- **Grad-CAM explainability** – Visual heatmaps showing which image regions drive the prediction
-- **FastAPI serving** – Async API with single, batch, and explainability endpoints
-- **Docker-first** – Multi-service stack with Compose (API + UI + MLflow + Prometheus + Grafana)
-- **Full observability** – Prometheus metrics, Grafana dashboards, structured JSON logging
-- **DVC pipelines** – Reproducible data download, validation, and training workflow
-- **Vertex AI training pipeline** – GPU training on GCP with automated six-stage Kubeflow-style workflow
-- **CI/CD to GCP Cloud Run** – Automated deploy on push to `main` via GitHub Actions
-- **Production hardening** – Rate limiting, API key auth, CORS, input validation, drift detection
-- **Comprehensive testing** – Unit, integration, and load tests (Locust + k6)
-- **Data validation** – Automated dataset integrity checks with detailed reporting
-- **Streamlit UI** – Interactive web interface for drag-and-drop image analysis, deployed on Cloud Run
-
----
-
-## Architecture
-
 <p align="center">
-  <img src="docs/architecture.svg" alt="System Architecture" width="800"/>
+  <h1 align="center">🔍 AI Product Photo Detector</h1>
+  <p align="center">
+    <strong>Production-grade MLOps system for detecting AI-generated product photos in e-commerce</strong>
+  </p>
 </p>
 
-The system follows a modular architecture with clear separation between training, serving, and monitoring concerns. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full breakdown.
+<p align="center">
+  <a href="https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/ci.yml"><img src="https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/cd.yml"><img src="https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/cd.yml/badge.svg" alt="CD"></a>
+  <a href="https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/model-training.yml"><img src="https://github.com/nolancacheux/AI-Product-Photo-Detector/actions/workflows/model-training.yml/badge.svg" alt="Training"></a>
+  <br/>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?logo=pytorch&logoColor=white" alt="PyTorch"></a>
+  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white" alt="FastAPI"></a>
+  <a href="https://cloud.google.com/run"><img src="https://img.shields.io/badge/Cloud%20Run-Deployed-4285F4?logo=googlecloud&logoColor=white" alt="Cloud Run"></a>
+  <a href="https://docker.com/"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white" alt="Docker"></a>
+  <a href="https://dvc.org/"><img src="https://img.shields.io/badge/DVC-Pipeline-945DD6?logo=dvc&logoColor=white" alt="DVC"></a>
+  <a href="https://github.com/nolancacheux/AI-Product-Photo-Detector/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"></a>
+  <a href="https://colab.research.google.com/github/nolancacheux/AI-Product-Photo-Detector/blob/main/notebooks/train_colab.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
+</p>
+
+<p align="center">
+  End-to-end machine learning system — from data ingestion and GPU training on Vertex AI<br/>
+  to API serving, real-time monitoring, and automated cloud deployment.
+</p>
 
 ---
 
-## Tech Stack
+## 🌐 Live Demo
 
-| Layer | Technologies |
-|---|---|
-| **Deep Learning** | PyTorch, torchvision, timm (EfficientNet-B0), Grad-CAM |
-| **API** | FastAPI, Uvicorn, Pydantic v2, slowapi (rate limiting) |
-| **MLOps** | DVC (pipelines + data versioning), MLflow (experiment tracking) |
-| **Data** | HuggingFace Datasets (high-res images), CIFAKE, DVC-managed storage |
-| **Training** | Google Colab (free T4 GPU), Vertex AI (T4 GPU), Kubeflow-style pipeline, GCS |
-| **Monitoring** | Prometheus, Grafana, structlog (JSON), custom drift detection |
-| **Infrastructure** | Docker, Docker Compose, GCP Cloud Run, Artifact Registry, GCS |
-| **CI/CD** | GitHub Actions (lint → test → deploy), Vertex AI training workflow |
-| **Quality** | Ruff (lint + format), mypy (strict), pytest + coverage, Locust + k6 (load testing) |
-| **UI** | Streamlit (Cloud Run) |
+| Resource | URL |
+|----------|-----|
+| **🚀 REST API** | [`ai-product-detector-714127049161.europe-west1.run.app`](https://ai-product-detector-714127049161.europe-west1.run.app) |
+| **🖥️ Web UI** | [`ai-product-detector-ui-714127049161.europe-west1.run.app`](https://ai-product-detector-ui-714127049161.europe-west1.run.app) |
+| **📖 Swagger Docs** | [`/docs`](https://ai-product-detector-714127049161.europe-west1.run.app/docs) |
+| **📊 Health Check** | [`/health`](https://ai-product-detector-714127049161.europe-west1.run.app/health) |
+| **📈 Metrics** | [`/metrics`](https://ai-product-detector-714127049161.europe-west1.run.app/metrics) |
+
+```bash
+# Try it now — single prediction
+curl -X POST https://ai-product-detector-714127049161.europe-west1.run.app/predict \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -F "file=@product_photo.jpg"
+```
 
 ---
 
-## Quick Start
+## 🏗️ Architecture
 
-### Prerequisites
+### System Overview
 
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
-- Docker & Docker Compose (for full stack)
+```mermaid
+graph TB
+    subgraph Clients["Client Layer"]
+        CLI[cURL / HTTPie]
+        UI[Streamlit UI]
+        SDK[Python SDK]
+    end
 
-### Installation
+    subgraph CloudRun["Google Cloud Run"]
+        API[FastAPI Server]
+        AUTH[Auth Middleware]
+        RL[Rate Limiter]
+        PRED[Predictor Engine]
+        EXPL[Grad-CAM Explainer]
+        DRIFT[Drift Detector]
+        METRICS[Prometheus Metrics]
+    end
+
+    subgraph Storage["Google Cloud Storage"]
+        GCS_DATA[Training Data]
+        GCS_MODELS[Model Checkpoints]
+        GCS_STAGING[Vertex AI Staging]
+    end
+
+    subgraph Registry["Artifact Registry"]
+        IMG_API[API Image]
+        IMG_TRAIN[Training Image]
+        IMG_UI[UI Image]
+    end
+
+    subgraph Training["Vertex AI"]
+        VERTEX[Custom Training Job]
+        GPU["n1-standard-4 + T4 GPU"]
+    end
+
+    subgraph Monitoring["Observability"]
+        PROM[Prometheus]
+        GRAF[Grafana Dashboards]
+        LOGS[Structured Logging]
+    end
+
+    CLI --> API
+    UI --> API
+    SDK --> API
+    API --> AUTH --> RL --> PRED
+    API --> EXPL
+    API --> DRIFT
+    API --> METRICS
+    PRED --> GCS_MODELS
+    VERTEX --> GPU
+    GPU --> GCS_MODELS
+    GCS_DATA --> VERTEX
+    IMG_TRAIN --> VERTEX
+    IMG_API --> CloudRun
+    METRICS --> PROM --> GRAF
+    API --> LOGS
+
+    style CloudRun fill:#e8f5e9,stroke:#2e7d32
+    style Training fill:#e3f2fd,stroke:#1565c0
+    style Storage fill:#fff3e0,stroke:#ef6c00
+    style Monitoring fill:#fce4ec,stroke:#c62828
+```
+
+### CI/CD Pipeline
+
+```mermaid
+graph LR
+    subgraph CI["CI Pipeline"]
+        PUSH[Git Push] --> LINT[Ruff Lint]
+        PUSH --> TYPE[mypy Type Check]
+        PUSH --> TEST["pytest\n3.11 + 3.12"]
+        PUSH --> SEC[Security Scan]
+        LINT --> DBUILD[Docker Build Test]
+        TEST --> DBUILD
+    end
+
+    subgraph CD["CD Pipeline"]
+        DBUILD --> WAIT[Wait for CI]
+        WAIT --> BUILD[Build Image]
+        BUILD --> PUSH_REG[Push to\nArtifact Registry]
+        PUSH_REG --> DEPLOY[Deploy to\nCloud Run]
+        DEPLOY --> SMOKE[Smoke Test]
+    end
+
+    subgraph ModelCD["Model Training Pipeline"]
+        TRIGGER[Manual Dispatch] --> DATA[Verify GCS Data]
+        DATA --> TBUILD[Build Training Image]
+        TBUILD --> VTRAIN["Vertex AI\nGPU Training"]
+        VTRAIN --> EVAL[Evaluate Model]
+        EVAL --> GATE{"Quality Gate\nacc ≥ 0.85\nF1 ≥ 0.80"}
+        GATE -->|Pass| MDEPLOY[Deploy New Model]
+        GATE -->|Fail| REJECT[Block Deploy]
+    end
+
+    style CI fill:#e8f5e9,stroke:#2e7d32
+    style CD fill:#e3f2fd,stroke:#1565c0
+    style ModelCD fill:#fff3e0,stroke:#ef6c00
+```
+
+### ML Pipeline
+
+```mermaid
+graph LR
+    subgraph Data["Data Stage"]
+        HF[HuggingFace\nDatasets] --> DL[Download]
+        CIFAKE[CIFAKE\nDataset] --> DL
+        DL --> VAL[Validate\nIntegrity]
+        VAL --> SPLIT["Train / Val / Test\nSplit"]
+    end
+
+    subgraph Train["Training Stage"]
+        SPLIT --> AUG[Augmentation\nFlip, Rotate, Jitter]
+        AUG --> MODEL["EfficientNet-B0\nTransfer Learning"]
+        MODEL --> OPT["AdamW + Cosine\nAnnealing"]
+        OPT --> CKPT[Checkpoint\nbest_model.pt]
+    end
+
+    subgraph Evaluate["Evaluation Stage"]
+        CKPT --> METRICS_E[Accuracy, F1\nPrecision, Recall]
+        METRICS_E --> GATE_E{"Quality Gate"}
+        GATE_E -->|Pass| REG[Model Registry\nGCS + MLflow]
+        GATE_E -->|Fail| RETRAIN[Retrain]
+    end
+
+    subgraph Deploy["Deploy Stage"]
+        REG --> DOCKER[Docker Build]
+        DOCKER --> CR[Cloud Run Deploy]
+        CR --> MONITOR[Monitor\nDrift Detection]
+        MONITOR -->|Drift| RETRAIN
+    end
+
+    style Data fill:#f3e5f5,stroke:#7b1fa2
+    style Train fill:#e8f5e9,stroke:#2e7d32
+    style Evaluate fill:#e3f2fd,stroke:#1565c0
+    style Deploy fill:#fff3e0,stroke:#ef6c00
+```
+
+---
+
+## ✨ Features
+
+### 🧠 Core ML
+- **Binary image classification** — Real vs AI-generated product photos
+- **EfficientNet-B0 backbone** — Transfer learning with pretrained ImageNet weights via `timm`
+- **Grad-CAM explainability** — Visual heatmaps showing which regions drive the prediction
+- **Data augmentation** — Horizontal flip, rotation, color jitter, random crop
+- **Cosine annealing** — Learning rate scheduling with warmup
+
+### 🚀 API & Serving
+- **FastAPI async server** — Single, batch (up to 10), and explainability endpoints
+- **API key authentication** — HMAC-based constant-time comparison
+- **Rate limiting** — Per-endpoint configurable limits via `slowapi`
+- **Input validation** — File type, size, and format verification
+- **Structured responses** — Pydantic v2 schemas with confidence levels
+
+### 🔄 MLOps
+- **DVC pipelines** — Reproducible `download → validate → train` workflow
+- **MLflow experiment tracking** — Hyperparameters, metrics, and model artifacts
+- **Vertex AI training** — Automated GPU training with T4 on GCP
+- **Quality gate** — Automated accuracy/F1 thresholds before deployment
+- **Model versioning** — GCS-backed model registry with DVC tracking
+
+### 📊 Monitoring & Observability
+- **Prometheus metrics** — 12+ custom metrics (latency, throughput, probability distribution)
+- **Grafana dashboards** — Pre-configured, auto-provisioned dashboards
+- **Drift detection** — Real-time prediction distribution monitoring (sliding window)
+- **Structured logging** — JSON output via `structlog` with request ID correlation
+
+### 🔐 Security
+- **API key auth** — Optional, enforced in production via environment variables
+- **Rate limiting** — Abuse prevention on all prediction endpoints
+- **Non-root containers** — Docker images run as unprivileged users
+- **Security scanning** — `pip-audit` + `bandit` in CI pipeline
+- **CORS configuration** — Configurable allowed origins
+
+### 🏗️ Infrastructure
+- **Terraform IaC** — GCS, Artifact Registry, Cloud Run, IAM, budget alerts
+- **Docker Compose** — Full local stack (API + UI + MLflow + Prometheus + Grafana)
+- **GitHub Actions CI/CD** — Automated lint, test, build, deploy on every push
+- **Serverless scaling** — Cloud Run auto-scales 0→N based on traffic
+
+---
+
+## 🚀 Quick Start
+
+### Local Development
+
+**Prerequisites:** Python 3.11+, [uv](https://docs.astral.sh/uv/) (recommended) or pip, Docker & Docker Compose
 
 ```bash
 # Clone the repository
 git clone https://github.com/nolancacheux/AI-Product-Photo-Detector.git
 cd AI-Product-Photo-Detector
 
-# Install dependencies
-make install        # production only
-make dev            # development (includes linting, testing, pre-commit)
+# Install all dependencies (dev + ui + pre-commit hooks)
+make dev
+
+# Download dataset and train a model
+make data           # Download CIFAKE (2500 images/class)
+make train          # Train EfficientNet-B0
+
+# Start the API server with hot reload
+make serve          # → http://localhost:8000
+
+# Or start the full stack with Docker Compose
+make docker-up      # API + UI + MLflow + Prometheus + Grafana
 ```
 
-### Train a Model
+**Service URLs (Docker Compose):**
 
-Three training options are available, from zero-setup to production-grade:
+| Service | URL | Description |
+|---------|-----|-------------|
+| **API** | http://localhost:8080 | FastAPI inference server |
+| **Streamlit UI** | http://localhost:8501 | Drag-and-drop image analysis |
+| **MLflow** | http://localhost:5000 | Experiment tracking UI |
+| **Prometheus** | http://localhost:9090 | Metrics collection |
+| **Grafana** | http://localhost:3000 | Monitoring dashboards |
 
-| | **Google Colab** | **Vertex AI Pipeline** | **Local Training** |
-|---|---|---|---|
-| **GPU** | Free T4 (Google) | T4 on GCP (paid) | CPU or local GPU |
-| **Cost** | Free | ~$0.10-0.20 per run | Free (your hardware) |
-| **Training time** | ~20 min | ~25 min | ~1-2h (CPU) / ~20 min (GPU) |
-| **Dataset** | HuggingFace (high-res) | GCS (uploaded automatically) | CIFAKE (downloaded via DVC) |
-| **Setup required** | Google account | GCP project + GitHub secrets | Python environment |
-| **Automation** | Manual (notebook) | Fully automated (CI/CD) | Manual or DVC pipeline |
-| **Best for** | Quick experiments, no GPU | Production retraining | Development, debugging |
-
----
-
-#### Option 1: Google Colab (Recommended for Quick Start)
-
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nolancacheux/AI-Product-Photo-Detector/blob/main/notebooks/train_colab.ipynb)
-
-No local setup required. The notebook downloads a high-resolution dataset from HuggingFace, trains on a free T4 GPU, and exports the checkpoint:
-
-- Open the notebook link above
-- Select **Runtime > Change runtime type > T4 GPU**
-- Run all cells (~20 minutes)
-- Download the trained model checkpoint
-
----
-
-#### Option 2: Vertex AI Pipeline (Production)
-
-Fully automated GPU training on GCP, triggered via GitHub Actions:
+### Production Deployment
 
 ```bash
-# Trigger a training run with custom parameters
+# 1. Provision infrastructure with Terraform
+cd terraform
+cp terraform.tfvars.example terraform.tfvars  # Edit with your GCP project
+terraform init && terraform apply
+
+# 2. Push to main — CI/CD handles the rest
+git push origin main
+# CI: lint → type-check → test (3.11 + 3.12) → security scan
+# CD: build image → push to Artifact Registry → deploy to Cloud Run → smoke test
+
+# 3. Trigger GPU training on Vertex AI
 gh workflow run model-training.yml \
   -f epochs=15 \
   -f batch_size=64 \
   -f auto_deploy=true
 ```
 
-The pipeline executes six stages automatically: data upload to GCS, Docker image build, GPU training on Vertex AI (n1-standard-4 + T4), evaluation, quality gate (accuracy >= 0.85, F1 >= 0.80), and conditional deployment to Cloud Run.
-
-Configuration: [`configs/pipeline_config.yaml`](configs/pipeline_config.yaml). See the [Vertex AI Training Pipeline](#vertex-ai-training-pipeline) section for full details.
-
 ---
 
-#### Option 3: Local Training
+## 📡 API Documentation
 
-```bash
-# Download the CIFAKE dataset (2500 images per class)
-make data
-
-# Train with default config
-make train
-
-# Or run the full DVC pipeline (download -> validate -> train)
-make dvc-repro
-
-# Track experiments with MLflow
-make mlflow   # starts MLflow UI on http://localhost:5000
-```
-
-Alternatively, run the training script directly with a custom config:
-
-```bash
-python -m src.training.train --config configs/train_config.yaml
-```
-
----
-
-Training configuration is in [`configs/train_config.yaml`](configs/train_config.yaml). Key hyperparameters:
-
-| Parameter | Value |
-|---|---|
-| Architecture | EfficientNet-B0 (pretrained) |
-| Image size | 224×224 |
-| Batch size | 64 |
-| Epochs | 15 |
-| Learning rate | 0.001 |
-| Scheduler | Cosine annealing with warmup |
-| Early stopping | Patience: 5 epochs |
-
-### Serve the API
-
-```bash
-# Local development (with hot reload)
-make serve
-
-# Production (Docker)
-make docker-build
-make docker-run
-
-# Full stack (API + UI + MLflow + Prometheus + Grafana)
-make docker-up
-```
-
-### Run Tests
-
-```bash
-make test           # Unit + integration tests with coverage
-make lint           # Ruff + mypy
-make load-test      # Locust load test (10 users, 60s)
-make load-test-k6   # k6 load test
-```
-
----
-
-## API Documentation
-
-Base URL: `https://ai-product-detector-714127049161.europe-west1.run.app`
-
-Interactive documentation: [`/docs`](https://ai-product-detector-714127049161.europe-west1.run.app/docs) (Swagger UI)
+**Base URL:** `https://ai-product-detector-714127049161.europe-west1.run.app`
+&nbsp;|&nbsp; **Interactive docs:** [`/docs`](https://ai-product-detector-714127049161.europe-west1.run.app/docs)
 
 ### Endpoints
 
-#### `POST /predict` — Single Image Prediction
+| Method | Endpoint | Description | Rate Limit |
+|--------|----------|-------------|------------|
+| `POST` | `/predict` | Single image classification | 30/min |
+| `POST` | `/predict/batch` | Batch classification (up to 10) | 5/min |
+| `POST` | `/predict/explain` | Prediction + Grad-CAM heatmap | 10/min |
+| `GET` | `/health` | Readiness probe (model status, uptime, drift) | — |
+| `GET` | `/healthz` | Lightweight liveness probe | — |
+| `GET` | `/metrics` | Prometheus metrics (text format) | — |
+| `GET` | `/drift` | Drift detection status | — |
+| `GET` | `/privacy` | GDPR privacy policy | — |
 
-Classifies an image as `real` or `ai_generated` with a confidence score.
+### Single Prediction
 
 ```bash
 curl -X POST https://ai-product-detector-714127049161.europe-west1.run.app/predict \
@@ -211,7 +316,6 @@ curl -X POST https://ai-product-detector-714127049161.europe-west1.run.app/predi
   -F "file=@product_photo.jpg"
 ```
 
-**Response:**
 ```json
 {
   "prediction": "ai_generated",
@@ -222,21 +326,7 @@ curl -X POST https://ai-product-detector-714127049161.europe-west1.run.app/predi
 }
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `prediction` | string | `real` or `ai_generated` |
-| `probability` | float | Probability of being AI-generated (0.0–1.0) |
-| `confidence` | string | `low` (<0.3), `medium` (0.3–0.8), `high` (>0.8) |
-| `inference_time_ms` | float | Inference latency in milliseconds |
-| `model_version` | string | Model version used |
-
-**Constraints:** JPEG, PNG, or WebP — max 5 MB — rate limited to 30 req/min.
-
----
-
-#### `POST /predict/batch` — Batch Prediction
-
-Classify up to 10 images in a single request.
+### Batch Prediction
 
 ```bash
 curl -X POST https://ai-product-detector-714127049161.europe-west1.run.app/predict/batch \
@@ -245,40 +335,20 @@ curl -X POST https://ai-product-detector-714127049161.europe-west1.run.app/predi
   -F "files=@photo2.png"
 ```
 
-**Response:**
 ```json
 {
   "results": [
-    {
-      "filename": "photo1.jpg",
-      "prediction": "ai_generated",
-      "probability": 0.87,
-      "confidence": "high",
-      "error": null
-    },
-    {
-      "filename": "photo2.png",
-      "prediction": "real",
-      "probability": 0.12,
-      "confidence": "high",
-      "error": null
-    }
+    { "filename": "photo1.jpg", "prediction": "ai_generated", "probability": 0.87, "confidence": "high" },
+    { "filename": "photo2.png", "prediction": "real", "probability": 0.12, "confidence": "high" }
   ],
   "total": 2,
   "successful": 2,
   "failed": 0,
-  "total_inference_time_ms": 89.5,
-  "model_version": "1.0.0"
+  "total_inference_time_ms": 89.5
 }
 ```
 
-**Constraints:** Max 10 images — 5 MB each — 50 MB total payload — rate limited to 5 req/min.
-
----
-
-#### `POST /predict/explain` — Prediction with Grad-CAM Heatmap
-
-Returns the prediction plus a base64-encoded JPEG heatmap showing which regions influenced the decision.
+### Explainability (Grad-CAM)
 
 ```bash
 curl -X POST https://ai-product-detector-714127049161.europe-west1.run.app/predict/explain \
@@ -286,470 +356,386 @@ curl -X POST https://ai-product-detector-714127049161.europe-west1.run.app/predi
   -F "file=@product_photo.jpg"
 ```
 
-**Response:**
 ```json
 {
   "prediction": "ai_generated",
   "probability": 0.87,
   "confidence": "high",
   "heatmap_base64": "/9j/4AAQ...",
-  "inference_time_ms": 120.5,
-  "model_version": "1.0.0"
+  "inference_time_ms": 120.5
 }
 ```
-
-**Constraints:** Rate limited to 10 req/min (heavier computation).
-
----
-
-#### `GET /health` — Readiness Probe
-
-```bash
-curl https://ai-product-detector-714127049161.europe-west1.run.app/health
-```
-
-```json
-{
-  "status": "healthy",
-  "model_loaded": true,
-  "model_version": "1.0.0",
-  "uptime_seconds": 3600.5,
-  "active_requests": 2,
-  "drift_detected": false,
-  "predictions_total": 1542
-}
-```
-
----
-
-#### `GET /healthz` — Liveness Probe
-
-Lightweight probe for Kubernetes / Cloud Run. Returns `200` if the process is alive.
-
-```bash
-curl https://ai-product-detector-714127049161.europe-west1.run.app/healthz
-```
-
----
-
-#### `GET /metrics` — Prometheus Metrics
-
-Exposes all application metrics in Prometheus text format.
-
-```bash
-curl https://ai-product-detector-714127049161.europe-west1.run.app/metrics
-```
-
----
-
-#### `GET /drift` — Drift Detection Status
-
-Returns current drift monitoring metrics including alerts.
-
-```bash
-curl https://ai-product-detector-714127049161.europe-west1.run.app/drift
-```
-
----
-
-#### `GET /privacy` — Privacy Policy
-
-Returns data handling and privacy information (GDPR-friendly — no data is stored).
-
----
 
 ### Authentication
 
-Authentication is controlled via environment variables:
-
 | Variable | Description |
-|---|---|
+|----------|-------------|
 | `API_KEYS` | Comma-separated list of valid API keys |
-| `REQUIRE_AUTH` | Set to `true` to enforce authentication (rejects all requests if no keys configured) |
+| `REQUIRE_AUTH` | Set to `true` to enforce auth (default: disabled for local dev) |
 
-When auth is disabled (default for local dev), all endpoints are publicly accessible.
+Pass the key via header: `X-API-Key: YOUR_KEY`
 
-### Error Handling
-
-All errors follow a consistent format:
+### Error Responses
 
 ```json
-{
-  "error": "Invalid image format",
-  "detail": "Supported formats: JPEG, PNG, WebP. Got: image/gif"
-}
+{ "error": "Invalid image format", "detail": "Supported formats: JPEG, PNG, WebP. Got: image/gif" }
 ```
 
 | Status | Meaning |
-|---|---|
+|--------|---------|
 | `400` | Invalid input (bad format, empty batch) |
 | `401` | Missing or invalid API key |
-| `413` | File too large (>5 MB or batch >50 MB) |
+| `413` | File too large (>5 MB) or batch payload >50 MB |
 | `429` | Rate limit exceeded |
-| `503` | Model not loaded / service unavailable |
+| `503` | Model not loaded / service starting |
 
 ---
 
-## MLOps Pipeline
+## 🔬 MLOps Pipeline
 
-### DVC – Reproducible Pipelines
+### Training Options
 
-The entire workflow is orchestrated with [DVC](https://dvc.org) for local development:
+| | **Google Colab** | **Vertex AI** | **Local** |
+|---|---|---|---|
+| **GPU** | Free T4 | T4 on GCP (paid) | CPU or local GPU |
+| **Cost** | Free | ~$0.10–0.20/run | Free |
+| **Time** | ~20 min | ~25 min | ~1–2h (CPU) |
+| **Dataset** | HuggingFace (high-res) | GCS (auto-uploaded) | CIFAKE (DVC) |
+| **Best for** | Quick experiments | Production retraining | Development |
 
-```yaml
-# dvc.yaml
-stages:
-  download:   # Download CIFAKE dataset
-  validate:   # Validate data integrity → reports/data_validation.json
-  train:      # Train model → models/checkpoints/best_model.pt
-```
+#### Colab (Quick Start)
 
-```bash
-dvc repro           # Run the full pipeline
-dvc repro train     # Re-run training only
-dvc status          # Check what's changed
-```
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nolancacheux/AI-Product-Photo-Detector/blob/main/notebooks/train_colab.ipynb)
 
-### Vertex AI Training Pipeline
+Open → set runtime to T4 GPU → run all cells → download checkpoint.
 
-For production training, a fully automated pipeline runs on Google Cloud Vertex AI with GPU acceleration. The workflow is triggered via GitHub Actions (`model-training.yml`) and executes a six-stage pipeline:
-
-```
-Upload Data    Build Image    Train on GPU    Evaluate    Quality Gate    Deploy
-   (GCS)    (Artifact Reg.)  (Vertex AI T4)   (CPU)      (auto check)  (Cloud Run)
-    [1]  ──→     [2]     ──→     [3]      ──→  [4]   ──→    [5]    ──→   [6]
-```
-
-| Stage | Description |
-|---|---|
-| **1. Upload Data** | Sync training data to Google Cloud Storage (`gs://ai-product-detector-487013/data/processed/`) |
-| **2. Build Image** | Build the training Docker image and push to Artifact Registry |
-| **3. Train** | Submit a `CustomContainerTrainingJob` to Vertex AI (n1-standard-4 + NVIDIA T4 GPU) |
-| **4. Evaluate** | Download the trained model and run evaluation on the test set |
-| **5. Quality Gate** | Enforce minimum thresholds: accuracy >= 0.85, F1 >= 0.80 |
-| **6. Deploy** | Build the inference image, deploy to Cloud Run, and run a smoke test |
-
-**Trigger:** Manual dispatch via `workflow_dispatch` (configurable epochs, batch size, auto-deploy flag) or automatically on data changes pushed to `main`.
-
-**Infrastructure:**
-- **Compute:** n1-standard-4 with 1x NVIDIA Tesla T4 GPU, 100 GB boot disk
-- **Storage:** GCS bucket for training data, model artifacts, and staging
-- **Registry:** Artifact Registry for training and inference Docker images
-
-The pipeline can also be run locally using `src/training/vertex_submit.py`:
+#### Vertex AI (Production)
 
 ```bash
+# Trigger via GitHub Actions
+gh workflow run model-training.yml -f epochs=15 -f batch_size=64 -f auto_deploy=true
+
+# Or submit directly
 python -m src.training.vertex_submit --epochs 15 --batch-size 64 --sync
 ```
 
-### CI/CD – GitHub Actions
+**Pipeline stages:**
 
-Three workflows automate quality, training, and deployment:
+```
+[1] Verify Data → [2] Build Image → [3] GPU Training → [4] Evaluate → [5] Quality Gate → [6] Deploy
+     (GCS)        (Artifact Reg.)    (Vertex AI T4)      (CPU)        (acc≥0.85,F1≥0.80)  (Cloud Run)
+```
 
-| Workflow | Trigger | Pipeline |
-|---|---|---|
-| **CI** ([`ci.yml`](.github/workflows/ci.yml)) | Push / PR to `main` | Lint, type check, test (3.11 + 3.12), security scan, Docker build |
-| **CD** ([`cd.yml`](.github/workflows/cd.yml)) | Push to `main` / Manual dispatch | Wait for CI, build and push to Artifact Registry, deploy to Cloud Run, smoke test |
-| **Model Training** ([`model-training.yml`](.github/workflows/model-training.yml)) | Manual dispatch / Data changes | Upload to GCS, build training image, Vertex AI GPU training, evaluate, quality gate, deploy |
-
-The CD pipeline automatically deploys to GCP Cloud Run on every push to `main` after CI passes. The Model Training pipeline handles the full training lifecycle on Vertex AI and conditionally deploys when the quality gate passes.
-
-### Experiment Tracking – MLflow
-
-All training runs are logged to MLflow with hyperparameters, metrics, and model artifacts:
+#### Local Training
 
 ```bash
-make mlflow         # Start MLflow UI on port 5000
+make data            # Download CIFAKE dataset
+make train           # Train with configs/train_config.yaml
+make dvc-repro       # Full DVC pipeline: download → validate → train
+make mlflow          # Start MLflow UI → http://localhost:5000
 ```
+
+### DVC Pipeline
+
+```yaml
+# dvc.yaml — 3-stage reproducible pipeline
+stages:
+  download:   # Download CIFAKE dataset → data/processed/
+  validate:   # Integrity checks → reports/data_validation.json
+  train:      # EfficientNet-B0 → models/checkpoints/best_model.pt
+```
+
+```bash
+dvc repro            # Run full pipeline
+dvc repro train      # Re-run training only
+dvc status           # Check what changed
+```
+
+### Training Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| Architecture | EfficientNet-B0 (ImageNet pretrained) |
+| Image size | 224 × 224 |
+| Batch size | 64 |
+| Epochs | 15 |
+| Optimizer | AdamW, lr=0.001 |
+| Scheduler | Cosine annealing with 2-epoch warmup |
+| Early stopping | Patience: 5 epochs |
+| Augmentation | Flip, rotation, color jitter, random crop |
 
 ---
 
-## Cloud Deployment
-
-### GCP Cloud Run
-
-The API and UI are deployed as serverless containers on Google Cloud Run:
-
-```
-Region:             europe-west1
-Memory:             1 Gi (configurable: 512Mi / 1Gi / 2Gi)
-Port:               8080
-Container Registry: europe-west1-docker.pkg.dev
-Scaling:            0 → N (automatic)
-Auth:               API key via X-API-Key header
-```
-
-| Service | URL |
-|---|---|
-| **API** | [ai-product-detector-714127049161.europe-west1.run.app](https://ai-product-detector-714127049161.europe-west1.run.app) |
-| **Streamlit UI** | [ai-product-detector-ui-714127049161.europe-west1.run.app](https://ai-product-detector-ui-714127049161.europe-west1.run.app) |
-| **Swagger Docs** | [/docs](https://ai-product-detector-714127049161.europe-west1.run.app/docs) |
-
-### Google Cloud Storage
-
-GCS serves as the central data and model store for the training pipeline:
-
-```
-Bucket:             gs://ai-product-detector-487013
-├── data/processed/ — Training, validation, and test datasets
-├── models/         — Trained model checkpoints (best_model.pt)
-└── staging/        — Vertex AI job staging files
-```
-
-### Deployment Flows
-
-**Code changes (CD):**
-```
-git push main → CI passes → Docker build → Push to Artifact Registry → Deploy to Cloud Run → Health check
-```
-
-**Model retraining (Vertex AI):**
-```
-Trigger workflow → Upload data to GCS → Build training image → Vertex AI (T4 GPU) → Evaluate → Quality gate → Deploy
-```
-
-**Manual deploy / rollback:**
-
-```bash
-# Deploy latest
-make deploy
-
-# Rollback to specific commit
-gh workflow run cd.yml -f image_tag=<commit-sha>
-```
-
-### Docker
-
-```bash
-# Build the API image (CPU-optimized PyTorch)
-docker build -f docker/Dockerfile -t ai-product-detector:1.0.0 .
-
-# Run standalone
-docker run --rm -p 8080:8080 -v ./models:/app/models:ro ai-product-detector:1.0.0
-
-# Full stack with docker-compose
-docker compose up -d    # API + Streamlit UI + MLflow + Prometheus + Grafana
-docker compose logs -f  # Follow logs
-docker compose down     # Tear down
-```
-
-**Service ports (docker-compose):**
-
-| Service | Port | URL |
-|---|---|---|
-| API | 8080 | http://localhost:8080 |
-| Streamlit UI | 8501 | http://localhost:8501 |
-| MLflow | 5000 | http://localhost:5000 |
-| Prometheus | 9090 | http://localhost:9090 |
-| Grafana | 3000 | http://localhost:3000 |
-
----
-
-## Streamlit UI
-
-An interactive web interface built with Streamlit provides drag-and-drop image analysis with real-time predictions and Grad-CAM visualizations.
-
-**Live deployment:** [ai-product-detector-ui-714127049161.europe-west1.run.app](https://ai-product-detector-ui-714127049161.europe-west1.run.app)
-
-```bash
-# Run locally
-make ui
-
-# Run via Docker
-docker build -f docker/ui.Dockerfile -t ai-product-detector-ui .
-docker run --rm -p 8501:8501 ai-product-detector-ui
-```
-
-The UI is also included in the Docker Compose stack and is automatically deployed to Cloud Run alongside the API.
-
----
-
-## Monitoring
+## 📊 Monitoring & Observability
 
 ### Prometheus Metrics
 
-The API exposes a comprehensive set of custom metrics at `/metrics`:
+All exposed at `GET /metrics` in Prometheus text format:
 
 | Metric | Type | Description |
-|---|---|---|
-| `aidetect_predictions_total` | Counter | Total predictions by status/class/confidence |
+|--------|------|-------------|
+| `aidetect_predictions_total` | Counter | Total predictions by status / class / confidence |
 | `aidetect_prediction_latency_seconds` | Histogram | Per-prediction latency distribution |
-| `aidetect_prediction_probability` | Histogram | Distribution of prediction probabilities |
+| `aidetect_prediction_probability` | Histogram | Probability score distribution |
 | `aidetect_batch_predictions_total` | Counter | Batch request count |
-| `aidetect_batch_size` | Histogram | Number of images per batch request |
+| `aidetect_batch_size` | Histogram | Images per batch request |
 | `aidetect_batch_latency_seconds` | Histogram | Batch processing time |
 | `aidetect_image_validation_errors_total` | Counter | Validation errors by type |
 | `aidetect_model_loaded` | Gauge | Model load status (0/1) |
 | `aidetect_request_size_bytes` | Histogram | Request payload size |
 | `aidetect_response_size_bytes` | Histogram | Response payload size |
-| `http_request_duration_seconds` | Histogram | HTTP request latency by endpoint |
-| `http_requests_total` | Counter | HTTP requests by method/endpoint/status |
+| `http_request_duration_seconds` | Histogram | HTTP latency by endpoint |
+| `http_requests_total` | Counter | HTTP requests by method / endpoint / status |
 
 ### Drift Detection
 
-A custom drift detector monitors prediction distribution in real-time:
+Real-time monitoring of prediction distribution shifts:
 
-- Sliding window over the last 1000 predictions
-- Tracks mean probability, confidence distribution, and class ratios
-- Alerts when metrics deviate from baseline (configurable threshold)
-- Status available at `GET /drift`
+- **Sliding window** over the last 1,000 predictions
+- **Tracked signals:** Mean probability, confidence distribution, class ratios
+- **Alerting:** Configurable threshold with status at `GET /drift`
+- **Feedback loop:** Drift triggers model retraining consideration
 
 ### Grafana Dashboards
 
-Pre-configured Grafana dashboards with Prometheus as data source. Auto-provisioned via `configs/grafana/provisioning/`.
+Pre-configured and auto-provisioned via `configs/grafana/provisioning/`:
+
+- **Request throughput** — Requests/sec by endpoint
+- **Latency percentiles** — p50, p90, p99 per endpoint
+- **Prediction distribution** — Real vs AI-generated ratio over time
+- **Model health** — Load status, drift alerts, error rates
 
 Default credentials: `admin` / `admin`
 
 ### Structured Logging
 
-All application logs use `structlog` with JSON output, including:
+```json
+{
+  "event": "prediction_complete",
+  "prediction": "ai_generated",
+  "probability": 0.87,
+  "latency_ms": 45.2,
+  "request_id": "abc-123",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
 
-- Request ID tracking (via `X-Request-ID` header)
+- `structlog` with JSON output
+- Request ID tracking via `X-Request-ID` header
 - Cloud Trace context correlation (GCP)
-- Prediction metadata (result, probability, latency)
 
 ---
 
-## Project Structure
+## 🛠️ Tech Stack
+
+| Category | Technologies |
+|----------|-------------|
+| **Deep Learning** | PyTorch 2.0+, torchvision, timm (EfficientNet-B0), Grad-CAM |
+| **API Framework** | FastAPI, Uvicorn, Pydantic v2, slowapi |
+| **Data & MLOps** | DVC (pipelines + versioning), MLflow (experiment tracking), HuggingFace Datasets |
+| **Cloud Training** | Vertex AI (CustomContainerTrainingJob), T4 GPU, Google Cloud Storage |
+| **Monitoring** | Prometheus, Grafana, structlog (JSON), custom drift detection |
+| **Infrastructure** | Docker, Docker Compose, Terraform, GCP Cloud Run, Artifact Registry |
+| **CI/CD** | GitHub Actions (3 workflows: CI, CD, Model Training) |
+| **Code Quality** | Ruff (lint + format), mypy (strict), pytest + coverage, pre-commit |
+| **Load Testing** | Locust, k6 |
+| **Security** | pip-audit, bandit, HMAC auth, non-root containers |
+| **UI** | Streamlit (deployed on Cloud Run) |
+
+---
+
+## 📁 Project Structure
 
 ```
 AI-Product-Photo-Detector/
-├── .github/
-│   └── workflows/
-│       ├── ci.yml                  # CI: lint + type check + test + security
-│       ├── cd.yml                  # CD: build + push + deploy to Cloud Run
-│       └── model-training.yml      # Vertex AI training pipeline (GPU)
+│
+├── .github/workflows/
+│   ├── ci.yml                          # CI: lint + type-check + test (3.11, 3.12) + security
+│   ├── cd.yml                          # CD: build → push → deploy Cloud Run → smoke test
+│   └── model-training.yml              # Vertex AI: data → train (GPU) → eval → gate → deploy
+│
 ├── configs/
-│   ├── grafana/
-│   │   ├── dashboards/             # Grafana dashboard JSON definitions
-│   │   └── provisioning/           # Datasource and dashboard provisioning
-│   ├── inference_config.yaml       # API server configuration
-│   ├── pipeline_config.yaml        # Vertex AI pipeline configuration
-│   ├── prometheus.yml              # Prometheus scrape targets
-│   └── train_config.yaml           # Training hyperparameters
+│   ├── grafana/                        # Grafana dashboard definitions + provisioning
+│   ├── inference_config.yaml           # API server configuration
+│   ├── pipeline_config.yaml            # Vertex AI pipeline parameters
+│   ├── prometheus.yml                  # Prometheus scrape targets
+│   └── train_config.yaml              # Training hyperparameters
+│
 ├── docker/
-│   ├── Dockerfile                  # API production image (CPU PyTorch, non-root)
-│   ├── Dockerfile.training         # Vertex AI GPU training image
-│   ├── serve.Dockerfile            # Serving-optimized image
-│   ├── train.Dockerfile            # Local training image
-│   └── ui.Dockerfile               # Streamlit UI image
+│   ├── Dockerfile                      # Production API image (CPU PyTorch, non-root)
+│   ├── Dockerfile.training             # Vertex AI GPU training image
+│   ├── serve.Dockerfile                # Serving-optimized image
+│   ├── train.Dockerfile                # Local training environment
+│   └── ui.Dockerfile                   # Streamlit UI image
+│
 ├── docs/
-│   ├── architecture.svg            # System architecture diagram
-│   ├── ARCHITECTURE.md             # Detailed architecture documentation
-│   ├── AUDIT_ARCHITECTURE.md       # Architecture audit report
-│   ├── CICD.md                     # CI/CD pipeline documentation
-│   ├── CONTRIBUTING.md             # Contribution guidelines
-│   ├── COSTS.md                    # Cloud cost analysis
-│   ├── DEPLOYMENT.md               # Deployment guide
-│   ├── INCIDENT_SCENARIO.md        # Incident response playbook
-│   ├── INFRASTRUCTURE.md           # Infrastructure documentation
-│   ├── PRD.md                      # Product requirements document
-│   ├── presentation.md             # Marp presentation slides
-│   └── TRAINING.md                 # Training pipeline documentation
+│   ├── ARCHITECTURE.md                 # System architecture & design decisions
+│   ├── CICD.md                         # CI/CD pipeline documentation
+│   ├── CONTRIBUTING.md                 # Contribution guidelines
+│   ├── COSTS.md                        # Cloud cost analysis
+│   ├── DEPLOYMENT.md                   # Deployment guide
+│   ├── INCIDENT_SCENARIO.md            # Incident response playbook
+│   ├── INFRASTRUCTURE.md               # Infrastructure documentation
+│   ├── PRD.md                          # Product requirements document
+│   └── TRAINING.md                     # Training pipeline documentation
+│
 ├── notebooks/
-│   └── train_colab.ipynb           # Google Colab training notebook (free T4 GPU)
+│   └── train_colab.ipynb               # Colab notebook — free T4 GPU training
+│
 ├── scripts/
-│   ├── create_sample_data.py       # Generate sample test images
-│   ├── download_cifake.py          # Download CIFAKE dataset
-│   └── download_dataset.py         # Generic dataset downloader
+│   ├── create_sample_data.py           # Generate sample test images
+│   ├── download_cifake.py              # Download CIFAKE dataset
+│   └── download_dataset.py             # Generic dataset downloader
+│
 ├── src/
 │   ├── data/
-│   │   └── validate.py             # Dataset validation and integrity checks
+│   │   └── validate.py                 # Dataset validation & integrity checks
 │   ├── inference/
-│   │   ├── api.py                  # FastAPI application and routes
-│   │   ├── auth.py                 # API key authentication (HMAC + constant-time)
-│   │   ├── explainer.py            # Grad-CAM heatmap generation
-│   │   ├── predictor.py            # Model inference engine
-│   │   ├── routes/                 # Modular route definitions
-│   │   ├── schemas.py              # Pydantic request/response schemas
-│   │   ├── shadow.py               # Shadow model comparison
-│   │   ├── state.py                # Application state management
-│   │   └── validation.py           # Image validation utilities
+│   │   ├── api.py                      # FastAPI application & routes
+│   │   ├── auth.py                     # API key auth (HMAC, constant-time)
+│   │   ├── explainer.py                # Grad-CAM heatmap generation
+│   │   ├── predictor.py                # Model inference engine
+│   │   ├── rate_limit.py               # Rate limiting configuration
+│   │   ├── schemas.py                  # Pydantic request/response models
+│   │   ├── shadow.py                   # Shadow model comparison (A/B testing)
+│   │   ├── state.py                    # Application state management
+│   │   └── validation.py               # Image validation utilities
 │   ├── monitoring/
-│   │   ├── drift.py                # Real-time drift detection
-│   │   └── metrics.py              # Prometheus metric definitions
+│   │   ├── drift.py                    # Real-time drift detection
+│   │   └── metrics.py                  # Prometheus metric definitions
 │   ├── pipelines/
-│   │   ├── evaluate.py             # Model evaluation pipeline stage
-│   │   └── training_pipeline.py    # End-to-end training pipeline orchestrator
+│   │   ├── evaluate.py                 # Model evaluation pipeline stage
+│   │   └── training_pipeline.py        # End-to-end training orchestrator
 │   ├── training/
-│   │   ├── augmentation.py         # Data augmentation transforms
-│   │   ├── dataset.py              # PyTorch Dataset implementation
-│   │   ├── gcs.py                  # Google Cloud Storage upload/download helpers
-│   │   ├── model.py                # EfficientNet-B0 architecture
-│   │   ├── train.py                # Training loop with MLflow tracking
-│   │   └── vertex_submit.py        # Vertex AI job submission CLI
+│   │   ├── augmentation.py             # Data augmentation transforms
+│   │   ├── dataset.py                  # PyTorch Dataset implementation
+│   │   ├── gcs.py                      # GCS upload/download helpers
+│   │   ├── model.py                    # EfficientNet-B0 architecture
+│   │   ├── train.py                    # Training loop with MLflow tracking
+│   │   └── vertex_submit.py            # Vertex AI job submission CLI
 │   ├── ui/
-│   │   └── app.py                  # Streamlit web interface
+│   │   └── app.py                      # Streamlit web interface
 │   └── utils/
-│       ├── config.py               # Settings management (Pydantic Settings)
-│       └── logger.py               # Structured logging setup
+│       ├── config.py                   # Settings management (Pydantic Settings)
+│       ├── logger.py                   # Structured logging setup
+│       └── model_loader.py             # Model loading utilities
+│
+├── terraform/
+│   ├── main.tf                         # GCS + Artifact Registry + Cloud Run + IAM + Budget
+│   ├── variables.tf                    # Input variables
+│   ├── outputs.tf                      # Output values
+│   └── terraform.tfvars.example        # Example configuration
+│
 ├── tests/
 │   ├── load/
-│   │   ├── locustfile.py           # Locust load testing scenarios
-│   │   └── k6_test.js             # k6 load testing script
-│   ├── conftest.py                 # Shared test fixtures
-│   ├── test_api.py                 # API endpoint tests
-│   ├── test_augmentation.py        # Data augmentation tests
-│   ├── test_auth.py                # Authentication tests
-│   ├── test_batch.py               # Batch prediction tests
-│   ├── test_config.py              # Configuration tests
-│   ├── test_data_validate.py       # Data validation tests
-│   ├── test_dataset.py             # Dataset tests
-│   ├── test_drift.py               # Drift detection tests
-│   ├── test_drift_extended.py      # Extended drift detection tests
-│   ├── test_evaluate_extended.py   # Evaluation pipeline tests
-│   ├── test_explainer.py           # Grad-CAM tests
-│   ├── test_gcs.py                 # GCS upload/download tests
-│   ├── test_integration.py         # Integration tests
-│   ├── test_logger.py              # Logging tests
-│   ├── test_metrics.py             # Prometheus metrics tests
-│   ├── test_model.py               # Model architecture tests
-│   ├── test_pipelines.py           # Pipeline orchestration tests
-│   ├── test_predictor.py           # Inference engine tests
-│   ├── test_predictor_extended.py  # Extended predictor tests
-│   ├── test_routes.py              # Route module tests
-│   ├── test_shadow.py              # Shadow A/B testing tests
-│   ├── test_state.py               # Application state tests
-│   ├── test_train.py               # Training loop tests
-│   ├── test_training_pipeline_extended.py # Extended training pipeline tests
-│   ├── test_ui.py                  # Streamlit UI tests
-│   ├── test_validation.py          # Image validation tests
-│   ├── test_validation_extended.py # Extended validation tests
-│   └── test_vertex_submit.py       # Vertex AI submission tests
-├── docker-compose.yml              # Full stack orchestration
-├── dvc.yaml                        # DVC pipeline definition
-├── Makefile                        # Development commands
-├── pyproject.toml                  # Project metadata and dependencies
-└── .pre-commit-config.yaml         # Pre-commit hooks (ruff)
+│   │   ├── locustfile.py               # Locust load testing scenarios
+│   │   └── k6_test.js                  # k6 load testing script
+│   ├── conftest.py                     # Shared test fixtures
+│   ├── test_api.py                     # API endpoint tests
+│   ├── test_augmentation.py            # Augmentation tests
+│   ├── test_auth.py                    # Authentication tests
+│   ├── test_batch.py                   # Batch prediction tests
+│   ├── test_config.py                  # Configuration tests
+│   ├── test_data_validate.py           # Data validation tests
+│   ├── test_dataset.py                 # Dataset tests
+│   ├── test_drift.py                   # Drift detection tests
+│   ├── test_explainer.py               # Grad-CAM tests
+│   ├── test_gcs.py                     # GCS helper tests
+│   ├── test_integration.py             # Integration tests
+│   ├── test_metrics.py                 # Prometheus metrics tests
+│   ├── test_model.py                   # Model architecture tests
+│   ├── test_pipelines.py               # Pipeline orchestration tests
+│   ├── test_predictor.py               # Inference engine tests
+│   ├── test_shadow.py                  # Shadow A/B testing tests
+│   ├── test_train.py                   # Training loop tests
+│   ├── test_ui.py                      # UI tests
+│   ├── test_validation.py              # Validation tests
+│   └── test_vertex_submit.py           # Vertex AI submission tests
+│
+├── docker-compose.yml                  # Full stack: API + UI + MLflow + Prometheus + Grafana
+├── dvc.yaml                            # DVC pipeline: download → validate → train
+├── Makefile                            # Development commands (make help)
+├── pyproject.toml                      # Project metadata, dependencies, tool config
+└── .pre-commit-config.yaml             # Pre-commit hooks (ruff)
 ```
 
 ---
 
-## Contributing
-
-Contributions are welcome. Please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) for guidelines.
+## 🐳 Docker
 
 ```bash
-# Setup development environment
-make dev
+# Build API image
+docker build -f docker/Dockerfile -t ai-product-detector:latest .
 
-# Run quality checks before submitting
-make lint
-make test
+# Run standalone
+docker run --rm -p 8080:8080 -v ./models:/app/models:ro ai-product-detector:latest
+
+# Full stack (API + UI + MLflow + Prometheus + Grafana)
+docker compose up -d
+docker compose logs -f
+docker compose down
 ```
-
-This project uses:
-- **Ruff** for linting and formatting
-- **mypy** (strict mode) for type checking
-- **pre-commit** hooks for automated checks
-- **Conventional commits** (`feat:`, `fix:`, `docs:`, etc.)
 
 ---
 
-## License
+## ☁️ Cloud Deployment
+
+### Cloud Run Services
+
+| Service | Region | URL |
+|---------|--------|-----|
+| **API** | europe-west1 | [`ai-product-detector-714127049161.europe-west1.run.app`](https://ai-product-detector-714127049161.europe-west1.run.app) |
+| **UI** | europe-west1 | [`ai-product-detector-ui-714127049161.europe-west1.run.app`](https://ai-product-detector-ui-714127049161.europe-west1.run.app) |
+
+**Configuration:** 1 GiB memory, port 8080, auto-scaling 0→N, health probes on `/health`
+
+### Terraform Resources
+
+```bash
+cd terraform && terraform init && terraform apply
+```
+
+Provisions: GCS bucket (versioned), Artifact Registry, Cloud Run service, IAM bindings, budget alerts.
+
+### Deployment Flows
+
+```bash
+# Automatic: push to main
+git push origin main  # → CI → CD → Cloud Run
+
+# Manual deploy
+make deploy  # or: gh workflow run cd.yml
+
+# Rollback
+gh workflow run cd.yml -f image_tag=<commit-sha>
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome — please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) first.
+
+```bash
+make dev             # Install dev dependencies + pre-commit hooks
+make lint            # Ruff + mypy
+make test            # pytest with coverage
+```
+
+**Conventions:**
+- [Conventional commits](https://www.conventionalcommits.org/) — `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
+- Ruff for linting & formatting
+- mypy for type checking
+- Pre-commit hooks enforced
+
+---
+
+## 📄 License
 
 This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-**Built by [Nolan Cacheux](https://github.com/nolancacheux)**
+<p align="center">
+  Built by <a href="https://github.com/nolancacheux">Nolan Cacheux</a>
+</p>
