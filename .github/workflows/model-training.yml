@@ -221,7 +221,6 @@ jobs:
           print(f"  Model output: {model_output}")
 
           model = job.run(
-              model_display_name=f"ai-product-detector-{sha}",
               base_output_dir=model_output,
               args=[
                   "--epochs", epochs,
