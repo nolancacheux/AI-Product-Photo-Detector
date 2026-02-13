@@ -206,7 +206,7 @@ jobs:
           pip install pip-audit bandit safety
 
       - name: Run pip-audit (dependency vulnerabilities)
-        run: pip-audit --strict --desc
+        run: pip-audit --strict --desc --local
 
       - name: Run bandit (code security analysis)
         run: |
@@ -230,7 +230,7 @@ jobs:
           echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
 
           # pip-audit result
-          if pip-audit --strict --desc > /dev/null 2>&1; then
+          if pip-audit --strict --desc --local > /dev/null 2>&1; then
             echo "| pip-audit (deps) | ✅ No vulnerabilities |" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "| pip-audit (deps) | ⚠️ Vulnerabilities found |" >> "$GITHUB_STEP_SUMMARY"
