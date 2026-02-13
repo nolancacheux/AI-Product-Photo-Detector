@@ -215,33 +215,33 @@ The only problematic edge is `inference → training` (for the model class). Eve
 
 ### Critical (Must-Have)
 
-| # | Missing | Why It Matters |
-|---|---------|---------------|
-| 1 | **Model registry** (MLflow Model Registry or similar) | No way to promote staging → production models |
-| 2 | **A/B testing / shadow mode** | Can't safely roll out new model versions |
-| 3 | **Data validation pipeline** (Great Expectations / Pandera) | No input data quality gates |
-| 4 | **Persistent drift storage** | Drift history lost on restart |
-| 5 | **Alerting rules** (Grafana alerts or PagerDuty) | Drift detected but nobody gets notified |
-| 6 | **Rollback mechanism** | `deploy.yml` deploys but no automated rollback on failure |
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| 1 | **Model registry** (MLflow Model Registry or similar) | Pending | No way to promote staging to production models |
+| 2 | **A/B testing / shadow mode** | Resolved | Shadow model comparison via `/predict/compare` endpoint |
+| 3 | **Data validation pipeline** | Resolved | `src/data/validate.py` runs as DVC stage before training |
+| 4 | **Persistent drift storage** | Pending | Drift history lost on restart |
+| 5 | **Alerting rules** (Grafana alerts or PagerDuty) | Resolved | Prometheus alerting rules in `configs/prometheus/alerting-rules.yml` |
+| 6 | **Rollback mechanism** | Resolved | CD workflow supports rollback via `image_tag` dispatch input |
 
 ### Important (Should-Have)
 
-| # | Missing | Why It Matters |
-|---|---------|---------------|
-| 7 | **Feature store** | Image embeddings not stored for analysis |
-| 8 | **Retraining pipeline trigger** | Drift detected → manual intervention required |
-| 9 | **Load testing** (Locust / k6) | No performance baseline |
-| 10 | **API versioning** (`/v1/predict`) | Breaking changes require client updates |
-| 11 | **Canary deployments** | All-or-nothing deployments are risky |
-| 12 | **Secret management** (GCP Secret Manager) | API keys via env vars, not rotatable |
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| 7 | **Feature store** | Pending | Image embeddings not stored for analysis |
+| 8 | **Retraining pipeline trigger** | Pending | Drift detected but requires manual intervention |
+| 9 | **Load testing** (Locust / k6) | Resolved | Locust and k6 scripts in `tests/load/` |
+| 10 | **API versioning** (`/v1/predict`) | Resolved | Versioned routes available under `/v1/` prefix |
+| 11 | **Canary deployments** | Pending | All-or-nothing deployments remain |
+| 12 | **Secret management** (GCP Secret Manager) | Resolved | Terraform `secrets` module provisions Secret Manager |
 
 ### Nice-to-Have
 
-| # | Missing | Why It Matters |
-|---|---------|---------------|
-| 13 | **Model explainability** (GradCAM / SHAP) | Can't explain *why* an image is flagged |
-| 14 | **Batch inference pipeline** (async / queue-based) | Current batch is synchronous, blocks |
-| 15 | **Multi-region deployment** | Single region = single point of failure |
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| 13 | **Model explainability** (Grad-CAM / SHAP) | Resolved | Grad-CAM via `/predict/explain` endpoint |
+| 14 | **Batch inference pipeline** (async / queue-based) | Pending | Current batch is synchronous |
+| 15 | **Multi-region deployment** | Pending | Single region deployment |
 
 ---
 

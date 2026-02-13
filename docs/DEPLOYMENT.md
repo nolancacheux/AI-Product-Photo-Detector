@@ -223,14 +223,14 @@ Managed by Terraform variables or `gcloud` flags:
 | Parameter | Terraform Variable | gcloud Flag | Default | Recommendation |
 |---|---|---|---|---|
 | Min instances | `cloud_run_min_instances` | `--min-instances` | 0 | 0 for cost savings; 1 to avoid cold starts |
-| Max instances | `cloud_run_max_instances` | `--max-instances` | 2 | 2--5 for moderate traffic |
+| Max instances | `cloud_run_max_instances` | `--max-instances` | 2 | 2-5 for moderate traffic |
 | CPU | `cloud_run_cpu` | `--cpu` | 1000m | 1 vCPU is sufficient for inference |
 | Memory | `cloud_run_memory` | `--memory` | 512Mi | 1Gi recommended (model loading) |
 
 #### Cold Start Optimization
 
 With `min_instances = 0`, the first request after a period of inactivity incurs
-a cold start (5--15 seconds). The model must be loaded from disk into memory.
+a cold start (5-15 seconds). The model must be loaded from disk into memory.
 
 To reduce cold start latency:
 - Set `min_instances = 1` (keeps one instance warm; costs ~$10/month).

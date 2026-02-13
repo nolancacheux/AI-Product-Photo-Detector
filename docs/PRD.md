@@ -4,8 +4,8 @@
 
 **Version:** 1.0  
 **Author:** Nolan Cacheux  
-**Date:** 2025-01-30  
-**Status:** Draft
+**Date:** 2025  
+**Status:** Approved
 
 ---
 
@@ -221,7 +221,7 @@ An ML-powered detection system that analyzes product images and returns a probab
 | **Experiment Tracking** | MLflow | Industry standard, free |
 | **Data Versioning** | DVC | Git-like for data |
 | **Containerization** | Docker | Standard, lightweight images |
-| **CI/CD** | GitHub Actions (planned) | Free tier, integrated |
+| **CI/CD** | GitHub Actions | Free tier, GitHub-integrated |
 | **Metrics** | Prometheus | Standard, Grafana compatible |
 | **Logging** | structlog | Structured JSON logs |
 
@@ -380,10 +380,10 @@ Response (200):
 
 ### 8.3 Infrastructure
 
-- **Host**: Hetzner VPS (existing)
+- **Host**: Google Cloud Run (europe-west1)
 - **Container Runtime**: Docker
-- **Reverse Proxy**: Nginx (optional)
-- **SSL**: Let's Encrypt (optional)
+- **Infrastructure as Code**: Terraform (modular)
+- **SSL**: Managed by Cloud Run (automatic)
 
 ---
 
@@ -441,29 +441,29 @@ Response (200):
 ## 10. Timeline
 
 ### Phase 1: Foundation (Week 1)
-- [ ] Project setup (repo, CI/CD, Docker)
-- [ ] Dataset collection & generation
-- [ ] Data validation pipeline
+- [x] Project setup (repo, CI/CD, Docker)
+- [x] Dataset collection and generation
+- [x] Data validation pipeline
 
 ### Phase 2: Model Development (Week 2)
-- [ ] Model training pipeline
-- [ ] MLflow integration
-- [ ] Evaluation & optimization
+- [x] Model training pipeline
+- [x] MLflow integration
+- [x] Evaluation and optimization
 
 ### Phase 3: Deployment (Week 3)
-- [ ] FastAPI inference server
-- [ ] Streamlit UI
-- [ ] Docker images
+- [x] FastAPI inference server
+- [x] Streamlit UI
+- [x] Docker images
 
 ### Phase 4: Observability (Week 4)
-- [ ] Prometheus metrics
-- [ ] Grafana dashboards
-- [ ] Drift detection
+- [x] Prometheus metrics
+- [x] Grafana dashboards
+- [x] Drift detection
 
 ### Phase 5: Incident Simulation (Week 5)
-- [ ] Simulate drift scenario
-- [ ] Document response
-- [ ] Final documentation
+- [x] Simulate drift scenario
+- [x] Document response
+- [x] Final documentation
 
 ---
 
@@ -545,4 +545,4 @@ Google's SynthID embeds invisible watermarks in AI-generated images, but:
 
 ---
 
-*Document maintained by Nolan Cacheux - Last updated: 2025-01-30*
+*Document maintained by Nolan Cacheux*

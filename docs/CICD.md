@@ -82,9 +82,9 @@ validates code quality, correctness, and security across multiple dimensions.
 
 - **Runner:** `ubuntu-latest`, Python 3.11
 - **Tools:**
-  - [pip-audit](https://pypi.org/project/pip-audit/) -- checks installed
+  - [pip-audit](https://pypi.org/project/pip-audit/) - checks installed
     dependencies for known vulnerabilities.
-  - [bandit](https://bandit.readthedocs.io/) -- static analysis for common
+  - [bandit](https://bandit.readthedocs.io/) - static analysis for common
     security issues in Python source code. Skips `B101` (assert) and `B601`
     (shell injection in parameterized calls).
 - **Note:** Both steps use `continue-on-error: true` so they report findings

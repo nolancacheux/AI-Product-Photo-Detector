@@ -22,7 +22,7 @@
 
 ### 4. Data Validation
 - Automated checks: structure, integrity (PIL open), class balance, format
-- Runs as DVC stage AND Kubeflow component
+- Runs as a DVC stage before every training cycle
 - Output: JSON report, blocks training on failure
 
 ### 5. Model Architecture
@@ -143,6 +143,6 @@
 - **3** GitHub Actions workflows (CI, CD, Training)
 - **3** training paths (Local, Colab, Vertex AI)
 - **5** Docker Compose services (API, UI, MLflow, Prometheus, Grafana)
-- **6** Kubeflow pipeline stages
+- **3** DVC pipeline stages
 - **6** Terraform-managed GCP resources
 - **< 100ms** API latency (p50)

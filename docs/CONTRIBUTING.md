@@ -272,8 +272,8 @@ terraform apply
 
 ## Release Process
 
-1. Update version in `pyproject.toml` and `src/__init__.py`
-2. Update `CHANGELOG.md`
-3. Create release tag: `git tag v1.0.0`
-4. Push tag: `git push origin v1.0.0`
-5. CI/CD automatically builds and deploys to Cloud Run
+1. Update the version in `pyproject.toml` and `src/__init__.py`
+2. Update `CHANGELOG.md` with the new version and changes
+3. Create a release tag: `git tag v1.x.x`
+4. Push the tag: `git push origin v1.x.x`
+5. The CI/CD pipeline automatically builds and deploys to Cloud Run

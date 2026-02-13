@@ -29,34 +29,35 @@
 
 ## Table of Contents
 
-- [Live Demo](#-live-demo)
-- [Architecture](#-architecture)
+- [Live Demo](#live-demo)
+- [Architecture](#architecture)
   - [System Overview](#system-overview)
   - [CI/CD Pipeline](#cicd-pipeline)
   - [ML Pipeline](#ml-pipeline)
-- [Features](#-features)
-- [Quick Start](#-quick-start)
-  - [Local Development](#local-development)
-  - [Production Deployment](#production-deployment)
-- [API Documentation](#-api-documentation)
+- [Features](#features)
+- [Quick Start](#quick-start)
+  - [Local Development](#mode-1-local-development-docker-compose)
+  - [Google Colab](#mode-2-google-colab-free-gpu-training)
+  - [Production GCP](#mode-3-production-gcp-cicd)
+- [API Documentation](#api-documentation)
   - [Endpoints](#endpoints)
   - [Authentication](#authentication)
   - [Error Responses](#error-responses)
-- [MLOps Pipeline](#-mlops-pipeline)
+- [MLOps Pipeline](#mlops-pipeline)
   - [Training Options](#training-options)
   - [DVC Pipeline](#dvc-pipeline)
   - [Training Configuration](#training-configuration)
-- [Monitoring & Observability](#-monitoring--observability)
+- [Monitoring and Observability](#monitoring-and-observability)
   - [Prometheus Metrics](#prometheus-metrics)
   - [Drift Detection](#drift-detection)
   - [Grafana Dashboards](#grafana-dashboards)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Docker](#-docker)
-- [Cloud Deployment](#-cloud-deployment)
-- [Contributing](#-contributing)
-- [Documentation](#-documentation)
-- [License](#-license)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Docker](#docker)
+- [Cloud Deployment](#cloud-deployment)
+- [Contributing](#contributing)
+- [Documentation](#documentation)
+- [License](#license)
 
 ---
 
@@ -231,7 +232,7 @@ graph LR
 - **Data augmentation** — Horizontal flip, rotation, color jitter, random crop
 - **Cosine annealing** — Learning rate scheduling with warmup
 
-### API & Serving
+### API and Serving
 - **FastAPI async server** — Single, batch (up to 10), and explainability endpoints
 - **API key authentication** — HMAC-based constant-time comparison
 - **Rate limiting** — Per-endpoint configurable limits via `slowapi`
@@ -245,7 +246,7 @@ graph LR
 - **Quality gate** — Automated accuracy/F1 thresholds before deployment
 - **Model versioning** — GCS-backed model registry with DVC tracking
 
-### Monitoring & Observability
+### Monitoring and Observability
 - **Prometheus metrics** — 12+ custom metrics (latency, throughput, probability distribution)
 - **Grafana dashboards** — Pre-configured, auto-provisioned dashboards
 - **Drift detection** — Real-time prediction distribution monitoring (sliding window)
@@ -582,7 +583,7 @@ dvc status # Check what changed
 
 ---
 
-## Monitoring & Observability
+## Monitoring and Observability
 
 ### Prometheus Metrics
 

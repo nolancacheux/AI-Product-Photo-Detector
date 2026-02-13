@@ -119,7 +119,7 @@ def validate_dataset(data_dir: str) -> dict:
 
 Output: `reports/data_validation.json` with full audit trail.
 
-<!-- Speaker notes: This runs as a DVC stage and as a Kubeflow pipeline component. Any corruption or imbalance blocks training. -->
+<!-- Speaker notes: This runs as a DVC stage before every training cycle. Any corruption or imbalance blocks training. -->
 
 ---
 
@@ -620,7 +620,7 @@ ai-product-photo-detector/
 |   |   |-- auth.py            API key management
 |   |   |-- schemas.py         Pydantic request/response models
 |   |-- monitoring/       # Prometheus + drift detection
-|   |-- pipelines/        # Kubeflow pipeline definition
+|   |-- pipelines/        # Pipeline orchestration
 |   |-- ui/               # Streamlit web interface
 |   |-- data/             # Dataset validation
 |   |-- utils/            # Config, structured logging
