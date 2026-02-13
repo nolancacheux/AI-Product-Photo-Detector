@@ -57,7 +57,7 @@ class HealthResponse(BaseModel):
     status: HealthStatus = Field(description="Current health status")
     model_loaded: bool = Field(description="Whether the model is loaded")
     model_version: str = Field(description="Loaded model version")
-    uptime_seconds: float = Field(ge=0, description="Server uptime in seconds")
+    uptime_seconds: float = Field(default=0.0, ge=0, description="Server uptime in seconds")
     active_requests: int = Field(default=0, description="Number of in-flight requests")
     drift_detected: bool = Field(default=False, description="Whether drift has been detected")
     predictions_total: int = Field(default=0, description="Total predictions served")
@@ -94,6 +94,60 @@ class ErrorResponse(BaseModel):
             "example": {
                 "error": "Invalid image format",
                 "detail": "Supported formats: JPEG, PNG, WebP",
+            }
+        }
+    )
+
+
+class StructuredErrorResponse(BaseModel):
+    """Structured error response with request tracing and classification."""
+
+    error: str = Field(description="Error type")
+    detail: str = Field(description="Detailed error message")
+    request_id: str = Field(description="Unique request identifier for tracing")
+    status_code: int = Field(description="HTTP status code")
+    error_class: str = Field(description="Error classification: client_error or server_error")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "error": "Invalid image format",
+                "detail": "Supported formats: JPEG, PNG, WebP. Got: text/plain",
+                "request_id": "req_abc123",
+                "status_code": 400,
+                "error_class": "client_error",
+            }
+        }
+    )
+
+
+class DetailedHealthResponse(BaseModel):
+    """Response schema for detailed /health endpoint."""
+
+    status: HealthStatus = Field(description="Current health status")
+    model_loaded: bool = Field(description="Whether the model is loaded")
+    model_version: str = Field(description="Loaded model version")
+    uptime_seconds: float = Field(default=0.0, ge=0, description="Server uptime in seconds")
+    active_requests: int = Field(default=0, description="Number of in-flight requests")
+    drift_detected: bool = Field(default=False, description="Whether drift has been detected")
+    predictions_total: int = Field(default=0, description="Total predictions served")
+    memory_usage_mb: float = Field(default=0.0, ge=0, description="RSS memory usage in MB")
+    drift_status: dict = Field(default_factory=dict, description="Detailed drift status")
+    pid: int = Field(default=0, description="Process ID")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "status": "healthy",
+                "model_loaded": True,
+                "model_version": "1.0.0",
+                "uptime_seconds": 3600.5,
+                "active_requests": 2,
+                "drift_detected": False,
+                "predictions_total": 1542,
+                "memory_usage_mb": 256.3,
+                "drift_status": {},
+                "pid": 12345,
             }
         }
     )

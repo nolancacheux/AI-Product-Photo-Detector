@@ -1,5 +1,15 @@
-"""Monitoring route handlers: /health, /healthz, /metrics, /drift."""
+"""Monitoring route handlers: health probes, metrics, drift.
 
+Provides Kubernetes-compatible health probes:
+- /healthz  -> liveness  (process alive)
+- /readyz   -> readiness (model loaded + dependencies ready)
+- /health   -> detailed  (model version, uptime, drift, memory, predictions)
+- /startup  -> startup   (model loading complete)
+- /metrics  -> Prometheus
+- /drift    -> drift detection status
+"""
+
+import os
 import time
 from dataclasses import asdict
 from typing import Any
@@ -10,6 +20,7 @@ from starlette.responses import Response
 
 from src.inference import state
 from src.inference.schemas import (
+    DetailedHealthResponse,
     HealthResponse,
     HealthStatus,
     LivenessResponse,
@@ -17,6 +28,26 @@ from src.inference.schemas import (
 from src.monitoring.metrics import ACTIVE_REQUESTS
 
 router = APIRouter()
+
+
+def _get_memory_usage_mb() -> float:
+    """Read RSS memory usage from /proc/self/status (Linux) or psutil fallback."""
+    try:
+        with open("/proc/self/status") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    return int(line.split()[1]) / 1024  # kB -> MB
+    except (OSError, ValueError):
+        pass
+
+    # Fallback: os.getpid() + resource module
+    try:
+        import resource
+
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        return usage.ru_maxrss / 1024  # kB -> MB on Linux
+    except Exception:
+        return 0.0
 
 
 @router.get("/healthz", response_model=LivenessResponse, tags=["Health"])
@@ -29,12 +60,36 @@ async def liveness() -> LivenessResponse:
     return LivenessResponse(alive=True)
 
 
-@router.get("/health", response_model=HealthResponse, tags=["Health"])
-async def health_check() -> HealthResponse:
-    """Readiness probe — checks model and drift status.
+@router.get("/readyz", response_model=HealthResponse, tags=["Health"])
+async def readiness() -> HealthResponse:
+    """Readiness probe — checks model and critical dependencies.
 
-    Returns:
-        Health status with model info, active requests, drift status.
+    Returns 200 only when the model is loaded and able to serve predictions.
+    Returns 503 if the model is not ready.
+    """
+    predictor = state.predictor
+    model_loaded = predictor is not None and predictor.is_ready()
+
+    status_code = HealthStatus.HEALTHY if model_loaded else HealthStatus.UNHEALTHY
+
+    response = HealthResponse(
+        status=status_code,
+        model_loaded=model_loaded,
+        model_version=predictor.model_version if predictor else "unknown",
+    )
+
+    if not model_loaded:
+        raise HTTPException(status_code=503, detail=response.model_dump())
+
+    return response
+
+
+@router.get("/health", response_model=DetailedHealthResponse, tags=["Health"])
+async def detailed_health() -> DetailedHealthResponse:
+    """Detailed health check with full operational metrics.
+
+    Includes model version, uptime, drift status, memory, prediction counts,
+    and active request count. Useful for dashboards and deep health inspection.
     """
     predictor = state.predictor
     drift_detector = state.drift_detector
@@ -43,11 +98,13 @@ async def health_check() -> HealthResponse:
     model_loaded = predictor is not None and predictor.is_ready()
 
     drift_detected = False
+    drift_status_detail: dict[str, Any] = {}
     if drift_detector:
-        drift_status = drift_detector.get_status()
-        drift_detected = drift_status.get("drift_detected", False)
+        drift_info = drift_detector.get_status()
+        drift_detected = drift_info.get("drift_detected", False)
+        drift_status_detail = drift_info
 
-    return HealthResponse(
+    return DetailedHealthResponse(
         status=HealthStatus.HEALTHY if model_loaded else HealthStatus.UNHEALTHY,
         model_loaded=model_loaded,
         model_version=predictor.model_version if predictor else "unknown",
@@ -55,7 +112,34 @@ async def health_check() -> HealthResponse:
         active_requests=int(ACTIVE_REQUESTS._value.get()),
         drift_detected=drift_detected,
         predictions_total=state.get_total_predictions(),
+        memory_usage_mb=round(_get_memory_usage_mb(), 2),
+        drift_status=drift_status_detail,
+        pid=os.getpid(),
     )
+
+
+# Backward compatibility: /health used to be the readiness-style endpoint.
+# Now it returns detailed info. The old schema fields are a superset so
+# existing consumers parsing HealthResponse fields will still work.
+
+
+@router.get("/startup", response_model=LivenessResponse, tags=["Health"])
+async def startup_probe() -> LivenessResponse:
+    """Startup probe — returns 200 once model loading is complete.
+
+    Returns 503 while the model is still loading.
+    Use as a Kubernetes startupProbe to avoid premature liveness checks.
+    """
+    predictor = state.predictor
+    model_loaded = predictor is not None and predictor.is_ready()
+
+    if not model_loaded:
+        raise HTTPException(
+            status_code=503,
+            detail={"alive": False, "reason": "Model still loading"},
+        )
+
+    return LivenessResponse(alive=True)
 
 
 @router.get("/metrics", tags=["Monitoring"])
