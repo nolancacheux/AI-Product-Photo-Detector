@@ -1,11 +1,13 @@
+# Terraform local state & cache
 .terraform/
 *.tfstate
 *.tfstate.backup
 *.tfstate.*.backup
 *.tfplan
-terraform.tfvars
 .terraform.lock.hcl
 crash.log
+
+# Override files
 override.tf
 override.tf.json
 *_override.tf
@@ -14,3 +16,6 @@ override.tf.json
 # Service account keys — NEVER commit these
 *-key.json
 *.credentials.json
+
+# Environment-specific tfvars with real values
+# (terraform.tfvars in environments/ are checked in as templates)

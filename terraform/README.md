@@ -1,251 +1,252 @@
-# Terraform — GCP Infrastructure
+# Terraform — AI Product Photo Detector Infrastructure
 
-Infrastructure as Code for the AI Product Photo Detector MLOps pipeline on Google Cloud Platform.
+Production-grade, modular Terraform configuration for deploying the AI Product Photo Detector on Google Cloud Platform.
 
-## Architecture Overview
+## Architecture
 
-| Resource | Purpose |
-|---|---|
-| **GCS Bucket** | DVC remote storage for datasets and model artifacts |
-| **Artifact Registry** | Docker image repository (with auto-cleanup policy) |
-| **Cloud Run** | Serverless deployment of the FastAPI inference API |
-| **Service Account** | Least-privilege identity for Cloud Run |
-| **Budget Alert** | Monthly spending alert to avoid surprise bills |
+```
+terraform/
+├── environments/          # Per-environment configurations
+│   ├── dev/               # Development (scale-to-zero, 512Mi, 10€ budget)
+│   │   ├── main.tf        # Module calls with dev values
+│   │   ├── variables.tf   # Dev-specific variables
+│   │   ├── outputs.tf     # Dev outputs
+│   │   └── terraform.tfvars
+│   └── prod/              # Production (min 1 instance, 1Gi, 50€ budget)
+│       ├── main.tf        # Module calls with prod values
+│       ├── variables.tf   # Prod-specific variables
+│       ├── outputs.tf     # Prod outputs
+│       └── terraform.tfvars
+├── modules/               # Reusable infrastructure modules
+│   ├── cloud-run/         # Cloud Run service (FastAPI API)
+│   ├── storage/           # GCS buckets (DVC data & models)
+│   ├── registry/          # Artifact Registry (Docker images)
+│   ├── monitoring/        # Uptime checks, alerts, notifications
+│   └── iam/               # Service accounts & role bindings
+├── backend.tf             # Remote state documentation
+├── versions.tf            # Required providers
+└── README.md              # This file
+```
+
+## Environment Comparison
+
+| Setting               | Dev                    | Prod                        |
+|-----------------------|------------------------|-----------------------------|
+| Min instances         | 0 (scale-to-zero)     | 1 (always-on)               |
+| Max instances         | 2                      | 10                          |
+| Memory                | 512Mi                  | 1Gi                         |
+| Budget                | 10€/month              | 50€/month                   |
+| Monitoring            | Optional (off)         | Always enabled               |
+| Bucket force_destroy  | true                   | false                       |
+| Image retention       | 5 recent / 3d untagged | 20 recent / 14d untagged    |
+| Custom domain         | N/A                    | Supported                   |
 
 ## Prerequisites
 
-Before starting, make sure you have:
+1. **Google Cloud SDK** installed and authenticated:
+   ```bash
+   gcloud auth application-default login
+   ```
 
-| Tool | Version | Install |
-|---|---|---|
-| **Google Cloud SDK** | Latest | [Install gcloud](https://cloud.google.com/sdk/docs/install) |
-| **Terraform** | ≥ 1.5.0 | [Install Terraform](https://developer.hashicorp.com/terraform/install) |
-| **GCP Billing Account** | Active | [Set up billing](https://cloud.google.com/billing/docs/how-to/create-billing-account) |
+2. **Terraform** >= 1.5.0 installed:
+   ```bash
+   terraform version
+   ```
 
-Verify your installations:
+3. **GCP Project** with billing enabled:
+   ```bash
+   gcloud projects list
+   gcloud billing accounts list
+   ```
 
-```bash
-gcloud version
-terraform version
-```
+## Quick Start
 
-## Step-by-Step Setup (New User)
-
-### Step 1 — Authenticate with Google Cloud
-
-```bash
-gcloud auth login
-gcloud auth application-default login
-```
-
-### Step 2 — Create a GCP Project (if you don't have one)
+### 1. Configure your environment
 
 ```bash
-# Create a new project
-gcloud projects create my-mlops-project --name="MLOps Project"
+# Choose your environment
+cd terraform/environments/dev    # or /prod
 
-# Set it as default
-gcloud config set project my-mlops-project
-
-# Link billing account (required for resource creation)
-# Find your billing account ID:
-gcloud billing accounts list
-
-# Link it:
-gcloud billing projects link my-mlops-project \
-  --billing-account=XXXXXX-XXXXXX-XXXXXX
+# Edit terraform.tfvars with your project ID
+vim terraform.tfvars
 ```
 
-### Step 3 — Enable Required APIs
-
-Terraform will enable APIs automatically, but you can also do it manually if needed:
-
-```bash
-gcloud services enable \
-  run.googleapis.com \
-  artifactregistry.googleapis.com \
-  storage.googleapis.com \
-  iam.googleapis.com \
-  cloudresourcemanager.googleapis.com \
-  billingbudgets.googleapis.com
-```
-
-### Step 4 — Create a Service Account for Terraform (optional but recommended)
-
-> For personal/student projects, using `gcloud auth application-default login` is sufficient.
-> For shared projects or CI/CD, create a dedicated service account:
-
-```bash
-# Create the service account
-gcloud iam service-accounts create terraform-admin \
-  --display-name="Terraform Admin"
-
-# Grant necessary permissions
-gcloud projects add-iam-policy-binding my-mlops-project \
-  --member="serviceAccount:terraform-admin@my-mlops-project.iam.gserviceaccount.com" \
-  --role="roles/editor"
-
-gcloud projects add-iam-policy-binding my-mlops-project \
-  --member="serviceAccount:terraform-admin@my-mlops-project.iam.gserviceaccount.com" \
-  --role="roles/iam.serviceAccountAdmin"
-
-# Download key file
-gcloud iam service-accounts keys create terraform-key.json \
-  --iam-account=terraform-admin@my-mlops-project.iam.gserviceaccount.com
-
-# Set the credential env variable
-export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/terraform-key.json"
-```
-
-> ⚠️ **Never commit `terraform-key.json`!** It's already in `.gitignore`.
-
-### Step 5 — Configure Variables
-
-```bash
-cp terraform.tfvars.example terraform.tfvars
-```
-
-Edit `terraform.tfvars` and set **at minimum**:
-
+At minimum, set:
 ```hcl
-project_id      = "my-mlops-project"       # REQUIRED
-billing_account = "XXXXXX-XXXXXX-XXXXXX"    # Recommended (for budget alerts)
+project_id = "your-actual-gcp-project-id"
 ```
 
-See [terraform.tfvars.example](terraform.tfvars.example) for all available variables.
-
-### Step 6 — Deploy Infrastructure
+### 2. Initialize Terraform
 
 ```bash
-# Initialize Terraform (downloads providers)
 terraform init
+```
 
-# Preview what will be created
+### 3. Plan and review
+
+```bash
 terraform plan
+```
 
-# Apply (creates all resources)
+### 4. Apply
+
+```bash
 terraform apply
 ```
 
-Type `yes` when prompted.
-
-### Step 7 — Verify Outputs
+### 5. Get outputs
 
 ```bash
+# Service URL
+terraform output cloud_run_url
+
+# All outputs
 terraform output
 ```
 
-Expected outputs:
+## Remote State (Recommended for Teams)
 
-| Output | Description |
-|---|---|
-| `cloud_run_url` | Your API endpoint |
-| `gcs_bucket_name` | DVC remote bucket name |
-| `gcs_bucket_url` | Full GCS URL for DVC config |
-| `artifact_registry_url` | Docker push target |
-| `service_account_email` | Service account for CI/CD |
-| `docker_push_command` | Ready-to-use push command |
+By default, state is stored locally. For team collaboration, enable GCS remote state:
 
-## Remote State (Optional but Recommended)
-
-For team collaboration or CI/CD, store state in a GCS bucket:
+### Setup (one-time)
 
 ```bash
-# Create the state bucket (one-time, before terraform init)
-gsutil mb -l europe-west1 gs://YOUR_PROJECT_ID-tfstate
-gsutil versioning set on gs://YOUR_PROJECT_ID-tfstate
+# Replace with your project ID
+PROJECT_ID="your-project-id"
+
+# Create state bucket
+gsutil mb -l europe-west1 gs://${PROJECT_ID}-tfstate
+gsutil versioning set on gs://${PROJECT_ID}-tfstate
 ```
 
-Then uncomment the backend block in `main.tf`:
+### Enable
+
+Uncomment the `backend "gcs"` block in your environment's `main.tf`:
 
 ```hcl
 terraform {
   backend "gcs" {
-    bucket = "YOUR_PROJECT_ID-tfstate"
-    prefix = "terraform/state"
+    bucket = "your-project-id-tfstate"
+    prefix = "terraform/state/dev"  # or "terraform/state/prod"
   }
 }
 ```
 
-Re-initialize to migrate:
+Then migrate:
 
 ```bash
 terraform init -migrate-state
 ```
 
-## Post-Deployment Usage
+## Module Reference
 
-### Configure DVC remote
+### cloud-run
+
+Deploys a Cloud Run v2 service with configurable scaling, resources, and health probes.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `cpu` | CPU allocation | `1000m` |
+| `memory` | Memory allocation | `512Mi` |
+| `min_instances` | Min instances (0 = scale-to-zero) | `0` |
+| `max_instances` | Max instances | `2` |
+| `allow_unauthenticated` | Public access | `true` |
+
+### storage
+
+Creates a GCS bucket with versioning, lifecycle rules, and enforced public access prevention.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `force_destroy` | Allow bucket deletion with objects | `false` |
+| `versioning_max_versions` | Versions to keep | `5` |
+| `archive_retention_days` | Archive retention | `90` |
+
+### registry
+
+Creates an Artifact Registry Docker repository with automatic cleanup policies.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `keep_count` | Recent images to keep | `10` |
+| `untagged_max_age_seconds` | Max untagged image age | `604800` (7d) |
+
+### monitoring
+
+Sets up uptime checks on `/health`, alert policies for downtime and error rate, and email notifications.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `enable_monitoring` | Enable/disable all monitoring | `true` |
+| `health_check_path` | HTTP path to check | `/health` |
+| `alert_downtime_duration` | Downtime before alert | `60s` |
+| `error_rate_threshold` | 5xx error rate % threshold | `5` |
+
+### iam
+
+Creates a dedicated service account with least-privilege roles for Cloud Run.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `additional_roles` | Extra IAM roles | `[]` |
+
+## Common Operations
+
+### Deploy a new image
 
 ```bash
-dvc remote modify gcs url gs://$(terraform output -raw gcs_bucket_name)
-```
-
-### Push a Docker image
-
-```bash
-REGISTRY=$(terraform output -raw artifact_registry_url)
-
-# Authenticate Docker with Artifact Registry
-gcloud auth configure-docker $(echo $REGISTRY | cut -d/ -f1)
-
 # Build and push
-docker build -t $REGISTRY/ai-product-detector:latest -f ../docker/Dockerfile ..
-docker push $REGISTRY/ai-product-detector:latest
+IMAGE="europe-west1-docker.pkg.dev/YOUR_PROJECT/ai-product-detector/ai-product-detector:v1.0.0"
+docker build -t $IMAGE .
+docker push $IMAGE
+
+# Deploy via Terraform
+cd terraform/environments/prod
+terraform apply -var="cloud_run_container_image=$IMAGE"
 ```
 
-### Update Cloud Run with a new image
+### Destroy an environment
 
 ```bash
-gcloud run services update ai-product-detector \
-  --image $(terraform output -raw artifact_registry_url)/ai-product-detector:latest \
-  --region $(terraform output -raw region)
-```
-
-## Cost Management
-
-This configuration is optimized for student projects:
-
-| Setting | Value | Why |
-|---|---|---|
-| `cloud_run_min_instances` | `0` | Scale-to-zero when idle (no idle cost) |
-| `cloud_run_max_instances` | `2` | Prevents runaway scaling |
-| `cloud_run_cpu` | `1000m` | 1 vCPU (minimal) |
-| `cloud_run_memory` | `512Mi` | Sufficient for inference |
-| `budget_amount` | `10€` | Alert before spending too much |
-| GCS lifecycle rules | 5 versions, 90-day archive cleanup | Prevents storage bloat |
-| AR cleanup policy | Keep 10 latest, delete untagged after 7d | Saves registry storage |
-
-> 💡 **Estimated cost**: Under free tier for light usage. Budget alert at 10€/month by default.
-
-## Destroy
-
-To tear down all resources:
-
-```bash
+cd terraform/environments/dev
 terraform destroy
 ```
 
-> ⚠️ The GCS bucket has `force_destroy = false`. Empty it first or temporarily set `force_destroy = true` in `main.tf` before destroying.
+### Format all Terraform files
 
-## File Structure
+```bash
+terraform fmt -recursive terraform/
+```
 
+### Validate configuration
+
+```bash
+cd terraform/environments/dev
+terraform validate
 ```
-terraform/
-├── main.tf                  # Provider, resources (GCS, AR, Cloud Run, IAM, Budget)
-├── variables.tf             # Input variables with validation & defaults
-├── outputs.tf               # Useful outputs for downstream tools
-├── terraform.tfvars.example # Template — copy to terraform.tfvars
-├── .gitignore               # Excludes state, keys, and tfvars
-└── README.md                # This file
-```
+
+## Cost Optimization
+
+- **Dev**: Scale-to-zero means you only pay when the API receives traffic
+- **Prod**: Min 1 instance keeps the service warm (no cold starts) but costs ~$5-15/month
+- **Budget alerts** at 50%, 80%, and 100% of your limit
+- **Artifact Registry cleanup** removes old images automatically
+- **GCS lifecycle rules** delete old object versions
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---|---|
-| `Error 403: billing account not found` | Check `billing_account` value or leave empty to skip budget |
-| `API not enabled` | Run `gcloud services enable <api>` or wait for Terraform to enable it |
-| `Permission denied` | Make sure `gcloud auth application-default login` is done |
-| `Cloud Run: container failed to start` | Push a valid Docker image first, then re-apply |
-| `Bucket already exists` | GCS bucket names are global — change `project_id` or `app_name` |
+### "Error creating Service: permission denied"
+```bash
+gcloud services enable run.googleapis.com --project=YOUR_PROJECT
+```
+
+### "Backend initialization required"
+```bash
+terraform init -reconfigure
+```
+
+### "Resource already exists"
+Import the existing resource:
+```bash
+terraform import module.cloud_run.google_cloud_run_v2_service.api projects/PROJECT/locations/REGION/services/SERVICE
+```
