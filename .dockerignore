@@ -10,6 +10,8 @@ __pycache__/
 dist/
 build/
 .env
+.env.development
+.env.production
 .env.*
 !.env.example
 *.dvc

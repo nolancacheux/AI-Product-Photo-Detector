@@ -3,8 +3,14 @@
 
 .PHONY: help install dev lint format test train serve ui \
         docker-build docker-run docker-up docker-down docker-logs \
+        docker-dev docker-dev-down docker-dev-logs \
+        docker-prod docker-prod-down docker-prod-logs \
         predict predict-batch data dvc-repro mlflow deploy clean \
         validate load-test load-test-k6
+
+# Compose file sets
+COMPOSE_DEV  := -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.development
+COMPOSE_PROD := -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production
 
 # Default target
 help:
@@ -35,6 +41,16 @@ help:
 	@echo "  make docker-up     Start all services (docker compose)"
 	@echo "  make docker-down   Stop all services"
 	@echo "  make docker-logs   Follow logs from all services"
+	@echo ""
+	@echo "Docker — Dev Environment:"
+	@echo "  make docker-dev       Start dev stack (hot reload, debug)"
+	@echo "  make docker-dev-down  Stop dev stack"
+	@echo "  make docker-dev-logs  Follow dev logs"
+	@echo ""
+	@echo "Docker — Prod Environment:"
+	@echo "  make docker-prod       Start production stack"
+	@echo "  make docker-prod-down  Stop production stack"
+	@echo "  make docker-prod-logs  Follow production logs"
 	@echo ""
 	@echo "Testing API:"
 	@echo "  make predict       Test single prediction (requires running API)"
@@ -112,6 +128,28 @@ docker-down:
 
 docker-logs:
 	docker compose logs -f
+
+# ─── Docker Dev ───────────────────────────────────────────────────────────────
+
+docker-dev:
+	docker compose $(COMPOSE_DEV) up -d --build
+
+docker-dev-down:
+	docker compose $(COMPOSE_DEV) down
+
+docker-dev-logs:
+	docker compose $(COMPOSE_DEV) logs -f
+
+# ─── Docker Prod ──────────────────────────────────────────────────────────────
+
+docker-prod:
+	docker compose $(COMPOSE_PROD) up -d --build
+
+docker-prod-down:
+	docker compose $(COMPOSE_PROD) down
+
+docker-prod-logs:
+	docker compose $(COMPOSE_PROD) logs -f
 
 # ─── Testing API ──────────────────────────────────────────────────────────────
 

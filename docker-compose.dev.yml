@@ -1,0 +1,66 @@
+# Docker Compose — Development Override
+# AI Product Photo Detector
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+#
+# Features:
+#   - Hot reload via mounted volumes
+#   - Debug logging
+#   - All ports exposed for local debugging
+#   - Named volumes for data persistence
+
+services:
+  api:
+    image: ai-product-detector:dev
+    volumes:
+      - ./src:/app/src:ro
+      - ./configs:/app/configs:ro
+      - ./models:/app/models:ro
+    environment:
+      - AIDETECT_LOG_LEVEL=DEBUG
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - REQUIRE_AUTH=false
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    command: ["uvicorn", "src.inference.api:app", "--host", "0.0.0.0", "--port", "8080", "--reload", "--reload-dir", "/app/src"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  ui:
+    image: ai-product-detector-ui:dev
+    volumes:
+      - ./src/ui:/app/src/ui:ro
+    environment:
+      - STREAMLIT_SERVER_RUN_ON_SAVE=true
+    restart: unless-stopped
+
+  mlflow:
+    volumes:
+      - mlflow-data:/mlflow
+    restart: unless-stopped
+
+  prometheus:
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+
+  grafana:
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
+    restart: unless-stopped
+
+volumes:
+  mlflow-data:
+  prometheus-data:
+  grafana-data:

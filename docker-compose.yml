@@ -1,78 +1,64 @@
-# Docker Compose for AI Product Photo Detector
-# Usage: docker compose up -d
+# Docker Compose — Base Configuration
+# AI Product Photo Detector
+#
+# This file defines the service structure shared by dev and prod.
+# Use with an override file:
+#   Dev:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#   Prod: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 services:
-  # Inference API (Cloud Run compatible)
+  # --- Inference API ---
   api:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    image: ai-product-detector:1.0.0
     container_name: ai-detector-api
     ports:
-      - "8080:8080"
-    volumes:
-      - ./models:/app/models:ro
-      - ./configs:/app/configs:ro
+      - "${API_PORT:-8080}:8080"
     environment:
       - PORT=8080
       - AIDETECT_MODEL_PATH=/app/models/checkpoints/best_model.pt
-      - AIDETECT_LOG_LEVEL=INFO
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-    restart: unless-stopped
     networks:
       - detector-network
 
-  # Streamlit UI
+  # --- Streamlit UI ---
   ui:
     build:
       context: .
       dockerfile: docker/ui.Dockerfile
-    image: ai-product-detector-ui:1.0.0
     container_name: ai-detector-ui
     ports:
-      - "8501:8501"
+      - "${UI_PORT:-8501}:8501"
     environment:
       - API_URL=http://api:8080
     depends_on:
       api:
         condition: service_healthy
-    restart: unless-stopped
     networks:
       - detector-network
 
-  # MLflow Tracking Server
+  # --- MLflow Tracking Server ---
   mlflow:
     image: python:3.11-slim
     container_name: ai-detector-mlflow
     command: >
-      bash -c "pip install mlflow && mlflow server 
-      --host 0.0.0.0 
-      --port 5000 
-      --backend-store-uri sqlite:///mlflow.db 
+      bash -c "pip install --no-cache-dir mlflow==2.16.0 &&
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:///mlflow/mlflow.db
       --default-artifact-root /mlflow/artifacts"
     ports:
-      - "5000:5000"
-    volumes:
-      - mlflow-data:/mlflow
-    restart: unless-stopped
+      - "${MLFLOW_PORT:-5000}:5000"
     networks:
       - detector-network
 
-  # Prometheus — scrapes /metrics from the API
+  # --- Prometheus ---
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: ai-detector-prometheus
     ports:
-      - "9090:9090"
-    volumes:
-      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
+      - "${PROMETHEUS_PORT:-9090}:9090"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=15d"
@@ -80,34 +66,22 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    restart: unless-stopped
     networks:
       - detector-network
 
-  # Grafana — dashboards and alerting
+  # --- Grafana ---
   grafana:
     image: grafana/grafana:11.1.0
     container_name: ai-detector-grafana
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT:-3000}:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
-    restart: unless-stopped
     networks:
       - detector-network
 
 networks:
   detector-network:
     driver: bridge
-
-volumes:
-  mlflow-data:
-  prometheus-data:
-  grafana-data:

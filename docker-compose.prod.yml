@@ -1,0 +1,114 @@
+# Docker Compose — Production Override
+# AI Product Photo Detector
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Features:
+#   - No debug, WARNING-level logging
+#   - Gunicorn with multiple workers
+#   - Resource limits (CPU + memory)
+#   - Strict health checks
+#   - No mounted volumes (images are self-contained)
+#   - Always-restart policy
+
+services:
+  api:
+    image: ai-product-detector:latest
+    environment:
+      - AIDETECT_LOG_LEVEL=WARNING
+      - REQUIRE_AUTH=true
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    command: ["gunicorn", "src.inference.api:app", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8080", "--timeout", "120", "--graceful-timeout", "30", "--access-logfile", "-"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+  ui:
+    image: ai-product-detector-ui:latest
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  mlflow:
+    volumes:
+      - mlflow-data:/mlflow
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  prometheus:
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+  grafana:
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:?GF_ADMIN_PASSWORD must be set}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+volumes:
+  mlflow-data:
+  prometheus-data:
+  grafana-data:
