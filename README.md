@@ -27,6 +27,39 @@
 
 ---
 
+## 📑 Table of Contents
+
+- [Live Demo](#-live-demo)
+- [Architecture](#-architecture)
+  - [System Overview](#system-overview)
+  - [CI/CD Pipeline](#cicd-pipeline)
+  - [ML Pipeline](#ml-pipeline)
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+  - [Local Development](#local-development)
+  - [Production Deployment](#production-deployment)
+- [API Documentation](#-api-documentation)
+  - [Endpoints](#endpoints)
+  - [Authentication](#authentication)
+  - [Error Responses](#error-responses)
+- [MLOps Pipeline](#-mlops-pipeline)
+  - [Training Options](#training-options)
+  - [DVC Pipeline](#dvc-pipeline)
+  - [Training Configuration](#training-configuration)
+- [Monitoring & Observability](#-monitoring--observability)
+  - [Prometheus Metrics](#prometheus-metrics)
+  - [Drift Detection](#drift-detection)
+  - [Grafana Dashboards](#grafana-dashboards)
+- [Tech Stack](#-tech-stack)
+- [Project Structure](#-project-structure)
+- [Docker](#-docker)
+- [Cloud Deployment](#-cloud-deployment)
+- [Contributing](#-contributing)
+- [Documentation](#-documentation)
+- [License](#-license)
+
+---
+
 ## 🌐 Live Demo
 
 | Resource | URL |
@@ -226,7 +259,7 @@ graph LR
 - **CORS configuration** — Configurable allowed origins
 
 ### 🏗️ Infrastructure
-- **Terraform IaC** — GCS, Artifact Registry, Cloud Run, IAM, budget alerts
+- **Terraform IaC** — Modular setup: GCS, Artifact Registry, Cloud Run, IAM, budget alerts
 - **Docker Compose** — Full local stack (API + UI + MLflow + Prometheus + Grafana)
 - **GitHub Actions CI/CD** — Automated lint, test, build, deploy on every push
 - **Serverless scaling** — Cloud Run auto-scales 0→N based on traffic
@@ -272,8 +305,7 @@ make docker-up      # API + UI + MLflow + Prometheus + Grafana
 
 ```bash
 # 1. Provision infrastructure with Terraform
-cd terraform
-cp terraform.tfvars.example terraform.tfvars  # Edit with your GCP project
+cd terraform/environments/prod
 terraform init && terraform apply
 
 # 2. Push to main — CI/CD handles the rest
@@ -535,8 +567,8 @@ Default credentials: `admin` / `admin`
 | **Data & MLOps** | DVC (pipelines + versioning), MLflow (experiment tracking), HuggingFace Datasets |
 | **Cloud Training** | Vertex AI (CustomContainerTrainingJob), T4 GPU, Google Cloud Storage |
 | **Monitoring** | Prometheus, Grafana, structlog (JSON), custom drift detection |
-| **Infrastructure** | Docker, Docker Compose, Terraform, GCP Cloud Run, Artifact Registry |
-| **CI/CD** | GitHub Actions (3 workflows: CI, CD, Model Training) |
+| **Infrastructure** | Docker, Docker Compose, Terraform (modular), GCP Cloud Run, Artifact Registry |
+| **CI/CD** | GitHub Actions (4 workflows: CI, CD, Model Training, PR Preview) |
 | **Code Quality** | Ruff (lint + format), mypy (strict), pytest + coverage, pre-commit |
 | **Load Testing** | Locust, k6 |
 | **Security** | pip-audit, bandit, HMAC auth, non-root containers |
@@ -552,14 +584,16 @@ AI-Product-Photo-Detector/
 ├── .github/workflows/
 │   ├── ci.yml                          # CI: lint + type-check + test (3.11, 3.12) + security
 │   ├── cd.yml                          # CD: build → push → deploy Cloud Run → smoke test
-│   └── model-training.yml              # Vertex AI: data → train (GPU) → eval → gate → deploy
+│   ├── model-training.yml              # Vertex AI: data → train (GPU) → eval → gate → deploy
+│   └── pr-preview.yml                  # PR preview deployments
 │
 ├── configs/
 │   ├── grafana/                        # Grafana dashboard definitions + provisioning
+│   ├── prometheus/                     # Prometheus alerting rules
 │   ├── inference_config.yaml           # API server configuration
 │   ├── pipeline_config.yaml            # Vertex AI pipeline parameters
 │   ├── prometheus.yml                  # Prometheus scrape targets
-│   └── train_config.yaml              # Training hyperparameters
+│   └── train_config.yaml               # Training hyperparameters
 │
 ├── docker/
 │   ├── Dockerfile                      # Production API image (CPU PyTorch, non-root)
@@ -576,6 +610,7 @@ AI-Product-Photo-Detector/
 │   ├── DEPLOYMENT.md                   # Deployment guide
 │   ├── INCIDENT_SCENARIO.md            # Incident response playbook
 │   ├── INFRASTRUCTURE.md               # Infrastructure documentation
+│   ├── MONITORING.md                   # Monitoring & observability guide
 │   ├── PRD.md                          # Product requirements document
 │   └── TRAINING.md                     # Training pipeline documentation
 │
@@ -585,7 +620,8 @@ AI-Product-Photo-Detector/
 ├── scripts/
 │   ├── create_sample_data.py           # Generate sample test images
 │   ├── download_cifake.py              # Download CIFAKE dataset
-│   └── download_dataset.py             # Generic dataset downloader
+│   ├── download_dataset.py             # Generic dataset downloader
+│   └── download_utils.py               # Shared download utilities
 │
 ├── src/
 │   ├── data/
@@ -596,6 +632,11 @@ AI-Product-Photo-Detector/
 │   │   ├── explainer.py                # Grad-CAM heatmap generation
 │   │   ├── predictor.py                # Model inference engine
 │   │   ├── rate_limit.py               # Rate limiting configuration
+│   │   ├── routes/                     # Modular API routes
+│   │   │   ├── info.py                 # Info endpoints (/, /privacy)
+│   │   │   ├── monitoring.py           # Health & metrics endpoints
+│   │   │   ├── predict.py              # Prediction endpoints
+│   │   │   └── v1/                     # API v1 versioned routes
 │   │   ├── schemas.py                  # Pydantic request/response models
 │   │   ├── shadow.py                   # Shadow model comparison (A/B testing)
 │   │   ├── state.py                    # Application state management
@@ -621,10 +662,19 @@ AI-Product-Photo-Detector/
 │       └── model_loader.py             # Model loading utilities
 │
 ├── terraform/
-│   ├── main.tf                         # GCS + Artifact Registry + Cloud Run + IAM + Budget
-│   ├── variables.tf                    # Input variables
-│   ├── outputs.tf                      # Output values
-│   └── terraform.tfvars.example        # Example configuration
+│   ├── environments/
+│   │   ├── dev/                        # Development environment config
+│   │   └── prod/                       # Production environment config
+│   ├── modules/
+│   │   ├── artifact_registry/          # Artifact Registry module
+│   │   ├── budget/                     # Budget alerts module
+│   │   ├── cloud_run/                  # Cloud Run service module
+│   │   ├── iam/                        # IAM bindings module
+│   │   ├── secrets/                    # Secret Manager module
+│   │   ├── storage/                    # GCS bucket module
+│   │   └── vertex_ai/                  # Vertex AI resources module
+│   ├── backend.tf                      # Terraform state backend (GCS)
+│   └── versions.tf                     # Provider version constraints
 │
 ├── tests/
 │   ├── load/
@@ -642,11 +692,13 @@ AI-Product-Photo-Detector/
 │   ├── test_explainer.py               # Grad-CAM tests
 │   ├── test_gcs.py                     # GCS helper tests
 │   ├── test_integration.py             # Integration tests
+│   ├── test_logger.py                  # Logger tests
 │   ├── test_metrics.py                 # Prometheus metrics tests
 │   ├── test_model.py                   # Model architecture tests
 │   ├── test_pipelines.py               # Pipeline orchestration tests
 │   ├── test_predictor.py               # Inference engine tests
 │   ├── test_shadow.py                  # Shadow A/B testing tests
+│   ├── test_state.py                   # Application state tests
 │   ├── test_train.py                   # Training loop tests
 │   ├── test_ui.py                      # UI tests
 │   ├── test_validation.py              # Validation tests
@@ -692,10 +744,18 @@ docker compose down
 ### Terraform Resources
 
 ```bash
-cd terraform && terraform init && terraform apply
+cd terraform/environments/prod
+terraform init && terraform apply
 ```
 
-Provisions: GCS bucket (versioned), Artifact Registry, Cloud Run service, IAM bindings, budget alerts.
+Provisions via modular architecture:
+- **storage/** — GCS bucket with versioning
+- **artifact_registry/** — Docker image registry
+- **cloud_run/** — API and UI services
+- **iam/** — Service accounts and bindings
+- **budget/** — Cost alerts and quotas
+- **secrets/** — API keys via Secret Manager
+- **vertex_ai/** — Training job configuration
 
 ### Deployment Flows
 
@@ -727,6 +787,25 @@ make test            # pytest with coverage
 - Ruff for linting & formatting
 - mypy for type checking
 - Pre-commit hooks enforced
+
+---
+
+## 📚 Documentation
+
+Detailed documentation is available in the [`docs/`](docs/) folder:
+
+| Document | Description |
+|----------|-------------|
+| [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture & design decisions |
+| [`CICD.md`](docs/CICD.md) | CI/CD pipeline documentation |
+| [`CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Contribution guidelines |
+| [`COSTS.md`](docs/COSTS.md) | Cloud cost analysis |
+| [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Deployment guide |
+| [`INCIDENT_SCENARIO.md`](docs/INCIDENT_SCENARIO.md) | Incident response playbook |
+| [`INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) | Infrastructure documentation |
+| [`MONITORING.md`](docs/MONITORING.md) | Monitoring & observability guide |
+| [`PRD.md`](docs/PRD.md) | Product requirements document |
+| [`TRAINING.md`](docs/TRAINING.md) | Training pipeline documentation |
 
 ---
 
