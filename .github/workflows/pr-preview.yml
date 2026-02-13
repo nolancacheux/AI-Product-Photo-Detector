@@ -228,11 +228,11 @@ jobs:
             else if (covNum >= 40) covColor = 'orange';
 
             // Status emojis
-            const testEmoji = testResult === 'success' ? '✅' : '❌';
-            const lintEmoji = lintResult === 'success' ? '✅' : '❌';
-            const secEmoji = securityStatus === 'passed' ? '✅' : '⚠️';
+            const testEmoji = testResult === 'success' ? '' : '';
+            const lintEmoji = lintResult === 'success' ? '' : '';
+            const secEmoji = securityStatus === 'passed' ? '' : '';
 
-            const body = `## 🔍 PR Preview Results
+            const body = `## PR Preview Results
 
             ![Coverage](https://img.shields.io/badge/coverage-${coverage}%25-${covColor})
 
@@ -242,7 +242,7 @@ jobs:
             | ${lintEmoji} Lint | **${lintResult}** | ruff check + format |
             | ${secEmoji} Security | **${securityStatus}** | pip-audit + bandit |
 
-            ### 📊 Coverage: ${coverage}%
+            ### Coverage: ${coverage}%
 
             <details>
             <summary>Details</summary>

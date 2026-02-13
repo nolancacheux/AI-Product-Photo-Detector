@@ -1,7 +1,7 @@
 # Architecture Audit Report
 
-**Date:** 2025-07-17  
-**Scope:** Global architecture, design patterns, scalability, package structure, configuration  
+**Date:** 2025-07-17
+**Scope:** Global architecture, design patterns, scalability, package structure, configuration
 **Project:** AI Product Photo Detector (v1.0.0)
 
 ---
@@ -16,7 +16,7 @@ The project exhibits **solid architecture for an M2 MLOps project**. The separat
 
 ## 1. Architecture — Separation of Responsibilities
 
-### ✅ What's Good
+### What's Good
 
 - **Clean module separation**: `training/`, `inference/`, `monitoring/`, `utils/` each have a clear, single responsibility
 - **Data flow is logical**: `data/ → training/ → models/ → inference/ → monitoring/`
@@ -24,7 +24,7 @@ The project exhibits **solid architecture for an M2 MLOps project**. The separat
 - **API layer is well structured**: `api.py` orchestrates, delegates to `predictor.py` for inference, `drift.py` for monitoring
 - **Config centralization**: YAML configs for train/inference, env vars via `pydantic-settings`
 
-### ⚠️ Issues Found
+### Issues Found
 
 | # | Issue | Severity | Location |
 |---|-------|----------|----------|
@@ -39,19 +39,19 @@ The project exhibits **solid architecture for an M2 MLOps project**. The separat
 **Issue 1 — Split `api.py`:**
 ```
 src/inference/
-├── api.py          → App creation, lifespan, root/health/info endpoints (~150 lines)
-├── routes.py       → /predict, /predict/batch, /metrics, /drift (~250 lines)  
-├── middleware.py   → observability_middleware, CORS setup (~100 lines)
-├── predictor.py    → (unchanged)
-├── schemas.py      → (unchanged)
-├── auth.py         → (unchanged)
-└── validation.py   → (unchanged, but actually wired in)
+├── api.py → App creation, lifespan, root/health/info endpoints (~150 lines)
+├── routes.py → /predict, /predict/batch, /metrics, /drift (~250 lines)
+├── middleware.py → observability_middleware, CORS setup (~100 lines)
+├── predictor.py → (unchanged)
+├── schemas.py → (unchanged)
+├── auth.py → (unchanged)
+└── validation.py → (unchanged, but actually wired in)
 ```
 
-**Issue 2 — Decouple inference from training:**  
+**Issue 2 — Decouple inference from training:**
 The `Predictor` imports `AIImageDetector` from `src.training.model` to instantiate the model class. This creates a hard dependency: deploying inference requires shipping the entire training module. Solution: move the model *architecture definition* to a shared location or use `torch.jit` / ONNX for serving.
 
-**Issue 3 — Wire up `validation.py`:**  
+**Issue 3 — Wire up `validation.py`:**
 The `validate_image_bytes()` and `validate_upload_file()` functions in `validation.py` are comprehensive (magic byte detection, dimension checks, content hash). But `api.py` does its own simpler checks inline. The validation module should replace the inline checks.
 
 ---
@@ -66,9 +66,9 @@ The `validate_image_bytes()` and `validate_upload_file()` functions in `validati
 
 | Aspect | Assessment |
 |--------|------------|
-| Thread safety | ⚠️ `total_predictions += 1` is not thread-safe (though uvicorn async is single-threaded) |
-| Testability | ⚠️ Global state makes unit testing harder — needs monkeypatching |
-| Multi-model | ❌ Can't serve multiple models simultaneously |
+| Thread safety | `total_predictions += 1` is not thread-safe (though uvicorn async is single-threaded) |
+| Testability | Global state makes unit testing harder — needs monkeypatching |
+| Multi-model | Can't serve multiple models simultaneously |
 
 **Better approach:** FastAPI dependency injection:
 ```python
@@ -81,7 +81,7 @@ This is testable, mockable, and supports swapping predictors.
 
 **Current:** `create_model()` in `model.py` — simple factory function.
 
-**Verdict: ✅ Good.** The factory properly abstracts model creation. It accepts `model_name` which allows swapping architectures (e.g., `efficientnet_b0` → `resnet50`).
+**Verdict: Good.** The factory properly abstracts model creation. It accepts `model_name` which allows swapping architectures (e.g., `efficientnet_b0` → `resnet50`).
 
 **Improvement:** Add a model registry for multi-model support:
 ```python
@@ -95,7 +95,7 @@ MODEL_REGISTRY = {
 
 **Current:** `verify_api_key` uses `Depends()` properly. Good FastAPI pattern.
 
-**Verdict: ✅ Auth DI is clean.** But the predictor and drift detector should also use DI instead of globals.
+**Verdict: Auth DI is clean.** But the predictor and drift detector should also use DI instead of globals.
 
 ---
 
@@ -103,7 +103,7 @@ MODEL_REGISTRY = {
 
 ### Multi-Model Support
 
-**Current state: ❌ Single model hardcoded.**
+**Current state: Single model hardcoded.**
 
 - `Predictor.__init__()` loads one model from one path
 - The model architecture class `AIImageDetector` is hardcoded in `_load_model()`
@@ -116,7 +116,7 @@ MODEL_REGISTRY = {
 
 ### New Detection Types
 
-**Current state: ⚠️ Partially extensible.**
+**Current state: Partially extensible.**
 
 - The binary classification (real vs AI) is baked in with `PredictionResult(StrEnum)` having only `REAL` and `AI_GENERATED`
 - Adding a new category (e.g., `PHOTOSHOPPED`) requires changes in: schemas, predictor logic, training pipeline, monitoring
@@ -126,7 +126,7 @@ MODEL_REGISTRY = {
 
 ### Monitoring Scalability
 
-**Current state: ✅ Good foundation.**
+**Current state: Good foundation.**
 
 - Prometheus metrics are well-defined with proper labels
 - Drift detector uses a sliding window (configurable size)
@@ -143,21 +143,21 @@ MODEL_REGISTRY = {
 **Analysis of all 29 cross-module imports:**
 
 ```
-src.inference → src.training    (1 import: model.AIImageDetector)  ⚠️ Cross-boundary
-src.inference → src.monitoring  (2 imports: drift, metrics)        ✅ Expected
-src.inference → src.utils       (3 imports: config, logger)        ✅ Expected
-src.training  → src.utils       (2 imports: config, logger)        ✅ Expected  
-src.monitoring → src.utils      (1 import: logger)                 ✅ Expected
+src.inference → src.training (1 import: model.AIImageDetector) Cross-boundary
+src.inference → src.monitoring (2 imports: drift, metrics) Expected
+src.inference → src.utils (3 imports: config, logger) Expected
+src.training → src.utils (2 imports: config, logger) Expected
+src.monitoring → src.utils (1 import: logger) Expected
 ```
 
 **Dependency graph:**
 ```
 utils (leaf) ← training ← inference → monitoring
-                              ↑              ↑
+                              ↑ ↑
                               └──────────────┘
 ```
 
-**No circular dependencies detected. ✅**
+**No circular dependencies detected. **
 
 The only problematic edge is `inference → training` (for the model class). Everything else follows a clean DAG.
 
@@ -165,13 +165,13 @@ The only problematic edge is `inference → training` (for the model class). Eve
 
 | Module | Exports | Assessment |
 |--------|---------|------------|
-| `src/` | `__version__` only | ✅ Minimal, correct |
-| `src/inference/` | `Predictor` + all schemas | ✅ Good public API |
-| `src/training/` | All transforms, dataset, model | ✅ Good public API |
-| `src/monitoring/` | Nothing (empty) | ⚠️ Should export `DriftDetector`, key metrics |
-| `src/utils/` | All configs + logger | ✅ Good public API |
-| `src/data/` | Nothing (empty module) | ⚠️ Placeholder — remove or populate |
-| `src/ui/` | Nothing | ✅ OK (standalone Streamlit app) |
+| `src/` | `__version__` only | Minimal, correct |
+| `src/inference/` | `Predictor` + all schemas | Good public API |
+| `src/training/` | All transforms, dataset, model | Good public API |
+| `src/monitoring/` | Nothing (empty) | Should export `DriftDetector`, key metrics |
+| `src/utils/` | All configs + logger | Good public API |
+| `src/data/` | Nothing (empty module) | Placeholder — remove or populate |
+| `src/ui/` | Nothing | OK (standalone Streamlit app) |
 
 ---
 
@@ -189,18 +189,18 @@ The only problematic edge is `inference → training` (for the model class). Eve
 
 ### Assessment
 
-**✅ Good separation:**
+**Good separation:**
 - Training config = YAML (static, versioned)
 - Runtime config = env vars via `pydantic-settings`
 - Infrastructure config = Docker Compose + Terraform
 
-**⚠️ Issues:**
+**Issues:**
 
 1. **Config duplication**: Thresholds are defined in 3 places:
    - `configs/train_config.yaml` → `thresholds.classification: 0.5`
    - `configs/inference_config.yaml` → `thresholds.classification: 0.5`
    - `src/inference/predictor.py` → `threshold: float = 0.5` (default arg)
-   
+
    → Single source of truth needed.
 
 2. **Pydantic config models exist but aren't used**: `DataConfig`, `ModelConfig`, `TrainingConfig`, `ThresholdsConfig` are defined in `config.py` but `train.py` just uses raw `dict` from YAML. The typed config models should be used.
@@ -261,15 +261,15 @@ The monitoring module exported nothing, making users import directly from submod
 
 | Priority | Action | Effort |
 |----------|--------|--------|
-| 🔴 High | Fix image size mismatch (128 train vs 224 inference) | 1h |
-| 🔴 High | Wire `validation.py` into `api.py` (replace inline checks) | 2h |
-| 🟡 Medium | Decouple `inference` from `training` (shared model module) | 3h |
-| 🟡 Medium | Split `api.py` into routes + middleware | 2h |
-| 🟡 Medium | Use Pydantic config models instead of raw dicts in `train.py` | 2h |
-| 🟡 Medium | Replace global state with FastAPI DI | 1h |
-| 🟢 Low | Add model registry for multi-model support | 4h |
-| 🟢 Low | Single source of truth for thresholds | 1h |
-| 🟢 Low | Add API versioning (`/v1/`) | 1h |
+| High | Fix image size mismatch (128 train vs 224 inference) | 1h |
+| High | Wire `validation.py` into `api.py` (replace inline checks) | 2h |
+| Medium | Decouple `inference` from `training` (shared model module) | 3h |
+| Medium | Split `api.py` into routes + middleware | 2h |
+| Medium | Use Pydantic config models instead of raw dicts in `train.py` | 2h |
+| Medium | Replace global state with FastAPI DI | 1h |
+| Low | Add model registry for multi-model support | 4h |
+| Low | Single source of truth for thresholds | 1h |
+| Low | Add API versioning (`/v1/`) | 1h |
 
 ---
 
@@ -277,27 +277,27 @@ The monitoring module exported nothing, making users import directly from submod
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    src/ (package)                        │
-│                                                         │
-│  ┌──────────┐    ┌───────────┐    ┌──────────────────┐  │
-│  │ utils/   │◄───│ training/ │    │   inference/      │  │
-│  │  config  │    │  model    │◄───│   predictor ──┐   │  │
-│  │  logger  │◄───│  dataset  │    │   api ────────┤   │  │
-│  │          │    │  train    │    │   schemas     │   │  │
-│  │          │    │  augment  │    │   auth        │   │  │
-│  │          │    │           │    │   validation  │   │  │
-│  └──────────┘    └───────────┘    └───────┬──────┘   │  │
-│       ▲                                    │          │  │
-│       │          ┌──────────────┐          │          │  │
-│       └──────────│ monitoring/  │◄─────────┘          │  │
-│                  │  metrics     │                      │  │
-│                  │  drift       │                      │  │
-│                  └──────────────┘                      │  │
-│                                                         │
-│  ┌──────────┐    ┌──────────┐                           │
-│  │  data/   │    │   ui/    │  (standalone Streamlit)   │
-│  │ (empty)  │    │  app.py  │                           │
-│  └──────────┘    └──────────┘                           │
+│ src/ (package) │
+│ │
+│ ┌──────────┐ ┌───────────┐ ┌──────────────────┐ │
+│ │ utils/ │◄───│ training/ │ │ inference/ │ │
+│ │ config │ │ model │◄───│ predictor ──┐ │ │
+│ │ logger │◄───│ dataset │ │ api ────────┤ │ │
+│ │ │ │ train │ │ schemas │ │ │
+│ │ │ │ augment │ │ auth │ │ │
+│ │ │ │ │ │ validation │ │ │
+│ └──────────┘ └───────────┘ └───────┬──────┘ │ │
+│ ▲ │ │ │
+│ │ ┌──────────────┐ │ │ │
+│ └──────────│ monitoring/ │◄─────────┘ │ │
+│ │ metrics │ │ │
+│ │ drift │ │ │
+│ └──────────────┘ │ │
+│ │
+│ ┌──────────┐ ┌──────────┐ │
+│ │ data/ │ │ ui/ │ (standalone Streamlit) │
+│ │ (empty) │ │ app.py │ │
+│ └──────────┘ └──────────┘ │
 └─────────────────────────────────────────────────────────┘
 ```
 

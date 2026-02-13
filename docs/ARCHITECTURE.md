@@ -151,7 +151,7 @@ The project supports **three distinct development modes**, each optimized for di
 
 ```mermaid
 graph TB
-    subgraph Local["🖥️ Mode 1: Local Development"]
+    subgraph Local["Mode 1: Local Development"]
         LOCAL_DEV[make dev] --> LOCAL_COMPOSE[Docker Compose Stack]
         LOCAL_COMPOSE --> LOCAL_API[API :8080]
         LOCAL_COMPOSE --> LOCAL_UI[Streamlit :8501]
@@ -161,13 +161,13 @@ graph TB
         LOCAL_CPU --> LOCAL_MODEL[models/checkpoints/]
     end
 
-    subgraph Colab["☁️ Mode 2: Google Colab"]
+    subgraph Colab["Mode 2: Google Colab"]
         COLAB_NB[train_colab.ipynb] --> COLAB_GPU[Free T4/A100 GPU]
         COLAB_GPU --> COLAB_TRAIN[Training]
         COLAB_TRAIN --> COLAB_GCS[Export to GCS]
     end
 
-    subgraph Prod["🚀 Mode 3: Production GCP"]
+    subgraph Prod["Mode 3: Production GCP"]
         GH_PUSH[git push main] --> GH_CI[GitHub Actions CI]
         GH_CI --> GH_CD[GitHub Actions CD]
         GH_CD --> CLOUD_RUN[Cloud Run Deploy]
@@ -191,9 +191,9 @@ graph TB
 | **GPU** | CPU (or local GPU) | Free T4/A100 | Paid T4 (Vertex AI) |
 | **Cost** | Free | Free | ~$0.10-0.50/training run |
 | **Training Time** | 1-2h (CPU) | ~20 min (T4) | ~25 min (T4) |
-| **Hot Reload** | ✅ Yes | ❌ No | ❌ No |
+| **Hot Reload** | Yes | No | No |
 | **CI/CD** | Manual | Manual | Fully automated |
-| **Monitoring** | Local Prometheus/Grafana | ❌ None | Cloud Monitoring |
+| **Monitoring** | Local Prometheus/Grafana | None | Cloud Monitoring |
 | **Best For** | Daily development | Quick experiments | Production releases |
 
 ---
@@ -253,11 +253,11 @@ make data
 make docker-up
 
 # 5. Open services in browser
-# API:        http://localhost:8080
-# Streamlit:  http://localhost:8501
-# MLflow:     http://localhost:5000
+# API: http://localhost:8080
+# Streamlit: http://localhost:8501
+# MLflow: http://localhost:5000
 # Prometheus: http://localhost:9090
-# Grafana:    http://localhost:3000 (admin/admin)
+# Grafana: http://localhost:3000 (admin/admin)
 ```
 
 #### Services
@@ -274,26 +274,26 @@ make docker-up
 
 ```bash
 # Start/stop stack
-make docker-up          # Start all services
-make docker-down        # Stop all services
-make docker-logs        # Follow logs
+make docker-up # Start all services
+make docker-down # Stop all services
+make docker-logs # Follow logs
 
 # Dev environment with hot reload
-make docker-dev         # Start dev stack (docker-compose.dev.yml)
-make docker-dev-down    # Stop dev stack
-make docker-dev-logs    # Follow dev logs
+make docker-dev # Start dev stack (docker-compose.dev.yml)
+make docker-dev-down # Stop dev stack
+make docker-dev-logs # Follow dev logs
 
 # Code quality
-make lint               # Run ruff + mypy
-make format             # Auto-format code
-make test               # Run pytest with coverage
+make lint # Run ruff + mypy
+make format # Auto-format code
+make test # Run pytest with coverage
 
 # Local training (CPU)
-make train              # Train with configs/train_config.yaml
-make mlflow             # View training experiments
+make train # Train with configs/train_config.yaml
+make mlflow # View training experiments
 
 # Direct API server (without Docker)
-make serve              # uvicorn with --reload on :8000
+make serve # uvicorn with --reload on :8000
 ```
 
 #### Local Training (CPU)
@@ -388,10 +388,10 @@ graph LR
 # In the notebook
 CONFIG = {
     "epochs": 15,
-    "batch_size": 64,  # T4 can handle 64; reduce to 32 if OOM
+    "batch_size": 64, # T4 can handle 64; reduce to 32 if OOM
     "learning_rate": 0.001,
     "image_size": 224,
-    "gcs_bucket": "ai-product-detector-487013",  # Optional
+    "gcs_bucket": "ai-product-detector-487013", # Optional
     "gcs_model_path": "models/colab_trained.pt",
 }
 ```
@@ -484,11 +484,11 @@ graph TB
 ```yaml
 # Triggered on: push/PR to main
 jobs:
-  lint:       ruff check src/ tests/
-  typecheck:  mypy src/ --strict
-  test:       pytest (Python 3.11 + 3.12 matrix)
-  security:   pip-audit + bandit
-  docker:     docker build --target test
+  lint: ruff check src/ tests/
+  typecheck: mypy src/ --strict
+  test: pytest (Python 3.11 + 3.12 matrix)
+  security: pip-audit + bandit
+  docker: docker build --target test
 ```
 
 #### CD Pipeline
@@ -523,16 +523,16 @@ python -m src.training.vertex_submit \
 **Pipeline stages:**
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Verify Data    │ → │  Build Image    │ → │  Submit Job     │
-│  (GCS bucket)   │    │  (Artifact Reg) │    │  (Vertex AI)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ Verify Data │ → │ Build Image │ → │ Submit Job │
+│ (GCS bucket) │ │ (Artifact Reg) │ │ (Vertex AI) │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
                                                       │
                                                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Auto Deploy    │ ← │  Quality Gate   │ ← │  Evaluate       │
-│  (if enabled)   │    │  acc≥0.85 F1≥0.8│    │  (CPU runner)   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ Auto Deploy │ ← │ Quality Gate │ ← │ Evaluate │
+│ (if enabled) │ │ acc≥0.85 F1≥0.8│ │ (CPU runner) │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
 ```
 
 #### Terraform Infrastructure
@@ -540,20 +540,20 @@ python -m src.training.vertex_submit \
 ```
 terraform/
 ├── environments/
-│   ├── dev/                  # Development (scale-to-zero, 512Mi)
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── terraform.tfvars
-│   └── prod/                 # Production (min 1 instance, 1Gi)
-│       ├── main.tf
-│       ├── variables.tf
-│       └── terraform.tfvars
+│ ├── dev/ # Development (scale-to-zero, 512Mi)
+│ │ ├── main.tf
+│ │ ├── variables.tf
+│ │ └── terraform.tfvars
+│ └── prod/ # Production (min 1 instance, 1Gi)
+│ ├── main.tf
+│ ├── variables.tf
+│ └── terraform.tfvars
 └── modules/
-    ├── cloud-run/            # Cloud Run service configuration
-    ├── storage/              # GCS buckets with versioning
-    ├── registry/             # Artifact Registry with cleanup
-    ├── monitoring/           # Uptime checks, alert policies
-    └── iam/                  # Service accounts, IAM bindings
+    ├── cloud-run/ # Cloud Run service configuration
+    ├── storage/ # GCS buckets with versioning
+    ├── registry/ # Artifact Registry with cleanup
+    ├── monitoring/ # Uptime checks, alert policies
+    └── iam/ # Service accounts, IAM bindings
 ```
 
 #### Cloud Run Configuration
@@ -594,69 +594,69 @@ terraform/
 
 ```
 AI-Product-Photo-Detector/
-├── .github/workflows/          # CI/CD pipelines
-│   ├── ci.yml                  # Lint, type check, test, security scan
-│   ├── cd.yml                  # Build, push, deploy to Cloud Run
-│   ├── model-training.yml      # Vertex AI GPU training pipeline
-│   └── pr-preview.yml          # PR preview deployments
+├── .github/workflows/ # CI/CD pipelines
+│ ├── ci.yml # Lint, type check, test, security scan
+│ ├── cd.yml # Build, push, deploy to Cloud Run
+│ ├── model-training.yml # Vertex AI GPU training pipeline
+│ └── pr-preview.yml # PR preview deployments
 ├── src/
-│   ├── data/                   # Data download and validation
-│   ├── inference/              # API server
-│   │   ├── routes/             # API route handlers
-│   │   │   ├── predict.py      # /predict, /predict/batch, /predict/explain
-│   │   │   ├── monitoring.py   # /health, /healthz, /readyz, /metrics, /drift
-│   │   │   ├── info.py         # /, /privacy
-│   │   │   └── v1/             # API v1 versioned routes
-│   │   ├── api.py              # FastAPI application
-│   │   ├── predictor.py        # Model loading and inference
-│   │   ├── explainer.py        # Grad-CAM heatmap generation
-│   │   ├── auth.py             # API key authentication
-│   │   ├── validation.py       # Input validation
-│   │   ├── schemas.py          # Pydantic request/response models
-│   │   ├── shadow.py           # Shadow model comparison (A/B testing)
-│   │   ├── state.py            # Application state management
-│   │   └── rate_limit.py       # Rate limiting configuration
-│   ├── training/               # Model training
-│   │   ├── train.py            # Training loop with MLflow
-│   │   ├── model.py            # EfficientNet-B0 architecture
-│   │   ├── dataset.py          # PyTorch dataset with lazy loading
-│   │   ├── augmentation.py     # Data augmentation transforms
-│   │   ├── gcs.py              # GCS integration for models
-│   │   └── vertex_submit.py    # Vertex AI job submission
-│   ├── pipelines/              # Pipeline orchestration
-│   │   ├── evaluate.py         # Model evaluation
-│   │   └── training_pipeline.py # End-to-end training orchestrator
-│   ├── monitoring/             # Observability
-│   │   ├── metrics.py          # Prometheus metrics
-│   │   └── drift.py            # Drift detection
-│   ├── ui/                     # Streamlit web interface
-│   └── utils/                  # Shared utilities
-├── tests/                      # Unit and integration tests
-├── configs/                    # Configuration files
-│   ├── train_config.yaml       # Training hyperparameters
-│   ├── inference_config.yaml   # API configuration
-│   ├── pipeline_config.yaml    # Pipeline configuration
-│   ├── prometheus.yml          # Prometheus scrape config
-│   ├── prometheus/             # Prometheus alerting rules
-│   └── grafana/                # Grafana dashboards and provisioning
-├── docker/                     # Dockerfiles
-│   ├── Dockerfile              # Production API image
-│   ├── Dockerfile.training     # Vertex AI GPU training image
-│   ├── serve.Dockerfile        # Serving-optimized image
-│   ├── train.Dockerfile        # Local training environment
-│   └── ui.Dockerfile           # Streamlit UI image
-├── terraform/                  # Infrastructure as Code
-│   ├── environments/           # Per-environment configs (dev/prod)
-│   └── modules/                # Reusable Terraform modules
-├── scripts/                    # Data download utilities
-├── notebooks/                  # Jupyter notebooks (Colab training)
-│   └── train_colab.ipynb       # Free T4/A100 GPU training
-├── data/                       # Local data directory (DVC tracked)
-├── models/                     # Model checkpoints
-├── dvc.yaml                    # DVC pipeline definition
-├── docker-compose.yml          # Local development stack
-├── Makefile                    # Development commands
-└── pyproject.toml              # Python dependencies
+│ ├── data/ # Data download and validation
+│ ├── inference/ # API server
+│ │ ├── routes/ # API route handlers
+│ │ │ ├── predict.py # /predict, /predict/batch, /predict/explain
+│ │ │ ├── monitoring.py # /health, /healthz, /readyz, /metrics, /drift
+│ │ │ ├── info.py # /, /privacy
+│ │ │ └── v1/ # API v1 versioned routes
+│ │ ├── api.py # FastAPI application
+│ │ ├── predictor.py # Model loading and inference
+│ │ ├── explainer.py # Grad-CAM heatmap generation
+│ │ ├── auth.py # API key authentication
+│ │ ├── validation.py # Input validation
+│ │ ├── schemas.py # Pydantic request/response models
+│ │ ├── shadow.py # Shadow model comparison (A/B testing)
+│ │ ├── state.py # Application state management
+│ │ └── rate_limit.py # Rate limiting configuration
+│ ├── training/ # Model training
+│ │ ├── train.py # Training loop with MLflow
+│ │ ├── model.py # EfficientNet-B0 architecture
+│ │ ├── dataset.py # PyTorch dataset with lazy loading
+│ │ ├── augmentation.py # Data augmentation transforms
+│ │ ├── gcs.py # GCS integration for models
+│ │ └── vertex_submit.py # Vertex AI job submission
+│ ├── pipelines/ # Pipeline orchestration
+│ │ ├── evaluate.py # Model evaluation
+│ │ └── training_pipeline.py # End-to-end training orchestrator
+│ ├── monitoring/ # Observability
+│ │ ├── metrics.py # Prometheus metrics
+│ │ └── drift.py # Drift detection
+│ ├── ui/ # Streamlit web interface
+│ └── utils/ # Shared utilities
+├── tests/ # Unit and integration tests
+├── configs/ # Configuration files
+│ ├── train_config.yaml # Training hyperparameters
+│ ├── inference_config.yaml # API configuration
+│ ├── pipeline_config.yaml # Pipeline configuration
+│ ├── prometheus.yml # Prometheus scrape config
+│ ├── prometheus/ # Prometheus alerting rules
+│ └── grafana/ # Grafana dashboards and provisioning
+├── docker/ # Dockerfiles
+│ ├── Dockerfile # Production API image
+│ ├── Dockerfile.training # Vertex AI GPU training image
+│ ├── serve.Dockerfile # Serving-optimized image
+│ ├── train.Dockerfile # Local training environment
+│ └── ui.Dockerfile # Streamlit UI image
+├── terraform/ # Infrastructure as Code
+│ ├── environments/ # Per-environment configs (dev/prod)
+│ └── modules/ # Reusable Terraform modules
+├── scripts/ # Data download utilities
+├── notebooks/ # Jupyter notebooks (Colab training)
+│ └── train_colab.ipynb # Free T4/A100 GPU training
+├── data/ # Local data directory (DVC tracked)
+├── models/ # Model checkpoints
+├── dvc.yaml # DVC pipeline definition
+├── docker-compose.yml # Local development stack
+├── Makefile # Development commands
+└── pyproject.toml # Python dependencies
 ```
 
 ---
@@ -684,9 +684,9 @@ HuggingFace/Kaggle → download script → data/processed/{train,val,test}/ → 
 
 ```yaml
 stages:
-  download:   # CIFAKE dataset → data/processed/
-  validate:   # Integrity checks → reports/data_validation.json
-  train:      # EfficientNet-B0 → models/checkpoints/best_model.pt
+  download: # CIFAKE dataset → data/processed/
+  validate: # Integrity checks → reports/data_validation.json
+  train: # EfficientNet-B0 → models/checkpoints/best_model.pt
 ```
 
 ### 2. Training Pipeline
@@ -854,11 +854,11 @@ Client → FastAPI → Auth → Rate Limit → Validate Image → Preprocess (22
 
 ```
 docker/
-├── Dockerfile              # Production API image (CPU PyTorch, non-root)
-├── Dockerfile.training     # Vertex AI GPU training image
-├── serve.Dockerfile        # Serving-optimized image
-├── train.Dockerfile        # Local training environment
-└── ui.Dockerfile           # Streamlit UI image
+├── Dockerfile # Production API image (CPU PyTorch, non-root)
+├── Dockerfile.training # Vertex AI GPU training image
+├── serve.Dockerfile # Serving-optimized image
+├── train.Dockerfile # Local training environment
+└── ui.Dockerfile # Streamlit UI image
 ```
 
 **Docker Compose services:**
@@ -882,15 +882,15 @@ configurations:
 
 ```
 terraform/
-├── environments/           # Per-environment configurations
-│   ├── dev/                # Development (scale-to-zero, 512Mi, 10€ budget)
-│   └── prod/               # Production (min 1 instance, 1Gi, 50€ budget)
-└── modules/                # Reusable infrastructure modules
-    ├── cloud-run/          # Cloud Run service
-    ├── storage/            # GCS buckets
-    ├── registry/           # Artifact Registry
-    ├── monitoring/         # Uptime checks, alerts
-    └── iam/                # Service accounts
+├── environments/ # Per-environment configurations
+│ ├── dev/ # Development (scale-to-zero, 512Mi, 10€ budget)
+│ └── prod/ # Production (min 1 instance, 1Gi, 50€ budget)
+└── modules/ # Reusable infrastructure modules
+    ├── cloud-run/ # Cloud Run service
+    ├── storage/ # GCS buckets
+    ├── registry/ # Artifact Registry
+    ├── monitoring/ # Uptime checks, alerts
+    └── iam/ # Service accounts
 ```
 
 **Provisioned resources:**

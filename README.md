@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">🔍 AI Product Photo Detector</h1>
+  <h1 align="center">AI Product Photo Detector</h1>
   <p align="center">
     <strong>Production-grade MLOps system for detecting AI-generated product photos in e-commerce</strong>
   </p>
@@ -27,7 +27,7 @@
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [Live Demo](#-live-demo)
 - [Architecture](#-architecture)
@@ -60,15 +60,15 @@
 
 ---
 
-## 🌐 Live Demo
+## Live Demo
 
 | Resource | URL |
 |----------|-----|
-| **🚀 REST API** | [`ai-product-detector-714127049161.europe-west1.run.app`](https://ai-product-detector-714127049161.europe-west1.run.app) |
-| **🖥️ Web UI** | [`ai-product-detector-ui-714127049161.europe-west1.run.app`](https://ai-product-detector-ui-714127049161.europe-west1.run.app) |
-| **📖 Swagger Docs** | [`/docs`](https://ai-product-detector-714127049161.europe-west1.run.app/docs) |
-| **📊 Health Check** | [`/health`](https://ai-product-detector-714127049161.europe-west1.run.app/health) |
-| **📈 Metrics** | [`/metrics`](https://ai-product-detector-714127049161.europe-west1.run.app/metrics) |
+| **REST API** | [`ai-product-detector-714127049161.europe-west1.run.app`](https://ai-product-detector-714127049161.europe-west1.run.app) |
+| **Web UI** | [`ai-product-detector-ui-714127049161.europe-west1.run.app`](https://ai-product-detector-ui-714127049161.europe-west1.run.app) |
+| **Swagger Docs** | [`/docs`](https://ai-product-detector-714127049161.europe-west1.run.app/docs) |
+| **Health Check** | [`/health`](https://ai-product-detector-714127049161.europe-west1.run.app/health) |
+| **Metrics** | [`/metrics`](https://ai-product-detector-714127049161.europe-west1.run.app/metrics) |
 
 ```bash
 # Try it now — single prediction
@@ -79,7 +79,7 @@ curl -X POST https://ai-product-detector-714127049161.europe-west1.run.app/predi
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ### System Overview
 
@@ -222,43 +222,43 @@ graph LR
 
 ---
 
-## ✨ Features
+## Features
 
-### 🧠 Core ML
+### Core ML
 - **Binary image classification** — Real vs AI-generated product photos
 - **EfficientNet-B0 backbone** — Transfer learning with pretrained ImageNet weights via `timm`
 - **Grad-CAM explainability** — Visual heatmaps showing which regions drive the prediction
 - **Data augmentation** — Horizontal flip, rotation, color jitter, random crop
 - **Cosine annealing** — Learning rate scheduling with warmup
 
-### 🚀 API & Serving
+### API & Serving
 - **FastAPI async server** — Single, batch (up to 10), and explainability endpoints
 - **API key authentication** — HMAC-based constant-time comparison
 - **Rate limiting** — Per-endpoint configurable limits via `slowapi`
 - **Input validation** — File type, size, and format verification
 - **Structured responses** — Pydantic v2 schemas with confidence levels
 
-### 🔄 MLOps
+### MLOps
 - **DVC pipelines** — Reproducible `download → validate → train` workflow
 - **MLflow experiment tracking** — Hyperparameters, metrics, and model artifacts
 - **Vertex AI training** — Automated GPU training with T4 on GCP
 - **Quality gate** — Automated accuracy/F1 thresholds before deployment
 - **Model versioning** — GCS-backed model registry with DVC tracking
 
-### 📊 Monitoring & Observability
+### Monitoring & Observability
 - **Prometheus metrics** — 12+ custom metrics (latency, throughput, probability distribution)
 - **Grafana dashboards** — Pre-configured, auto-provisioned dashboards
 - **Drift detection** — Real-time prediction distribution monitoring (sliding window)
 - **Structured logging** — JSON output via `structlog` with request ID correlation
 
-### 🔐 Security
+### Security
 - **API key auth** — Optional, enforced in production via environment variables
 - **Rate limiting** — Abuse prevention on all prediction endpoints
 - **Non-root containers** — Docker images run as unprivileged users
 - **Security scanning** — `pip-audit` + `bandit` in CI pipeline
 - **CORS configuration** — Configurable allowed origins
 
-### 🏗️ Infrastructure
+### Infrastructure
 - **Terraform IaC** — Modular setup: GCS, Artifact Registry, Cloud Run, IAM, budget alerts
 - **Docker Compose** — Full local stack (API + UI + MLflow + Prometheus + Grafana)
 - **GitHub Actions CI/CD** — Automated lint, test, build, deploy on every push
@@ -266,17 +266,17 @@ graph LR
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 The project supports **three development modes** — choose based on your needs:
 
 | Mode | Best For | GPU | Time |
 |------|----------|-----|------|
-| **🖥️ Local** | Development, debugging | CPU | 1-2h |
-| **☁️ Colab** | Free GPU experiments | T4/A100 | ~20 min |
-| **🚀 Production** | CI/CD, production releases | T4 (Vertex AI) | ~25 min |
+| **Local** | Development, debugging | CPU | 1-2h |
+| **Colab** | Free GPU experiments | T4/A100 | ~20 min |
+| **Production** | CI/CD, production releases | T4 (Vertex AI) | ~25 min |
 
-### 🖥️ Mode 1: Local Development (Docker Compose)
+### Mode 1: Local Development (Docker Compose)
 
 Full-stack local development with hot reload, debugging, and monitoring.
 
@@ -291,10 +291,10 @@ cd AI-Product-Photo-Detector
 make dev
 
 # 3. Download dataset
-make data           # CIFAKE (2500 images/class)
+make data # CIFAKE (2500 images/class)
 
 # 4. Start the full stack
-make docker-up      # API + UI + MLflow + Prometheus + Grafana
+make docker-up # API + UI + MLflow + Prometheus + Grafana
 ```
 
 **Service URLs:**
@@ -311,21 +311,21 @@ make docker-up      # API + UI + MLflow + Prometheus + Grafana
 
 ```bash
 # Training (CPU)
-make train              # Train with configs/train_config.yaml
+make train # Train with configs/train_config.yaml
 python -m src.training.train --config configs/train_config.yaml --epochs 10
 
 # Code quality
-make lint               # ruff + mypy
-make test               # pytest with coverage
-make format             # Auto-format code
+make lint # ruff + mypy
+make test # pytest with coverage
+make format # Auto-format code
 
 # Docker
-make docker-logs        # Follow logs
-make docker-down        # Stop all services
-make docker-dev         # Dev stack with hot reload
+make docker-logs # Follow logs
+make docker-down # Stop all services
+make docker-dev # Dev stack with hot reload
 ```
 
-### ☁️ Mode 2: Google Colab (Free GPU Training)
+### Mode 2: Google Colab (Free GPU Training)
 
 Train on free T4/A100 GPUs without local setup.
 
@@ -349,13 +349,13 @@ Train on free T4/A100 GPUs without local setup.
 ```python
 CONFIG = {
     "epochs": 15,
-    "batch_size": 64,      # Reduce to 32 if OOM
+    "batch_size": 64, # Reduce to 32 if OOM
     "learning_rate": 0.001,
-    "gcs_bucket": "ai-product-detector-487013",  # Optional
+    "gcs_bucket": "ai-product-detector-487013", # Optional
 }
 ```
 
-### 🚀 Mode 3: Production GCP (CI/CD)
+### Mode 3: Production GCP (CI/CD)
 
 Automated deployment with GitHub Actions, Vertex AI training, and Cloud Run serving.
 
@@ -378,17 +378,17 @@ gh workflow run model-training.yml \
 
 **Training pipeline stages:**
 ```
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│ Verify Data  │ → │ Build Image  │ → │ Vertex AI    │ → │ Evaluate     │
-│ (GCS)        │   │ (Artifact    │   │ GPU Training │   │ (Quality     │
-│              │   │  Registry)   │   │ (T4)         │   │  Gate)       │
-└──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ Verify Data │ → │ Build Image │ → │ Vertex AI │ → │ Evaluate │
+│ (GCS) │ │ (Artifact │ │ GPU Training │ │ (Quality │
+│ │ │ Registry) │ │ (T4) │ │ Gate) │
+└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
                                                                 │
                                               ┌─────────────────┼─────────────────┐
-                                              │                 │                 │
-                                            PASS              FAIL
-                                              │                 │
-                                        Auto Deploy        Block Deploy
+                                              │ │ │
+                                            PASS FAIL
+                                              │ │
+                                        Auto Deploy Block Deploy
                                         (Cloud Run)
 ```
 
@@ -406,7 +406,7 @@ See [docs/TRAINING.md](docs/TRAINING.md) for detailed instructions on each mode.
 
 ---
 
-## 📡 API Documentation
+## API Documentation
 
 **Base URL:** `https://ai-product-detector-714127049161.europe-west1.run.app`
 &nbsp;|&nbsp; **Interactive docs:** [`/docs`](https://ai-product-detector-714127049161.europe-west1.run.app/docs)
@@ -507,11 +507,11 @@ Pass the key via header: `X-API-Key: YOUR_KEY`
 
 ---
 
-## 🔬 MLOps Pipeline
+## MLOps Pipeline
 
 ### Training Options
 
-| | **Google Colab** | **Vertex AI** | **Local** |
+| | **Google Colab**| **Vertex AI**| **Local** |
 |---|---|---|---|
 | **GPU** | Free T4 | T4 on GCP (paid) | CPU or local GPU |
 | **Cost** | Free | ~$0.10–0.20/run | Free |
@@ -539,16 +539,16 @@ python -m src.training.vertex_submit --epochs 15 --batch-size 64 --sync
 
 ```
 [1] Verify Data → [2] Build Image → [3] GPU Training → [4] Evaluate → [5] Quality Gate → [6] Deploy
-     (GCS)        (Artifact Reg.)    (Vertex AI T4)      (CPU)        (acc≥0.85,F1≥0.80)  (Cloud Run)
+     (GCS) (Artifact Reg.) (Vertex AI T4) (CPU) (acc≥0.85,F1≥0.80) (Cloud Run)
 ```
 
 #### Local Training
 
 ```bash
-make data            # Download CIFAKE dataset
-make train           # Train with configs/train_config.yaml
-make dvc-repro       # Full DVC pipeline: download → validate → train
-make mlflow          # Start MLflow UI → http://localhost:5000
+make data # Download CIFAKE dataset
+make train # Train with configs/train_config.yaml
+make dvc-repro # Full DVC pipeline: download → validate → train
+make mlflow # Start MLflow UI → http://localhost:5000
 ```
 
 ### DVC Pipeline
@@ -556,15 +556,15 @@ make mlflow          # Start MLflow UI → http://localhost:5000
 ```yaml
 # dvc.yaml — 3-stage reproducible pipeline
 stages:
-  download:   # Download CIFAKE dataset → data/processed/
-  validate:   # Integrity checks → reports/data_validation.json
-  train:      # EfficientNet-B0 → models/checkpoints/best_model.pt
+  download: # Download CIFAKE dataset → data/processed/
+  validate: # Integrity checks → reports/data_validation.json
+  train: # EfficientNet-B0 → models/checkpoints/best_model.pt
 ```
 
 ```bash
-dvc repro            # Run full pipeline
-dvc repro train      # Re-run training only
-dvc status           # Check what changed
+dvc repro # Run full pipeline
+dvc repro train # Re-run training only
+dvc status # Check what changed
 ```
 
 ### Training Configuration
@@ -582,7 +582,7 @@ dvc status           # Check what changed
 
 ---
 
-## 📊 Monitoring & Observability
+## Monitoring & Observability
 
 ### Prometheus Metrics
 
@@ -642,7 +642,7 @@ Default credentials: `admin` / `admin`
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Category | Technologies |
 |----------|-------------|
@@ -660,144 +660,144 @@ Default credentials: `admin` / `admin`
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 AI-Product-Photo-Detector/
 │
 ├── .github/workflows/
-│   ├── ci.yml                          # CI: lint + type-check + test (3.11, 3.12) + security
-│   ├── cd.yml                          # CD: build → push → deploy Cloud Run → smoke test
-│   ├── model-training.yml              # Vertex AI: data → train (GPU) → eval → gate → deploy
-│   └── pr-preview.yml                  # PR preview deployments
+│ ├── ci.yml # CI: lint + type-check + test (3.11, 3.12) + security
+│ ├── cd.yml # CD: build → push → deploy Cloud Run → smoke test
+│ ├── model-training.yml # Vertex AI: data → train (GPU) → eval → gate → deploy
+│ └── pr-preview.yml # PR preview deployments
 │
 ├── configs/
-│   ├── grafana/                        # Grafana dashboard definitions + provisioning
-│   ├── prometheus/                     # Prometheus alerting rules
-│   ├── inference_config.yaml           # API server configuration
-│   ├── pipeline_config.yaml            # Vertex AI pipeline parameters
-│   ├── prometheus.yml                  # Prometheus scrape targets
-│   └── train_config.yaml               # Training hyperparameters
+│ ├── grafana/ # Grafana dashboard definitions + provisioning
+│ ├── prometheus/ # Prometheus alerting rules
+│ ├── inference_config.yaml # API server configuration
+│ ├── pipeline_config.yaml # Vertex AI pipeline parameters
+│ ├── prometheus.yml # Prometheus scrape targets
+│ └── train_config.yaml # Training hyperparameters
 │
 ├── docker/
-│   ├── Dockerfile                      # Production API image (CPU PyTorch, non-root)
-│   ├── Dockerfile.training             # Vertex AI GPU training image
-│   ├── serve.Dockerfile                # Serving-optimized image
-│   ├── train.Dockerfile                # Local training environment
-│   └── ui.Dockerfile                   # Streamlit UI image
+│ ├── Dockerfile # Production API image (CPU PyTorch, non-root)
+│ ├── Dockerfile.training # Vertex AI GPU training image
+│ ├── serve.Dockerfile # Serving-optimized image
+│ ├── train.Dockerfile # Local training environment
+│ └── ui.Dockerfile # Streamlit UI image
 │
 ├── docs/
-│   ├── ARCHITECTURE.md                 # System architecture & design decisions
-│   ├── CICD.md                         # CI/CD pipeline documentation
-│   ├── CONTRIBUTING.md                 # Contribution guidelines
-│   ├── COSTS.md                        # Cloud cost analysis
-│   ├── DEPLOYMENT.md                   # Deployment guide
-│   ├── INCIDENT_SCENARIO.md            # Incident response playbook
-│   ├── INFRASTRUCTURE.md               # Infrastructure documentation
-│   ├── MONITORING.md                   # Monitoring & observability guide
-│   ├── PRD.md                          # Product requirements document
-│   └── TRAINING.md                     # Training pipeline documentation
+│ ├── ARCHITECTURE.md # System architecture & design decisions
+│ ├── CICD.md # CI/CD pipeline documentation
+│ ├── CONTRIBUTING.md # Contribution guidelines
+│ ├── COSTS.md # Cloud cost analysis
+│ ├── DEPLOYMENT.md # Deployment guide
+│ ├── INCIDENT_SCENARIO.md # Incident response playbook
+│ ├── INFRASTRUCTURE.md # Infrastructure documentation
+│ ├── MONITORING.md # Monitoring & observability guide
+│ ├── PRD.md # Product requirements document
+│ └── TRAINING.md # Training pipeline documentation
 │
 ├── notebooks/
-│   └── train_colab.ipynb               # Colab notebook — free T4 GPU training
+│ └── train_colab.ipynb # Colab notebook — free T4 GPU training
 │
 ├── scripts/
-│   ├── create_sample_data.py           # Generate sample test images
-│   ├── download_cifake.py              # Download CIFAKE dataset
-│   ├── download_dataset.py             # Generic dataset downloader
-│   └── download_utils.py               # Shared download utilities
+│ ├── create_sample_data.py # Generate sample test images
+│ ├── download_cifake.py # Download CIFAKE dataset
+│ ├── download_dataset.py # Generic dataset downloader
+│ └── download_utils.py # Shared download utilities
 │
 ├── src/
-│   ├── data/
-│   │   └── validate.py                 # Dataset validation & integrity checks
-│   ├── inference/
-│   │   ├── api.py                      # FastAPI application & routes
-│   │   ├── auth.py                     # API key auth (HMAC, constant-time)
-│   │   ├── explainer.py                # Grad-CAM heatmap generation
-│   │   ├── predictor.py                # Model inference engine
-│   │   ├── rate_limit.py               # Rate limiting configuration
-│   │   ├── routes/                     # Modular API routes
-│   │   │   ├── info.py                 # Info endpoints (/, /privacy)
-│   │   │   ├── monitoring.py           # Health & metrics endpoints
-│   │   │   ├── predict.py              # Prediction endpoints
-│   │   │   └── v1/                     # API v1 versioned routes
-│   │   ├── schemas.py                  # Pydantic request/response models
-│   │   ├── shadow.py                   # Shadow model comparison (A/B testing)
-│   │   ├── state.py                    # Application state management
-│   │   └── validation.py               # Image validation utilities
-│   ├── monitoring/
-│   │   ├── drift.py                    # Real-time drift detection
-│   │   └── metrics.py                  # Prometheus metric definitions
-│   ├── pipelines/
-│   │   ├── evaluate.py                 # Model evaluation pipeline stage
-│   │   └── training_pipeline.py        # End-to-end training orchestrator
-│   ├── training/
-│   │   ├── augmentation.py             # Data augmentation transforms
-│   │   ├── dataset.py                  # PyTorch Dataset implementation
-│   │   ├── gcs.py                      # GCS upload/download helpers
-│   │   ├── model.py                    # EfficientNet-B0 architecture
-│   │   ├── train.py                    # Training loop with MLflow tracking
-│   │   └── vertex_submit.py            # Vertex AI job submission CLI
-│   ├── ui/
-│   │   └── app.py                      # Streamlit web interface
-│   └── utils/
-│       ├── config.py                   # Settings management (Pydantic Settings)
-│       ├── logger.py                   # Structured logging setup
-│       └── model_loader.py             # Model loading utilities
+│ ├── data/
+│ │ └── validate.py # Dataset validation & integrity checks
+│ ├── inference/
+│ │ ├── api.py # FastAPI application & routes
+│ │ ├── auth.py # API key auth (HMAC, constant-time)
+│ │ ├── explainer.py # Grad-CAM heatmap generation
+│ │ ├── predictor.py # Model inference engine
+│ │ ├── rate_limit.py # Rate limiting configuration
+│ │ ├── routes/ # Modular API routes
+│ │ │ ├── info.py # Info endpoints (/, /privacy)
+│ │ │ ├── monitoring.py # Health & metrics endpoints
+│ │ │ ├── predict.py # Prediction endpoints
+│ │ │ └── v1/ # API v1 versioned routes
+│ │ ├── schemas.py # Pydantic request/response models
+│ │ ├── shadow.py # Shadow model comparison (A/B testing)
+│ │ ├── state.py # Application state management
+│ │ └── validation.py # Image validation utilities
+│ ├── monitoring/
+│ │ ├── drift.py # Real-time drift detection
+│ │ └── metrics.py # Prometheus metric definitions
+│ ├── pipelines/
+│ │ ├── evaluate.py # Model evaluation pipeline stage
+│ │ └── training_pipeline.py # End-to-end training orchestrator
+│ ├── training/
+│ │ ├── augmentation.py # Data augmentation transforms
+│ │ ├── dataset.py # PyTorch Dataset implementation
+│ │ ├── gcs.py # GCS upload/download helpers
+│ │ ├── model.py # EfficientNet-B0 architecture
+│ │ ├── train.py # Training loop with MLflow tracking
+│ │ └── vertex_submit.py # Vertex AI job submission CLI
+│ ├── ui/
+│ │ └── app.py # Streamlit web interface
+│ └── utils/
+│ ├── config.py # Settings management (Pydantic Settings)
+│ ├── logger.py # Structured logging setup
+│ └── model_loader.py # Model loading utilities
 │
 ├── terraform/
-│   ├── environments/
-│   │   ├── dev/                        # Development environment config
-│   │   └── prod/                       # Production environment config
-│   ├── modules/
-│   │   ├── artifact_registry/          # Artifact Registry module
-│   │   ├── budget/                     # Budget alerts module
-│   │   ├── cloud_run/                  # Cloud Run service module
-│   │   ├── iam/                        # IAM bindings module
-│   │   ├── secrets/                    # Secret Manager module
-│   │   ├── storage/                    # GCS bucket module
-│   │   └── vertex_ai/                  # Vertex AI resources module
-│   ├── backend.tf                      # Terraform state backend (GCS)
-│   └── versions.tf                     # Provider version constraints
+│ ├── environments/
+│ │ ├── dev/ # Development environment config
+│ │ └── prod/ # Production environment config
+│ ├── modules/
+│ │ ├── artifact_registry/ # Artifact Registry module
+│ │ ├── budget/ # Budget alerts module
+│ │ ├── cloud_run/ # Cloud Run service module
+│ │ ├── iam/ # IAM bindings module
+│ │ ├── secrets/ # Secret Manager module
+│ │ ├── storage/ # GCS bucket module
+│ │ └── vertex_ai/ # Vertex AI resources module
+│ ├── backend.tf # Terraform state backend (GCS)
+│ └── versions.tf # Provider version constraints
 │
 ├── tests/
-│   ├── load/
-│   │   ├── locustfile.py               # Locust load testing scenarios
-│   │   └── k6_test.js                  # k6 load testing script
-│   ├── conftest.py                     # Shared test fixtures
-│   ├── test_api.py                     # API endpoint tests
-│   ├── test_augmentation.py            # Augmentation tests
-│   ├── test_auth.py                    # Authentication tests
-│   ├── test_batch.py                   # Batch prediction tests
-│   ├── test_config.py                  # Configuration tests
-│   ├── test_data_validate.py           # Data validation tests
-│   ├── test_dataset.py                 # Dataset tests
-│   ├── test_drift.py                   # Drift detection tests
-│   ├── test_explainer.py               # Grad-CAM tests
-│   ├── test_gcs.py                     # GCS helper tests
-│   ├── test_integration.py             # Integration tests
-│   ├── test_logger.py                  # Logger tests
-│   ├── test_metrics.py                 # Prometheus metrics tests
-│   ├── test_model.py                   # Model architecture tests
-│   ├── test_pipelines.py               # Pipeline orchestration tests
-│   ├── test_predictor.py               # Inference engine tests
-│   ├── test_shadow.py                  # Shadow A/B testing tests
-│   ├── test_state.py                   # Application state tests
-│   ├── test_train.py                   # Training loop tests
-│   ├── test_ui.py                      # UI tests
-│   ├── test_validation.py              # Validation tests
-│   └── test_vertex_submit.py           # Vertex AI submission tests
+│ ├── load/
+│ │ ├── locustfile.py # Locust load testing scenarios
+│ │ └── k6_test.js # k6 load testing script
+│ ├── conftest.py # Shared test fixtures
+│ ├── test_api.py # API endpoint tests
+│ ├── test_augmentation.py # Augmentation tests
+│ ├── test_auth.py # Authentication tests
+│ ├── test_batch.py # Batch prediction tests
+│ ├── test_config.py # Configuration tests
+│ ├── test_data_validate.py # Data validation tests
+│ ├── test_dataset.py # Dataset tests
+│ ├── test_drift.py # Drift detection tests
+│ ├── test_explainer.py # Grad-CAM tests
+│ ├── test_gcs.py # GCS helper tests
+│ ├── test_integration.py # Integration tests
+│ ├── test_logger.py # Logger tests
+│ ├── test_metrics.py # Prometheus metrics tests
+│ ├── test_model.py # Model architecture tests
+│ ├── test_pipelines.py # Pipeline orchestration tests
+│ ├── test_predictor.py # Inference engine tests
+│ ├── test_shadow.py # Shadow A/B testing tests
+│ ├── test_state.py # Application state tests
+│ ├── test_train.py # Training loop tests
+│ ├── test_ui.py # UI tests
+│ ├── test_validation.py # Validation tests
+│ └── test_vertex_submit.py # Vertex AI submission tests
 │
-├── docker-compose.yml                  # Full stack: API + UI + MLflow + Prometheus + Grafana
-├── dvc.yaml                            # DVC pipeline: download → validate → train
-├── Makefile                            # Development commands (make help)
-├── pyproject.toml                      # Project metadata, dependencies, tool config
-└── .pre-commit-config.yaml             # Pre-commit hooks (ruff)
+├── docker-compose.yml # Full stack: API + UI + MLflow + Prometheus + Grafana
+├── dvc.yaml # DVC pipeline: download → validate → train
+├── Makefile # Development commands (make help)
+├── pyproject.toml # Project metadata, dependencies, tool config
+└── .pre-commit-config.yaml # Pre-commit hooks (ruff)
 ```
 
 ---
 
-## 🐳 Docker
+## Docker
 
 ```bash
 # Build API image
@@ -814,7 +814,7 @@ docker compose down
 
 ---
 
-## ☁️ Cloud Deployment
+## Cloud Deployment
 
 ### Cloud Run Services
 
@@ -845,10 +845,10 @@ Provisions via modular architecture:
 
 ```bash
 # Automatic: push to main
-git push origin main  # → CI → CD → Cloud Run
+git push origin main # → CI → CD → Cloud Run
 
 # Manual deploy
-make deploy  # or: gh workflow run cd.yml
+make deploy # or: gh workflow run cd.yml
 
 # Rollback
 gh workflow run cd.yml -f image_tag=<commit-sha>
@@ -856,14 +856,14 @@ gh workflow run cd.yml -f image_tag=<commit-sha>
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions welcome — please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) first.
 
 ```bash
-make dev             # Install dev dependencies + pre-commit hooks
-make lint            # Ruff + mypy
-make test            # pytest with coverage
+make dev # Install dev dependencies + pre-commit hooks
+make lint # Ruff + mypy
+make test # pytest with coverage
 ```
 
 **Conventions:**
@@ -874,7 +874,7 @@ make test            # pytest with coverage
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 Detailed documentation is available in the [`docs/`](docs/) folder:
 
@@ -893,7 +893,7 @@ Detailed documentation is available in the [`docs/`](docs/) folder:
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
 

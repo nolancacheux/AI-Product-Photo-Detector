@@ -157,7 +157,7 @@ jobs:
 
       - name: Build summary
         run: |
-          echo "### 🐳 Training Image" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Training Image" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Image:** \`${{ steps.image.outputs.uri }}\`" >> "$GITHUB_STEP_SUMMARY"
 
   # --------------------------------------------------------------------------
@@ -246,11 +246,11 @@ jobs:
                   config_str += " (CPU-only)"
 
               print(f"Submitting Vertex AI training job...")
-              print(f"  Region: {region}")
-              print(f"  Image: {image_uri}")
-              print(f"  Config: {config_str}")
-              print(f"  Epochs: {epochs}, Batch size: {batch_size}")
-              print(f"  Model output: {model_output}")
+              print(f" Region: {region}")
+              print(f" Image: {image_uri}")
+              print(f" Config: {config_str}")
+              print(f" Epochs: {epochs}, Batch size: {batch_size}")
+              print(f" Model output: {model_output}")
 
               run_kwargs = {
                   "base_output_dir": model_output,
@@ -368,7 +368,7 @@ jobs:
 
       - name: Training summary
         run: |
-          echo "### 🏋️ Vertex AI Training" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Vertex AI Training" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Job output:** \`${{ steps.training.outputs.model_gcs_path }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Training config:** ${{ steps.training.outputs.training_config }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Region:** ${{ env.TRAINING_REGION }}" >> "$GITHUB_STEP_SUMMARY"
@@ -530,7 +530,7 @@ jobs:
 
       - name: Post metrics to job summary
         run: |
-          echo "### 📊 Model Evaluation Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Model Evaluation Results" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
           if [ -f reports/metrics.json ]; then
@@ -551,12 +551,12 @@ jobs:
             echo "" >> "$GITHUB_STEP_SUMMARY"
 
             if [ "${PASSED}" = "true" ]; then
-              echo "> ✅ **Quality gate passed** (accuracy >= 0.85, F1 >= 0.80)" >> "$GITHUB_STEP_SUMMARY"
+              echo "> **Quality gate passed** (accuracy >= 0.85, F1 >= 0.80)" >> "$GITHUB_STEP_SUMMARY"
             else
-              echo "> ⚠️ **Quality gate failed** (requires accuracy >= 0.85, F1 >= 0.80)" >> "$GITHUB_STEP_SUMMARY"
+              echo "> **Quality gate failed** (requires accuracy >= 0.85, F1 >= 0.80)" >> "$GITHUB_STEP_SUMMARY"
             fi
           else
-            echo "> ⚠️ No metrics file found" >> "$GITHUB_STEP_SUMMARY"
+            echo "> No metrics file found" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload metrics artifact
@@ -656,17 +656,17 @@ jobs:
           STATUS=$(curl -s -o /tmp/health_response -w "%{http_code}" "${URL}/health" --max-time 30)
           BODY=$(cat /tmp/health_response)
 
-          echo "### 🚀 Deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Deployment" >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$STATUS" = "200" ]; then
             echo "Health check passed (HTTP ${STATUS})"
-            echo "- **Status:** ✅ Healthy" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Status:** Healthy" >> "$GITHUB_STEP_SUMMARY"
             echo "- **URL:** ${URL}" >> "$GITHUB_STEP_SUMMARY"
             echo "- **Accuracy:** ${{ needs.evaluate.outputs.accuracy }}" >> "$GITHUB_STEP_SUMMARY"
             echo "- **F1:** ${{ needs.evaluate.outputs.f1_score }}" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "Health check failed (HTTP ${STATUS})"
-            echo "- **Status:** ❌ Failed (HTTP ${STATUS})" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Status:** Failed (HTTP ${STATUS})" >> "$GITHUB_STEP_SUMMARY"
             echo "- **Response:** \`${BODY}\`" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi

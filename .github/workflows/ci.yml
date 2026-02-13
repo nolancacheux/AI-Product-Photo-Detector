@@ -168,7 +168,7 @@ jobs:
             COLOR="red"
           fi
 
-          echo "### 📊 Coverage Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Coverage Report" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "![Coverage](https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR})" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -224,23 +224,23 @@ jobs:
       - name: Security scan summary
         if: always()
         run: |
-          echo "### 🔒 Security Scan Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Security Scan Results" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Check | Status |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
 
           # pip-audit result
           if pip-audit --strict --desc --local > /dev/null 2>&1; then
-            echo "| pip-audit (deps) | ✅ No vulnerabilities |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| pip-audit (deps) | No vulnerabilities |" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "| pip-audit (deps) | ⚠️ Vulnerabilities found |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| pip-audit (deps) | Vulnerabilities found |" >> "$GITHUB_STEP_SUMMARY"
           fi
 
           # bandit result
           if bandit -r src/ -s B101,B601 -q 2>/dev/null; then
-            echo "| bandit (SAST) | ✅ No issues |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| bandit (SAST) | No issues |" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "| bandit (SAST) | ⚠️ Issues found |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| bandit (SAST) | Issues found |" >> "$GITHUB_STEP_SUMMARY"
           fi
 
   # --------------------------------------------------------------------------
@@ -333,14 +333,14 @@ jobs:
       - name: Trivy scan summary
         if: always()
         run: |
-          echo "### 🐳 Container Security (Trivy)" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Container Security (Trivy)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           if [ -f trivy-results.txt ]; then
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             head -100 trivy-results.txt >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "✅ No CRITICAL/HIGH vulnerabilities found" >> "$GITHUB_STEP_SUMMARY"
+            echo " No CRITICAL/HIGH vulnerabilities found" >> "$GITHUB_STEP_SUMMARY"
           fi
 
   # --------------------------------------------------------------------------

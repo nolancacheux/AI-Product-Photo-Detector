@@ -15,10 +15,10 @@
 
 | Level | Name | Description | Response Time | Examples |
 |-------|------|-------------|---------------|----------|
-| **P1** | Critical | Service is down or completely unusable. Data loss or security breach. | **15 min** | API returning 5xx for all requests, model not loaded, security breach |
-| **P2** | High | Major feature degraded. Significant impact on users. | **1 hour** | Error rate > 5%, P95 latency > 5s, drift score > 0.30 |
-| **P3** | Medium | Minor feature degraded. Limited user impact. | **4 hours** | Drift score > 0.15, memory growing steadily, rate limiting triggered |
-| **P4** | Low | Cosmetic issue or minor inconvenience. No user impact. | **24 hours** | Dashboard missing data, non-critical log warnings |
+| **P1**| Critical | Service is down or completely unusable. Data loss or security breach. | **15 min** | API returning 5xx for all requests, model not loaded, security breach |
+| **P2**| High | Major feature degraded. Significant impact on users. | **1 hour** | Error rate > 5%, P95 latency > 5s, drift score > 0.30 |
+| **P3**| Medium | Minor feature degraded. Limited user impact. | **4 hours** | Drift score > 0.15, memory growing steadily, rate limiting triggered |
+| **P4**| Low | Cosmetic issue or minor inconvenience. No user impact. | **24 hours** | Dashboard missing data, non-critical log warnings |
 
 ### Severity Decision Tree
 
@@ -208,9 +208,9 @@ Is the service completely down?
 
 4. Check system resources:
    ```bash
-   df -h          # Disk space
-   free -h        # System memory
-   docker stats   # Container resources
+   df -h # Disk space
+   free -h # System memory
+   docker stats # Container resources
    ```
 
 **Resolution Steps:**
@@ -372,25 +372,25 @@ The `DriftDetector` class (`src/monitoring/drift.py`) monitors a sliding window 
 #### Step 1 — Probability Distribution Shift
 
 ```
-Baseline mean probability:     0.72
-Current mean probability:      0.54
-Probability drift:             0.18  (threshold: 0.15) ⚠️ EXCEEDED
+Baseline mean probability: 0.72
+Current mean probability: 0.54
+Probability drift: 0.18 (threshold: 0.15) EXCEEDED
 ```
 
 #### Step 2 — Increased Low-Confidence Predictions
 
 ```
 Baseline low confidence ratio: 0.123
-Current low confidence ratio:  0.348
-Confidence drift:              0.225  (threshold: 0.15) ⚠️ EXCEEDED
+Current low confidence ratio: 0.348
+Confidence drift: 0.225 (threshold: 0.15) EXCEEDED
 ```
 
 #### Step 3 — Prediction Ratio Drift
 
 ```
-Baseline AI prediction ratio:  0.48
-Current AI prediction ratio:   0.26
-Ratio shift:                   0.22  (threshold: 0.20) ⚠️ EXCEEDED
+Baseline AI prediction ratio: 0.48
+Current AI prediction ratio: 0.26
+Ratio shift: 0.22 (threshold: 0.20) EXCEEDED
 ```
 
 #### Alert Timeline
@@ -521,4 +521,4 @@ Use this template for all P1 and P2 incidents. P3 incidents should use a simplif
 ---
 
 *Document maintained as part of the MLOps incident response framework.*
-*AI Product Photo Detector — M2 MLOps Project, JUNIA 2026*
+*AI Product Photo Detector — M2 Data Science MLOps Project*
