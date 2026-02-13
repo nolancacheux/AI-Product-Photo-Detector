@@ -292,7 +292,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: "ai-product-detector:scan"
           format: "table"
@@ -312,7 +312,7 @@ jobs:
 
       - name: Run Trivy (SARIF for GitHub Security tab)
         if: always()
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: "ai-product-detector:scan"
           format: "sarif"
