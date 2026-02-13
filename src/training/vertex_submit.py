@@ -102,8 +102,7 @@ def submit_training_job(
 
     logger.info(
         "Submitting Vertex AI training job",
-        machine_type="n1-standard-4",
-        accelerator="NVIDIA_TESLA_T4",
+        machine_type="e2-standard-2",
         epochs=epochs,
         batch_size=batch_size,
         sync=sync,
@@ -111,9 +110,7 @@ def submit_training_job(
 
     job.run(
         replica_count=1,
-        machine_type="n1-standard-4",
-        accelerator_type="NVIDIA_TESLA_T4",
-        accelerator_count=1,
+        machine_type="e2-standard-2",
         boot_disk_size_gb=100,
         args=[
             "--config",
