@@ -202,7 +202,7 @@ jobs:
             --port=8080 \
             --memory="${MEMORY}" \
             --allow-unauthenticated \
-            --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=true,ENVIRONMENT=staging" \
+            --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=false,ENVIRONMENT=staging" \
             --tag=staging \
             --no-traffic \
             --quiet \
@@ -213,7 +213,7 @@ jobs:
             --port=8080 \
             --memory="${MEMORY}" \
             --allow-unauthenticated \
-            --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=true,ENVIRONMENT=staging" \
+            --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=false,ENVIRONMENT=staging" \
             --quiet
 
       - name: Get staging URL
@@ -353,7 +353,7 @@ jobs:
             --port=8080 \
             --memory="${MEMORY}" \
             --allow-unauthenticated \
-            --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=true,ENVIRONMENT=production" \
+            --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=false,ENVIRONMENT=production" \
             --quiet
 
       - name: Get production URL
