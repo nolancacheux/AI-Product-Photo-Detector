@@ -203,17 +203,6 @@ jobs:
             --memory="${MEMORY}" \
             --allow-unauthenticated \
             --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=false,ENVIRONMENT=staging" \
-            --tag=staging \
-            --no-traffic \
-            --quiet \
-            2>/dev/null || \
-          gcloud run deploy ${{ env.SERVICE_STAGING }} \
-            --image=${{ format('{0}:{1}', env.IMAGE, needs.build.outputs.image_tag) }} \
-            --region=${{ env.REGION }} \
-            --port=8080 \
-            --memory="${MEMORY}" \
-            --allow-unauthenticated \
-            --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=false,ENVIRONMENT=staging" \
             --quiet
 
       - name: Get staging URL
