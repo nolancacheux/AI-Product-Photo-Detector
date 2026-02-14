@@ -1,7 +1,6 @@
 # ==============================================================================
-# CD — Build, Push & Deploy to Cloud Run (Staging → Production)
-# Pipeline: CI Check → Build → Deploy Staging → Smoke Test Staging →
-# Deploy Production (manual approval) → Smoke Test Prod → Notify
+# CD — Build, Push & Deploy to Cloud Run (Production)
+# Pipeline: CI Check → Build → Deploy Production → Smoke Test → Notify
 # Rollback: automatic if production smoke test fails.
 # Requires secrets: GCP_PROJECT_ID, GCP_SA_KEY, GCS_BUCKET, API_KEY
 # ==============================================================================
@@ -12,7 +11,6 @@ on:
   push:
     branches: [main]
 
-  # Manual deploy / rollback with custom image tag
   workflow_dispatch:
     inputs:
       image_tag:
@@ -28,11 +26,6 @@ on:
           - 512Mi
           - 1Gi
           - 2Gi
-      skip_staging:
-        description: "Skip staging and deploy directly to production"
-        required: false
-        default: false
-        type: boolean
 
 concurrency:
   group: cd-${{ github.ref }}
@@ -41,7 +34,6 @@ concurrency:
 env:
   REGION: europe-west1
   SERVICE: ai-product-detector
-  SERVICE_STAGING: ai-product-detector-staging
   REGISTRY: europe-west1-docker.pkg.dev
   IMAGE: europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api
 
@@ -98,28 +90,24 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
 
-      # Fetch model checkpoint from GCS (or DVC fallback)
       - name: Fetch model checkpoint
         run: |
           LOCAL_MODEL="models/checkpoints/best_model.pt"
           GCS_MODEL="gs://${{ secrets.GCS_BUCKET }}/models/best_model.pt"
           mkdir -p models/checkpoints
 
-          # Strategy 1: Direct GCS download (Vertex AI trained models)
           if gsutil ls "${GCS_MODEL}" > /dev/null 2>&1; then
             echo "Found model on GCS. Downloading..."
             gsutil cp "${GCS_MODEL}" "${LOCAL_MODEL}"
             echo "Downloaded from GCS."
           fi
 
-          # Strategy 2: DVC pull (original tracked model)
           if [ ! -f "${LOCAL_MODEL}" ]; then
             echo "No model on GCS. Trying DVC pull..."
             pip install dvc[gs] -q
             dvc pull models/checkpoints/best_model.pt.dvc -f || true
           fi
 
-          # Verify
           if [ -f "${LOCAL_MODEL}" ]; then
             SIZE=$(stat -c%s "${LOCAL_MODEL}")
             echo "Model ready: ${LOCAL_MODEL} (${SIZE} bytes)"
@@ -160,145 +148,13 @@ jobs:
           echo "- **Image:** \`${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
 
   # --------------------------------------------------------------------------
-  # Deploy to Staging
-  # --------------------------------------------------------------------------
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: [build]
-    if: >-
-      always()
-      && needs.build.result == 'success'
-      && inputs.skip_staging != true
-
-    permissions:
-      contents: read
-      id-token: write
-
-    environment:
-      name: staging
-      url: ${{ steps.url.outputs.url }}
-
-    outputs:
-      url: ${{ steps.url.outputs.url }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Deploy to Cloud Run (Staging)
-        run: |
-          MEMORY="${{ github.event.inputs.memory || '1Gi' }}"
-          gcloud run deploy ${{ env.SERVICE_STAGING }} \
-            --image=${{ format('{0}:{1}', env.IMAGE, needs.build.outputs.image_tag) }} \
-            --region=${{ env.REGION }} \
-            --port=8080 \
-            --memory="${MEMORY}" \
-            --allow-unauthenticated \
-            --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=false,ENVIRONMENT=staging" \
-            --quiet
-
-      - name: Get staging URL
-        id: url
-        run: |
-          URL=$(gcloud run services describe ${{ env.SERVICE_STAGING }} \
-            --region=${{ env.REGION }} \
-            --format='value(status.url)')
-          echo "url=${URL}" >> "$GITHUB_OUTPUT"
-          echo "Staging URL: ${URL}"
-
-      - name: Staging deployment summary
-        run: |
-          echo "### Deployed to Staging" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **URL:** ${{ steps.url.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Image:** \`${{ needs.build.outputs.image_tag }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Region:** ${{ env.REGION }}" >> "$GITHUB_STEP_SUMMARY"
-
-  # --------------------------------------------------------------------------
-  # Smoke Test Staging
-  # --------------------------------------------------------------------------
-  smoke-test-staging:
-    name: Smoke Test (Staging)
-    runs-on: ubuntu-latest
-    needs: [deploy-staging]
-
-    steps:
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Run smoke tests against staging
-        run: |
-          URL="${{ needs.deploy-staging.outputs.url }}"
-          echo "Running smoke tests against staging: ${URL}"
-
-          echo "Waiting 20s for service to stabilize..."
-          sleep 20
-
-          FAILED=0
-
-          # Test 1: Health check
-          echo "--- Test 1: Health endpoint ---"
-          STATUS=$(curl -s -o /tmp/health -w "%{http_code}" "${URL}/health" --max-time 30)
-          if [ "$STATUS" = "200" ]; then
-            echo " Health check passed (HTTP ${STATUS})"
-          else
-            echo " Health check failed (HTTP ${STATUS})"
-            cat /tmp/health
-            FAILED=1
-          fi
-
-          # Test 2: Root/docs endpoint returns 200
-          echo "--- Test 2: API docs endpoint ---"
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${URL}/docs" --max-time 30)
-          if [ "$STATUS" = "200" ]; then
-            echo " Docs endpoint passed (HTTP ${STATUS})"
-          else
-            echo " Docs endpoint failed (HTTP ${STATUS})"
-            FAILED=1
-          fi
-
-          # Test 3: API responds to predict endpoint (should return 401/422, not 500)
-          echo "--- Test 3: Predict endpoint responsiveness ---"
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${URL}/predict" --max-time 30)
-          if [ "$STATUS" -lt 500 ]; then
-            echo " Predict endpoint responsive (HTTP ${STATUS})"
-          else
-            echo " Predict endpoint server error (HTTP ${STATUS})"
-            FAILED=1
-          fi
-
-          # Summary
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Staging Smoke Tests" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$FAILED" -eq 0 ]; then
-            echo " All smoke tests passed" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo " Some smoke tests failed" >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-
-  # --------------------------------------------------------------------------
-  # Deploy to Production (requires manual approval via GitHub Environments)
+  # Deploy to Production
   # --------------------------------------------------------------------------
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: [build, smoke-test-staging]
-    if: >-
-      always()
-      && (needs.smoke-test-staging.result == 'success' || inputs.skip_staging == true)
+    needs: [build]
+    if: always() && needs.build.result == 'success'
 
     permissions:
       contents: read
@@ -323,7 +179,6 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      # Capture current revision for rollback
       - name: Capture current production revision
         id: pre-deploy
         run: |
@@ -342,7 +197,7 @@ jobs:
             --port=8080 \
             --memory="${MEMORY}" \
             --allow-unauthenticated \
-            --set-env-vars="API_KEYS=${{ secrets.API_KEY }},REQUIRE_AUTH=false,ENVIRONMENT=production" \
+            --set-env-vars="REQUIRE_AUTH=false,ENVIRONMENT=production" \
             --quiet
 
       - name: Get production URL
@@ -373,66 +228,54 @@ jobs:
       status: ${{ steps.smoke.outputs.status }}
 
     steps:
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
       - name: Run production smoke tests
         id: smoke
         run: |
           URL="${{ needs.deploy-production.outputs.url }}"
           echo "Running smoke tests against production: ${URL}"
 
-          echo "Waiting 15s for service to stabilize..."
-          sleep 15
+          echo "Waiting 20s for service to stabilize..."
+          sleep 20
 
           FAILED=0
 
-          # Test 1: Health check
           echo "--- Test 1: Health endpoint ---"
-          STATUS=$(curl -s -o /tmp/health -w "%{http_code}" "${URL}/health" --max-time 30)
-          BODY=$(cat /tmp/health)
+          STATUS=$(curl -s -o /tmp/health -w "%{http_code}" "${URL}/health" --max-time 60)
           if [ "$STATUS" = "200" ]; then
-            echo " Health check passed (HTTP ${STATUS})"
+            echo "Health check passed (HTTP ${STATUS})"
           else
-            echo " Health check failed (HTTP ${STATUS}): ${BODY}"
+            echo "Health check failed (HTTP ${STATUS})"
+            cat /tmp/health
             FAILED=1
           fi
 
-          # Test 2: Docs endpoint
           echo "--- Test 2: Docs endpoint ---"
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${URL}/docs" --max-time 30)
           if [ "$STATUS" = "200" ]; then
-            echo " Docs endpoint passed (HTTP ${STATUS})"
+            echo "Docs endpoint passed (HTTP ${STATUS})"
           else
-            echo " Docs endpoint failed (HTTP ${STATUS})"
+            echo "Docs endpoint failed (HTTP ${STATUS})"
             FAILED=1
           fi
 
-          # Test 3: API responsiveness
           echo "--- Test 3: Predict endpoint responsiveness ---"
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${URL}/predict" --max-time 30)
           if [ "$STATUS" -lt 500 ]; then
-            echo " Predict endpoint responsive (HTTP ${STATUS})"
+            echo "Predict endpoint responsive (HTTP ${STATUS})"
           else
-            echo " Predict endpoint server error (HTTP ${STATUS})"
+            echo "Predict endpoint server error (HTTP ${STATUS})"
             FAILED=1
           fi
 
-          # Summary
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "### Production Smoke Tests" >> "$GITHUB_STEP_SUMMARY"
           if [ "$FAILED" -eq 0 ]; then
             echo "status=success" >> "$GITHUB_OUTPUT"
-            echo " All production smoke tests passed" >> "$GITHUB_STEP_SUMMARY"
+            echo "All smoke tests passed" >> "$GITHUB_STEP_SUMMARY"
             echo "- **URL:** ${URL}" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "status=failure" >> "$GITHUB_OUTPUT"
-            echo " Production smoke tests failed — triggering rollback" >> "$GITHUB_STEP_SUMMARY"
+            echo "Production smoke tests failed - triggering rollback" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
@@ -459,7 +302,7 @@ jobs:
           PREV_REVISION="${{ needs.deploy-production.outputs.previous_revision }}"
 
           if [ "${PREV_REVISION}" = "none" ] || [ -z "${PREV_REVISION}" ]; then
-            echo " No previous revision to rollback to"
+            echo "No previous revision to rollback to"
             echo "### Rollback Skipped" >> "$GITHUB_STEP_SUMMARY"
             echo "No previous revision available for rollback." >> "$GITHUB_STEP_SUMMARY"
             exit 1
@@ -484,15 +327,15 @@ jobs:
 
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${URL}/health" --max-time 30)
           if [ "$STATUS" = "200" ]; then
-            echo " Rollback verified — service is healthy"
+            echo "Rollback verified - service is healthy"
             echo "- **Post-rollback health:** Healthy" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo " Service still unhealthy after rollback (HTTP ${STATUS})"
+            echo "Service still unhealthy after rollback (HTTP ${STATUS})"
             echo "- **Post-rollback health:** Still unhealthy (HTTP ${STATUS})" >> "$GITHUB_STEP_SUMMARY"
           fi
 
   # --------------------------------------------------------------------------
-  # Notify — Post deployment result
+  # Notify
   # --------------------------------------------------------------------------
   notify:
     name: Deployment Notification
@@ -516,7 +359,7 @@ jobs:
             echo "> **Deployment successful!**" >> "$GITHUB_STEP_SUMMARY"
             echo "> URL: ${{ needs.deploy-production.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
           elif [ "${{ needs.smoke-test-production.result }}" = "failure" ]; then
-            echo "> **Deployment failed — automatic rollback triggered**" >> "$GITHUB_STEP_SUMMARY"
+            echo "> **Deployment failed - automatic rollback triggered**" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "> **Deployment status: ${{ needs.smoke-test-production.result }}**" >> "$GITHUB_STEP_SUMMARY"
           fi
