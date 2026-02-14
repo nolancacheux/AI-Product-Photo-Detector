@@ -169,7 +169,10 @@ jobs:
     name: Deploy to Staging
     runs-on: ubuntu-latest
     needs: [build]
-    if: always() && needs.build.result == 'success' && github.event.inputs.skip_staging != 'true'
+    if: >-
+      always()
+      && needs.build.result == 'success'
+      && inputs.skip_staging != true
 
     permissions:
       contents: read
@@ -307,7 +310,9 @@ jobs:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: [build, smoke-test-staging]
-    if: always() && (needs.smoke-test-staging.result == 'success' || github.event.inputs.skip_staging == 'true')
+    if: >-
+      always()
+      && (needs.smoke-test-staging.result == 'success' || inputs.skip_staging == true)
 
     permissions:
       contents: read
