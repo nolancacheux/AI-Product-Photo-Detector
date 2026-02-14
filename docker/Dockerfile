@@ -49,8 +49,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY src/ ./src/
 COPY configs/ ./configs/
 
-# Prepare model directory (model injected via volume in dev, baked in prod)
-RUN mkdir -p models/checkpoints logs && chown -R appuser:appuser /app
+# Copy model checkpoint (downloaded during CI/CD build)
+COPY models/checkpoints/best_model.pt ./models/checkpoints/best_model.pt
+
+RUN mkdir -p logs && chown -R appuser:appuser /app
 
 USER appuser
 
