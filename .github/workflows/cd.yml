@@ -83,7 +83,6 @@ jobs:
 
     outputs:
       image_tag: ${{ steps.tag.outputs.tag }}
-      image_full: ${{ steps.tag.outputs.image_full }}
 
     steps:
       - uses: actions/checkout@v4
@@ -135,12 +134,10 @@ jobs:
           if [ "${{ github.event.inputs.image_tag }}" != "" ] && [ "${{ github.event.inputs.image_tag }}" != "latest" ]; then
             TAG="${{ github.event.inputs.image_tag }}"
             echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-            echo "image_full=${{ env.IMAGE }}:${TAG}" >> "$GITHUB_OUTPUT"
             echo "skip_build=true" >> "$GITHUB_OUTPUT"
           else
             TAG="${{ github.sha }}"
             echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-            echo "image_full=${{ env.IMAGE }}:${TAG}" >> "$GITHUB_OUTPUT"
             echo "skip_build=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -200,7 +197,7 @@ jobs:
         run: |
           MEMORY="${{ github.event.inputs.memory || '1Gi' }}"
           gcloud run deploy ${{ env.SERVICE_STAGING }} \
-            --image=${{ needs.build.outputs.image_full }} \
+            --image=${{ format('{0}:{1}', env.IMAGE, needs.build.outputs.image_tag) }} \
             --region=${{ env.REGION }} \
             --port=8080 \
             --memory="${MEMORY}" \
@@ -211,7 +208,7 @@ jobs:
             --quiet \
             2>/dev/null || \
           gcloud run deploy ${{ env.SERVICE_STAGING }} \
-            --image=${{ needs.build.outputs.image_full }} \
+            --image=${{ format('{0}:{1}', env.IMAGE, needs.build.outputs.image_tag) }} \
             --region=${{ env.REGION }} \
             --port=8080 \
             --memory="${MEMORY}" \
@@ -351,7 +348,7 @@ jobs:
         run: |
           MEMORY="${{ github.event.inputs.memory || '1Gi' }}"
           gcloud run deploy ${{ env.SERVICE }} \
-            --image=${{ needs.build.outputs.image_full }} \
+            --image=${{ format('{0}:{1}', env.IMAGE, needs.build.outputs.image_tag) }} \
             --region=${{ env.REGION }} \
             --port=8080 \
             --memory="${MEMORY}" \
