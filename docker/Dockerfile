@@ -5,7 +5,7 @@
 # Stage 2: Lean runtime with non-root user
 
 # ── Build Stage ──────────────────────────────────────────────────────────────
-FROM python:3.11.9-slim AS builder
+FROM python:3.14.3-slim AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir \
     gunicorn==22.0.0
 
 # ── Runtime Stage ────────────────────────────────────────────────────────────
-FROM python:3.11.9-slim
+FROM python:3.14.3-slim
 
 LABEL maintainer="Nolan Cacheux <cachnolan@gmail.com>"
 LABEL version="1.0.0"
