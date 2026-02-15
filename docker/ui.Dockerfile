@@ -2,7 +2,7 @@
 # AI Product Photo Detector
 
 # ── Build Stage ──────────────────────────────────────────────────────────────
-FROM python:3.11.9-slim AS builder
+FROM python:3.14.3-slim AS builder
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -12,7 +12,7 @@ COPY requirements-ui.txt ./
 RUN pip install --no-cache-dir -r requirements-ui.txt
 
 # ── Runtime Stage ────────────────────────────────────────────────────────────
-FROM python:3.11.9-slim
+FROM python:3.14.3-slim
 
 LABEL maintainer="Nolan Cacheux <cachnolan@gmail.com>"
 LABEL version="1.0.0"
