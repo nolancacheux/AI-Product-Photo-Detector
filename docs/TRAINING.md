@@ -1,7 +1,6 @@
 # Training Guide
 
-This document covers all three methods for training the AI Product Photo
-Detector model: local development, Google Colab, and Vertex AI production.
+This document covers all three methods for training the AI Product Photo Detector model.
 
 ---
 
@@ -10,24 +9,23 @@ Detector model: local development, Google Colab, and Vertex AI production.
 1. [Training Modes Overview](#training-modes-overview)
 2. [Model Architecture](#model-architecture)
 3. [Dataset](#dataset)
-4. [Mode 1: Local Development](#mode-1-local-development)
+4. [Mode 1: Local Training](#mode-1-local-training)
 5. [Mode 2: Google Colab](#mode-2-google-colab)
-6. [Mode 3: Vertex AI Production](#mode-3-vertex-ai-production)
+6. [Mode 3: Vertex AI Pipeline](#mode-3-vertex-ai-pipeline)
 7. [Hyperparameter Tuning](#hyperparameter-tuning)
 8. [Evaluation](#evaluation)
 9. [Updating the Deployed Model](#updating-the-deployed-model)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Training Modes Overview
 
-The project supports three training environments, each optimized for different use cases:
-
 | Mode | GPU | Cost | Time | Best For |
 |------|-----|------|------|----------|
-| **Local Development** | CPU (or local GPU) | Free | 1-2h | Development, debugging, quick tests |
+| **Local Training** | CPU (or local GPU) | Free | 1-2h | Development, debugging, quick tests |
 | **Google Colab** | Free T4/A100 | Free | ~20 min | Experiments, prototyping |
-| **Vertex AI** | Paid T4 | ~$0.10-0.50/run | ~25 min | Production training, CI/CD |
+| **Vertex AI Pipeline** | Paid T4 | ~$0.10-0.50/run | ~25 min | Production training, CI/CD |
 
 ### Decision Tree
 
@@ -45,7 +43,7 @@ The project supports three training environments, each optimized for different u
                      │                 │
                      ▼                 ▼
     ┌─────────────────────┐    ┌─────────────────────┐
-    │  Production model?  │    │  LOCAL DEVELOPMENT  │
+    │  Production model?  │    │  LOCAL TRAINING     │
     └─────────────────────┘    │  make train         │
            │           │       └─────────────────────┘
           Yes         No
@@ -61,12 +59,9 @@ The project supports three training environments, each optimized for different u
 
 ## Model Architecture
 
-The detector uses an **EfficientNet-B0** backbone with a custom binary
-classification head.
+The detector uses an **EfficientNet-B0** backbone with a custom binary classification head.
 
 **Source:** `src/training/model.py`
-
-### Architecture Diagram
 
 ```
 Input Image (3 x 224 x 224)
@@ -106,8 +101,7 @@ Input Image (3 x 224 x 224)
 
 - **Total parameters:** ~5.3M (EfficientNet-B0 backbone + classifier head)
 - **Trainable parameters:** ~5.3M (full fine-tuning by default)
-- **Optional:** Set `freeze_backbone=True` to freeze the backbone and train only
-  the classifier head (~660K trainable parameters).
+- **Optional:** Set `freeze_backbone=True` to freeze the backbone and train only the classifier head (~660K trainable parameters).
 
 ---
 
@@ -115,8 +109,7 @@ Input Image (3 x 224 x 224)
 
 ### CIFAKE Dataset
 
-The primary dataset is [CIFAKE: Real and AI-Generated Synthetic Images](https://www.kaggle.com/datasets/birdy654/cifake-real-and-ai-generated-synthetic-images),
-containing real photographs and AI-generated counterparts.
+The primary dataset is [CIFAKE: Real and AI-Generated Synthetic Images](https://www.kaggle.com/datasets/birdy654/cifake-real-and-ai-generated-synthetic-images), containing real photographs and AI-generated counterparts.
 
 ### Directory Structure
 
@@ -124,11 +117,7 @@ containing real photographs and AI-generated counterparts.
 data/processed/
 ├── train/
 │   ├── real/
-│   │   ├── image_0001.jpg
-│   │   └── ...
 │   └── ai_generated/
-│       ├── image_0001.jpg
-│       └── ...
 ├── val/
 │   ├── real/
 │   └── ai_generated/
@@ -142,15 +131,12 @@ data/processed/
 
 ### HuggingFace Alternatives
 
-If the original CIFAKE dataset is unavailable on Kaggle, equivalent datasets
-can be found on HuggingFace:
-
 - `emirhanbilgic/cifake-real-and-ai-generated-synthetic-images`
 - `jlbaker361/CIFake`
 
 ### Data Augmentation
 
-Training augmentations are defined in `src/training/augmentation.py`:
+Defined in `src/training/augmentation.py`:
 
 | Augmentation | Value |
 |--------------|-------|
@@ -162,14 +148,13 @@ Training augmentations are defined in `src/training/augmentation.py`:
 | Color jitter (hue) | 0.05 |
 | Random crop | Yes |
 
-Validation and test sets use only resize + center crop + normalization (ImageNet
-statistics).
+Validation and test sets use only resize + center crop + normalization (ImageNet statistics).
 
 ---
 
-## Mode 1: Local Development
+## Mode 1: Local Training
 
-Local training is ideal for development, debugging, and quick experiments.
+**When to use:** Development, debugging, quick experiments, and iterating on model changes without cloud costs.
 
 ### Prerequisites
 
@@ -195,26 +180,6 @@ make data
 make train
 ```
 
-### Full Stack Development
-
-```bash
-# Start all services (API + UI + MLflow + Prometheus + Grafana)
-make docker-up
-
-# Service URLs:
-# API:        http://localhost:8080
-# Streamlit:  http://localhost:8501
-# MLflow:     http://localhost:5000
-# Prometheus: http://localhost:9090
-# Grafana:    http://localhost:3000
-
-# Watch logs
-make docker-logs
-
-# Stop
-make docker-down
-```
-
 ### Training Commands
 
 ```bash
@@ -229,7 +194,7 @@ python -m src.training.train --config configs/train_config.yaml \
 
 # With GCS integration (uploads model after training)
 python -m src.training.train --config configs/train_config.yaml \
-  --gcs-bucket ai-product-detector-487013
+  --gcs-bucket <YOUR-GCS-BUCKET>
 ```
 
 ### DVC Pipeline
@@ -254,10 +219,6 @@ dvc status
 # Start MLflow UI
 make mlflow
 # Open http://localhost:5000
-
-# Or with Docker Compose
-make docker-up
-# MLflow available at http://localhost:5000
 ```
 
 **Logged Metrics (per epoch):**
@@ -273,18 +234,32 @@ make docker-up
 | `val_f1` | Validation F1 score |
 | `learning_rate` | Current learning rate |
 
+### Full Stack Development
+
+```bash
+# Start all services (API + UI + MLflow + Prometheus + Grafana)
+make docker-up
+
+# Service URLs:
+# API:        http://localhost:8080
+# Streamlit:  http://localhost:8501
+# MLflow:     http://localhost:5000
+# Prometheus: http://localhost:9090
+# Grafana:    http://localhost:3000
+
+# Watch logs
+make docker-logs
+
+# Stop
+make docker-down
+```
+
 ### Code Quality Checks
 
 ```bash
-# Run all checks
 make lint          # ruff + mypy
 make format        # Auto-format with ruff
 make test          # pytest with coverage
-
-# Individual commands
-ruff check src/ tests/
-mypy src/ --ignore-missing-imports
-pytest tests/ -v --cov=src
 ```
 
 ### Output
@@ -306,8 +281,12 @@ The best model checkpoint is saved to `models/checkpoints/best_model.pt`:
 
 ## Mode 2: Google Colab
 
-Free GPU training using Google Colab's T4/A100 GPUs. Ideal for quick experiments
-without local GPU resources.
+**When to use:** Free GPU training for experiments and prototyping without local GPU hardware or cloud costs.
+
+### Prerequisites
+
+- Google account
+- (Optional) GCS bucket for model storage
 
 ### Quick Start
 
@@ -341,16 +320,15 @@ without local GPU resources.
 ### Configuration
 
 ```python
-# Configurable parameters in the notebook
 CONFIG = {
     "epochs": 15,
     "batch_size": 64,        # T4 handles 64; reduce to 32 if OOM
     "learning_rate": 0.001,
     "image_size": 224,
     "num_workers": 2,
-    
+
     # GCS Integration (optional)
-    "gcs_bucket": "ai-product-detector-487013",
+    "gcs_bucket": "<YOUR-GCS-BUCKET>",
     "gcs_data_path": "data/processed/",
     "gcs_model_path": "models/colab_trained.pt",
 }
@@ -361,7 +339,6 @@ CONFIG = {
 **Option 1: HuggingFace Datasets (recommended)**
 ```python
 from datasets import load_dataset
-
 dataset = load_dataset("emirhanbilgic/cifake-real-and-ai-generated-synthetic-images")
 ```
 
@@ -369,16 +346,13 @@ dataset = load_dataset("emirhanbilgic/cifake-real-and-ai-generated-synthetic-ima
 ```python
 from google.colab import auth
 auth.authenticate_user()
-
-!gsutil -m cp -r gs://ai-product-detector-487013/data/processed/ ./data/
+!gsutil -m cp -r gs://<YOUR-GCS-BUCKET>/data/processed/ ./data/
 ```
 
 **Option 3: Google Drive Mount**
 ```python
 from google.colab import drive
 drive.mount('/content/drive')
-
-# Copy data from Drive
 !cp -r /content/drive/MyDrive/AI-Product-Photo-Detector/data/processed/ ./data/
 ```
 
@@ -392,13 +366,20 @@ files.download('models/checkpoints/best_model.pt')
 
 **Option 2: Upload to GCS**
 ```python
-!gsutil cp models/checkpoints/best_model.pt gs://ai-product-detector-487013/models/
+!gsutil cp models/checkpoints/best_model.pt gs://<YOUR-GCS-BUCKET>/models/
 ```
 
 **Option 3: Save to Google Drive**
 ```python
 !cp models/checkpoints/best_model.pt /content/drive/MyDrive/AI-Product-Photo-Detector/models/
 ```
+
+### Expected Performance
+
+| GPU | Batch Size | Time/Epoch | Total (15 epochs) |
+|-----|------------|------------|-------------------|
+| T4 | 64 | ~1.5 min | ~20-25 min |
+| A100 | 64 | ~0.5 min | ~8-10 min |
 
 ### Tips & Troubleshooting
 
@@ -410,19 +391,18 @@ files.download('models/checkpoints/best_model.pt')
 | **Need more GPU time** | Use Colab Pro for longer sessions |
 | **Dataset not found** | Try alternative HuggingFace datasets |
 
-### Expected Performance
-
-| GPU | Batch Size | Time/Epoch | Total (15 epochs) |
-|-----|------------|------------|-------------------|
-| T4 | 64 | ~1.5 min | ~20-25 min |
-| A100 | 64 | ~0.5 min | ~8-10 min |
-
 ---
 
-## Mode 3: Vertex AI Production
+## Mode 3: Vertex AI Pipeline
 
-Production-grade GPU training with CI/CD integration. Recommended for
-production model updates.
+**When to use:** Production-grade GPU training with CI/CD integration and automated quality gates. Recommended for production model updates.
+
+### Prerequisites
+
+- GCP project with billing enabled
+- Service account with Vertex AI and GCS permissions
+- Training data uploaded to GCS
+- GitHub Actions secrets configured (see [CICD.md](CICD.md))
 
 ### Architecture
 
@@ -498,36 +478,31 @@ python -m src.training.vertex_submit \
 ```bash
 # List recent training jobs
 gcloud ai custom-jobs list \
-  --project=ai-product-detector-487013 \
+  --project=<YOUR-PROJECT-ID> \
   --region=europe-west1
 
 # View job details
 gcloud ai custom-jobs describe <JOB_ID> \
-  --project=ai-product-detector-487013 \
+  --project=<YOUR-PROJECT-ID> \
   --region=europe-west1
 
 # Stream logs
 gcloud ai custom-jobs stream-logs <JOB_ID> \
-  --project=ai-product-detector-487013 \
+  --project=<YOUR-PROJECT-ID> \
   --region=europe-west1
 ```
 
 ### Quality Gate
-
-The workflow enforces quality thresholds before deployment:
 
 | Metric | Threshold | Purpose |
 |--------|-----------|---------|
 | Accuracy | ≥ 0.85 | Overall correctness |
 | F1 Score | ≥ 0.80 | Balance of precision/recall |
 
-**Behavior:**
 - **Pass:** Model is deployed to Cloud Run (if `auto_deploy=true`)
 - **Fail:** Deployment is blocked; metrics saved to `reports/metrics.json`
 
 ### Automatic Triggers
-
-The training workflow also triggers on:
 
 ```yaml
 on:
@@ -608,7 +583,6 @@ All hyperparameters are configured in `configs/train_config.yaml`.
 ### Manual Evaluation
 
 ```bash
-# Run evaluation on test data
 python -c "
 import torch
 from src.training.model import create_model
@@ -675,7 +649,7 @@ If the quality gate passes, the pipeline automatically:
 2. Upload to GCS:
    ```bash
    gsutil cp models/checkpoints/best_model.pt \
-     gs://ai-product-detector-487013/models/best_model.pt
+     gs://<YOUR-GCS-BUCKET>/models/best_model.pt
    ```
 3. Trigger the CD workflow:
    ```bash
@@ -684,30 +658,26 @@ If the quality gate passes, the pipeline automatically:
 
 ### Method 3: Direct Cloud Run Update
 
-For immediate updates:
-
 ```bash
 # Build and push new image
-docker build -f docker/Dockerfile -t europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-detector/api:latest .
-docker push europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-detector/api:latest
+docker build -f docker/Dockerfile \
+  -t <REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/<REPO>/api:latest .
+docker push <REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/<REPO>/api:latest
 
 # Deploy to Cloud Run
-gcloud run deploy ai-product-detector \
-  --image europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-detector/api:latest \
-  --region europe-west1
+gcloud run deploy <SERVICE-NAME> \
+  --image <REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/<REPO>/api:latest \
+  --region <REGION>
 ```
 
 ### Verifying the Update
 
 ```bash
-# Check the deployed service
-URL="https://ai-product-detector-714127049161.europe-west1.run.app"
-
 # Health check
-curl "${URL}/health"
+curl "https://<YOUR-SERVICE-URL>/health"
 
 # Test with a known image
-curl -X POST "${URL}/predict" \
+curl -X POST "https://<YOUR-SERVICE-URL>/predict" \
   -H "X-API-Key: <your-api-key>" \
   -F "file=@test_image.jpg"
 ```
@@ -742,15 +712,15 @@ curl -X POST "${URL}/predict" \
 | Quality gate fails | Lower thresholds or improve model |
 | Deployment fails | Check Cloud Run quota and permissions |
 
-### Common Errors
+### Common Checks
 
 ```bash
 # Check GCS permissions
-gsutil ls gs://ai-product-detector-487013/
+gsutil ls gs://<YOUR-GCS-BUCKET>/
 
 # Check Vertex AI quota
 gcloud ai custom-jobs list --region=europe-west1
 
 # Check Cloud Run status
-gcloud run services describe ai-product-detector --region=europe-west1
+gcloud run services describe <SERVICE-NAME> --region=europe-west1
 ```

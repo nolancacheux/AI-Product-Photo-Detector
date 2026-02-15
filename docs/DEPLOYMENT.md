@@ -1,7 +1,6 @@
 # Deployment Guide
 
-This guide covers all deployment methods for the AI Product Photo Detector: local
-Docker Compose for development, and Google Cloud Run for production.
+This guide covers all deployment methods for the AI Product Photo Detector: local Docker Compose for development, and Google Cloud Run for production.
 
 ---
 
@@ -19,8 +18,7 @@ Docker Compose for development, and Google Cloud Run for production.
 
 ## Local Deployment (Docker Compose)
 
-The `docker-compose.yml` at the project root defines a complete local
-development stack with five services.
+The `docker-compose.yml` at the project root defines a complete local development stack with five services.
 
 ### Services
 
@@ -69,8 +67,7 @@ grafana --> prometheus --> api (healthy)
                 mlflow (independent)
 ```
 
-The `api` service includes a Docker health check. The `ui` and `prometheus`
-services wait for the API to become healthy before starting.
+The `api` service includes a Docker health check. The `ui` and `prometheus` services wait for the API to become healthy before starting.
 
 ### Volumes
 
@@ -98,8 +95,7 @@ docker compose down -v
 
 ### Automated Deployment (via CD Pipeline)
 
-The recommended approach is to let the CD workflow handle deployment
-automatically. See [CICD.md](CICD.md) for details.
+The recommended approach is to let the CD workflow handle deployment automatically. See [CICD.md](CICD.md) for details.
 
 Every push to `main` that passes CI triggers:
 
@@ -110,18 +106,17 @@ Every push to `main` that passes CI triggers:
 
 ### Manual Deployment (via gcloud)
 
-For cases where manual deployment is needed (debugging, hotfixes, custom
-configuration).
+For cases where manual deployment is needed (debugging, hotfixes, custom configuration).
 
 #### Prerequisites
 
 ```bash
 # Authenticate
 gcloud auth login
-gcloud config set project ai-product-detector-487013
+gcloud config set project <YOUR-PROJECT-ID>
 
 # Configure Docker for Artifact Registry
-gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
+gcloud auth configure-docker <REGION>-docker.pkg.dev --quiet
 ```
 
 #### Build and Push
@@ -129,19 +124,19 @@ gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
 ```bash
 # Build the image
 docker build -f docker/Dockerfile \
-  -t europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api:manual \
+  -t <REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/<REPO>/api:manual \
   .
 
 # Push to Artifact Registry
-docker push europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api:manual
+docker push <REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/<REPO>/api:manual
 ```
 
 #### Deploy
 
 ```bash
-gcloud run deploy ai-product-detector \
-  --image=europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api:manual \
-  --region=europe-west1 \
+gcloud run deploy <SERVICE-NAME> \
+  --image=<REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/<REPO>/api:manual \
+  --region=<REGION> \
   --port=8080 \
   --memory=1Gi \
   --allow-unauthenticated \
@@ -153,8 +148,8 @@ gcloud run deploy ai-product-detector \
 
 ```bash
 # Get the service URL
-URL=$(gcloud run services describe ai-product-detector \
-  --region=europe-west1 \
+URL=$(gcloud run services describe <SERVICE-NAME> \
+  --region=<REGION> \
   --format='value(status.url)')
 
 # Health check
@@ -171,8 +166,7 @@ curl -X POST "${URL}/predict" \
 Use the CD workflow dispatch to deploy a specific image tag or rebuild:
 
 1. Go to **Actions > CD > Run workflow**.
-2. Set `image_tag` to a previous commit SHA for rollback, or leave as `latest`
-   to build fresh.
+2. Set `image_tag` to a previous commit SHA for rollback, or leave as `latest` to build fresh.
 3. Optionally adjust memory allocation.
 
 ---
@@ -229,8 +223,7 @@ Managed by Terraform variables or `gcloud` flags:
 
 #### Cold Start Optimization
 
-With `min_instances = 0`, the first request after a period of inactivity incurs
-a cold start (5-15 seconds). The model must be loaded from disk into memory.
+With `min_instances = 0`, the first request after a period of inactivity incurs a cold start (5-15 seconds). The model must be loaded from disk into memory.
 
 To reduce cold start latency:
 - Set `min_instances = 1` (keeps one instance warm; costs ~$10/month).
@@ -241,15 +234,15 @@ To reduce cold start latency:
 
 ```bash
 # Scale up for a demo or load test
-gcloud run services update ai-product-detector \
-  --region=europe-west1 \
+gcloud run services update <SERVICE-NAME> \
+  --region=<REGION> \
   --min-instances=1 \
   --max-instances=5 \
   --memory=2Gi
 
 # Scale back down
-gcloud run services update ai-product-detector \
-  --region=europe-west1 \
+gcloud run services update <SERVICE-NAME> \
+  --region=<REGION> \
   --min-instances=0 \
   --max-instances=2 \
   --memory=1Gi
@@ -280,15 +273,12 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3
 
 Defined in Terraform (`terraform/main.tf`):
 
-- **Startup probe:** `GET /health`, 5s initial delay, 10s period, 3 failures
-  before marking unhealthy.
+- **Startup probe:** `GET /health`, 5s initial delay, 10s period, 3 failures before marking unhealthy.
 - **Liveness probe:** `GET /health`, 30s period.
 
 ### Prometheus Metrics
 
-The API exposes Prometheus metrics at `/metrics`. The local Docker Compose stack
-includes a pre-configured Prometheus instance that scrapes these metrics every
-10 seconds.
+The API exposes Prometheus metrics at `/metrics`. The local Docker Compose stack includes a pre-configured Prometheus instance that scrapes these metrics every 10 seconds.
 
 **Prometheus configuration:** `configs/prometheus.yml`
 
@@ -298,8 +288,7 @@ Scraped targets:
 
 ### Grafana Dashboards
 
-Access Grafana at http://localhost:3000 (admin/admin). Provisioning
-configuration is mounted from `configs/grafana/provisioning/`.
+Access Grafana at http://localhost:3000 (admin/admin). Provisioning configuration is mounted from `configs/grafana/provisioning/`.
 
 ---
 
@@ -312,26 +301,25 @@ The quickest rollback method:
 1. Identify the commit SHA of the last known good deployment.
 2. Go to **Actions > CD > Run workflow**.
 3. Set `image_tag` to the commit SHA.
-4. The workflow skips building and deploys the existing image from Artifact
-   Registry.
+4. The workflow skips building and deploys the existing image from Artifact Registry.
 
 ### Rollback via gcloud
 
 ```bash
 # List recent revisions
 gcloud run revisions list \
-  --service=ai-product-detector \
-  --region=europe-west1
+  --service=<SERVICE-NAME> \
+  --region=<REGION>
 
 # Route traffic to a specific revision
-gcloud run services update-traffic ai-product-detector \
-  --region=europe-west1 \
-  --to-revisions=ai-product-detector-<REVISION_SUFFIX>=100
+gcloud run services update-traffic <SERVICE-NAME> \
+  --region=<REGION> \
+  --to-revisions=<SERVICE-NAME>-<REVISION_SUFFIX>=100
 
 # Alternatively, redeploy a previous image
-gcloud run deploy ai-product-detector \
-  --image=europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api:<PREVIOUS_SHA> \
-  --region=europe-west1 \
+gcloud run deploy <SERVICE-NAME> \
+  --image=<REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/<REPO>/api:<PREVIOUS_SHA> \
+  --region=<REGION> \
   --quiet
 ```
 
@@ -341,12 +329,12 @@ If a newly trained model causes issues:
 
 1. Identify the previous model on GCS:
    ```bash
-   gsutil ls -l gs://ai-product-detector-487013/models/
+   gsutil ls -l gs://<YOUR-GCS-BUCKET>/models/
    ```
 2. Restore the previous model:
    ```bash
-   gsutil cp gs://ai-product-detector-487013/models/training-<OLD_SHA>/best_model.pt \
-     gs://ai-product-detector-487013/models/best_model.pt
+   gsutil cp gs://<YOUR-GCS-BUCKET>/models/training-<OLD_SHA>/best_model.pt \
+     gs://<YOUR-GCS-BUCKET>/models/best_model.pt
    ```
 3. Trigger a CD deployment to rebuild the image with the restored model.
 
@@ -361,8 +349,8 @@ If a newly trained model causes issues:
 **Checks:**
 ```bash
 # View Cloud Run logs
-gcloud run services logs read ai-product-detector \
-  --region=europe-west1 \
+gcloud run services logs read <SERVICE-NAME> \
+  --region=<REGION> \
   --limit=50
 
 # Check if the model file exists in the image
@@ -386,8 +374,7 @@ curl http://localhost:8080/health
 ```
 
 **Common causes:**
-- Model loading takes longer than the startup probe timeout. Increase
-  `initial_delay_seconds` in `terraform/main.tf`.
+- Model loading takes longer than the startup probe timeout. Increase `initial_delay_seconds` in `terraform/main.tf`.
 - Application crash on startup (check logs for Python tracebacks).
 
 ### Docker build fails in CI
@@ -411,12 +398,12 @@ curl http://localhost:8080/health
 ```bash
 # Upload a model manually
 gsutil cp models/checkpoints/best_model.pt \
-  gs://ai-product-detector-487013/models/best_model.pt
+  gs://<YOUR-GCS-BUCKET>/models/best_model.pt
 ```
 
 ### Cloud Run cold start too slow
 
-**Symptom:** First request after idle period takes 10--20 seconds.
+**Symptom:** First request after idle period takes 10-20 seconds.
 
 **Mitigations:**
 1. Set `min_instances = 1` (keeps one instance warm).
@@ -446,6 +433,5 @@ curl http://localhost:8080/metrics
 
 **Checks:**
 - Verify the `GCP_SA_KEY` secret is a valid JSON service account key.
-- Verify the service account has the required IAM roles (see
-  [INFRASTRUCTURE.md](INFRASTRUCTURE.md#service-account-permissions)).
+- Verify the service account has the required IAM roles (see [INFRASTRUCTURE.md](INFRASTRUCTURE.md#service-account-permissions)).
 - Check that the required APIs are enabled in the GCP project.

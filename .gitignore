@@ -85,8 +85,6 @@ docker-compose.override.yml
 .env
 .env.*
 !.env.example
-!.env.development
-!.env.production
 *.pem
 *.key
 *.tfvars

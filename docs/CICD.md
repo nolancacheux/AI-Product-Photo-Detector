@@ -1,8 +1,6 @@
 # CI/CD Pipeline Documentation
 
-This project uses four GitHub Actions workflows to automate code quality checks,
-application deployment, model training, and PR previews. All workflow definitions
-live in `.github/workflows/`.
+This project uses four GitHub Actions workflows to automate code quality checks, application deployment, model training, and PR previews. All workflow definitions live in `.github/workflows/`.
 
 ---
 
@@ -30,9 +28,7 @@ live in `.github/workflows/`.
 | Model Training | `.github/workflows/model-training.yml` | Manual dispatch or data changes on `main` | Train on Vertex AI, evaluate, conditionally deploy |
 | PR Preview | `.github/workflows/pr-preview.yml` | PR open/update | Deploy preview environment for testing |
 
-All workflows use concurrency groups to prevent duplicate runs. CI cancels
-in-progress runs on the same branch; CD and Model Training do not cancel
-(to avoid interrupted deployments).
+All workflows use concurrency groups to prevent duplicate runs. CI cancels in-progress runs on the same branch; CD and Model Training do not cancel (to avoid interrupted deployments).
 
 ---
 
@@ -40,8 +36,7 @@ in-progress runs on the same branch; CD and Model Training do not cancel
 
 **File:** `.github/workflows/ci.yml`
 
-The CI workflow runs on every push and pull request targeting `main`. It
-validates code quality, correctness, and security across multiple dimensions.
+The CI workflow runs on every push and pull request targeting `main`. It validates code quality, correctness, and security across multiple dimensions.
 
 ### Jobs
 
@@ -73,30 +68,23 @@ validates code quality, correctness, and security across multiple dimensions.
     --cov-report=xml:coverage.xml \
     --cov-report=html:htmlcov/
   ```
-- **Artifacts:** Coverage report (XML + HTML) uploaded for the Python 3.11 run,
-  retained for 14 days.
-- **Summary:** A Markdown coverage table is posted to the GitHub Actions job
-  summary (Python 3.11 only).
+- **Artifacts:** Coverage report (XML + HTML) uploaded for the Python 3.11 run, retained for 14 days.
+- **Summary:** A Markdown coverage table is posted to the GitHub Actions job summary (Python 3.11 only).
 
 #### 4. Security Scan
 
 - **Runner:** `ubuntu-latest`, Python 3.11
 - **Tools:**
-  - [pip-audit](https://pypi.org/project/pip-audit/) - checks installed
-    dependencies for known vulnerabilities.
-  - [bandit](https://bandit.readthedocs.io/) - static analysis for common
-    security issues in Python source code. Skips `B101` (assert) and `B601`
-    (shell injection in parameterized calls).
-- **Note:** Both steps use `continue-on-error: true` so they report findings
-  without blocking the pipeline.
+  - [pip-audit](https://pypi.org/project/pip-audit/) — checks installed dependencies for known vulnerabilities.
+  - [bandit](https://bandit.readthedocs.io/) — static analysis for common security issues in Python source code. Skips `B101` (assert) and `B601` (shell injection in parameterized calls).
+- **Note:** Both steps use `continue-on-error: true` so they report findings without blocking the pipeline.
 
 #### 5. Docker Build Validation (PR only)
 
 - **Runner:** `ubuntu-latest`
 - **Depends on:** `lint`, `test`
 - **Condition:** Only runs on pull requests (`github.event_name == 'pull_request'`).
-- **Action:** Builds the Docker image from `docker/Dockerfile` without pushing.
-  Uses GitHub Actions cache (`type=gha`) for layer caching.
+- **Action:** Builds the Docker image from `docker/Dockerfile` without pushing. Uses GitHub Actions cache (`type=gha`) for layer caching.
 
 ---
 
@@ -104,25 +92,23 @@ validates code quality, correctness, and security across multiple dimensions.
 
 **File:** `.github/workflows/cd.yml`
 
-The CD workflow builds the application Docker image, pushes it to Google
-Artifact Registry, deploys to Cloud Run, and runs a smoke test.
+The CD workflow builds the application Docker image, pushes it to Google Artifact Registry, deploys to Cloud Run, and runs a smoke test.
 
 ### Environment Variables
 
-| Variable | Value |
+| Variable | Description |
 |---|---|
-| `REGION` | `europe-west1` |
-| `SERVICE` | `ai-product-detector` |
-| `REGISTRY` | `europe-west1-docker.pkg.dev` |
-| `IMAGE` | `europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api` |
+| `REGION` | GCP region for deployment |
+| `SERVICE` | Cloud Run service name |
+| `REGISTRY` | Artifact Registry hostname |
+| `IMAGE` | Full image path in Artifact Registry |
 
 ### Jobs
 
 #### 1. Wait for CI
 
 - **Condition:** Only on `push` events (skipped for manual dispatch).
-- Uses `lewagon/wait-on-check-action` to wait for CI jobs (Lint, Tests, Type
-  Checking) to complete successfully before proceeding.
+- Uses `lewagon/wait-on-check-action` to wait for CI jobs (Lint, Tests, Type Checking) to complete successfully before proceeding.
 
 #### 2. Build and Push Docker Image
 
@@ -131,11 +117,10 @@ Artifact Registry, deploys to Cloud Run, and runs a smoke test.
   1. Authenticate to GCP using the `GCP_SA_KEY` secret.
   2. Configure Docker to authenticate with Artifact Registry.
   3. Fetch the model checkpoint:
-     - **Strategy 1:** Direct download from `gs://<GCS_BUCKET>/models/best_model.pt`.
+     - **Strategy 1:** Direct download from GCS.
      - **Strategy 2 (fallback):** `dvc pull` from DVC remote.
      - Fails the build if no model checkpoint is available.
-  4. Determine image tag (commit SHA for new builds, or a user-specified tag for
-     rollbacks via manual dispatch).
+  4. Determine image tag (commit SHA for new builds, or a user-specified tag for rollbacks via manual dispatch).
   5. Build and push the image with both the SHA tag and `latest`.
 - **Output:** `image_tag` (the tag used for deployment).
 
@@ -144,17 +129,14 @@ Artifact Registry, deploys to Cloud Run, and runs a smoke test.
 - **Depends on:** `build`.
 - **Steps:**
   1. Deploy using `gcloud run deploy` with the built image.
-  2. Configuration: port 8080, configurable memory (default 1Gi),
-     unauthenticated access enabled.
+  2. Configuration: port 8080, configurable memory (default 1Gi), unauthenticated access enabled.
   3. Environment variables set: `API_KEYS`, `REQUIRE_AUTH=true`.
-- **Environment:** `production` (creates a GitHub Environments entry with the
-  deployment URL).
+- **Environment:** `production` (creates a GitHub Environments entry with the deployment URL).
 
 #### 4. Smoke Test
 
 - **Depends on:** `deploy`.
-- Waits 15 seconds for the service to stabilize, then sends a `GET` request to
-  `/health`. Fails the workflow if the response is not HTTP 200.
+- Waits 15 seconds for the service to stabilize, then sends a `GET` request to `/health`. Fails the workflow if the response is not HTTP 200.
 
 ### Manual Dispatch Inputs
 
@@ -169,32 +151,30 @@ Artifact Registry, deploys to Cloud Run, and runs a smoke test.
 
 **File:** `.github/workflows/model-training.yml`
 
-This workflow orchestrates end-to-end model training on Vertex AI, evaluates
-the resulting model, and conditionally deploys it to production.
+This workflow orchestrates end-to-end model training on Vertex AI, evaluates the resulting model, and conditionally deploys it to production.
 
 ### Environment Variables
 
-| Variable | Value |
+| Variable | Description |
 |---|---|
-| `GCP_PROJECT` | `ai-product-detector-487013` |
-| `REGION` | `europe-west1` |
-| `GCS_BUCKET` | `ai-product-detector-487013` |
-| `MACHINE_TYPE` | `n1-standard-4` |
-| `ACCELERATOR_TYPE` | `NVIDIA_TESLA_T4` |
-| `ACCELERATOR_COUNT` | `1` |
+| `GCP_PROJECT` | GCP project ID |
+| `REGION` | GCP region |
+| `GCS_BUCKET` | GCS bucket for data and models |
+| `MACHINE_TYPE` | Vertex AI machine type |
+| `ACCELERATOR_TYPE` | GPU type |
+| `ACCELERATOR_COUNT` | Number of GPUs |
 
 ### Jobs
 
 #### 1. Upload Training Data
 
-- Verifies that training data exists on GCS under
-  `gs://<GCS_BUCKET>/data/processed/{train,val,test}/`.
+- Verifies that training data exists on GCS.
 - Posts a file count summary to the job summary.
 
 #### 2. Build Training Image
 
 - Builds `docker/Dockerfile.training` (GPU-enabled PyTorch base image).
-- Pushes to `<REPO>/training:latest` and `<REPO>/training:<SHA>`.
+- Pushes to Artifact Registry with `latest` and `<SHA>` tags.
 - **Output:** `image_uri` for use by the training job.
 
 #### 3. Submit Vertex AI Training Job
@@ -205,11 +185,10 @@ the resulting model, and conditionally deploys it to production.
 - Configuration:
   - Machine: `n1-standard-4` with 1x NVIDIA Tesla T4 GPU.
   - Command: `python -m src.training.train --config configs/train_config.yaml`.
-  - Environment variables passed: `EPOCHS`, `BATCH_SIZE`, `GCS_DATA_PATH`,
-    `GCS_MODEL_OUTPUT`.
+  - Environment variables passed: `EPOCHS`, `BATCH_SIZE`, `GCS_DATA_PATH`, `GCS_MODEL_OUTPUT`.
 - After training completes:
   1. Downloads `best_model.pt` from the training output directory.
-  2. Copies it to the canonical location `gs://<GCS_BUCKET>/models/best_model.pt`.
+  2. Copies it to the canonical GCS location.
   3. Uploads the model as a GitHub Actions artifact (30-day retention).
 - **Output:** `model_gcs_path`.
 
@@ -229,8 +208,7 @@ the resulting model, and conditionally deploys it to production.
 - **Condition:** Deploys only when:
   - Manual dispatch with `auto_deploy: true` AND quality gate passed, OR
   - Push trigger (data change) AND quality gate passed.
-- Builds a new inference image with the trained model baked in, pushes it,
-  deploys to Cloud Run, and runs a smoke test.
+- Builds a new inference image with the trained model baked in, pushes it, deploys to Cloud Run, and runs a smoke test.
 
 ### Manual Dispatch Inputs
 
@@ -301,25 +279,24 @@ the resulting model, and conditionally deploys it to production.
 
 ## Required Secrets
 
-Configure these in **Settings > Secrets and variables > Actions** in your
-GitHub repository.
+Configure these in **Settings > Secrets and variables > Actions** in your GitHub repository.
 
-| Secret | Description | Example |
-|---|---|---|
-| `GCP_SA_KEY` | GCP service account key (JSON). Must have permissions for Cloud Run, Artifact Registry, GCS, and Vertex AI. | `{"type": "service_account", ...}` |
-| `GCP_PROJECT_ID` | GCP project ID. | `ai-product-detector-487013` |
-| `GCS_BUCKET` | GCS bucket name for data and model storage. | `ai-product-detector-487013` |
-| `API_KEY` | API key(s) for the deployed inference service. Set as `API_KEYS` environment variable on Cloud Run. | `sk-abc123` |
+| Secret | Description |
+|---|---|
+| `GCP_SA_KEY` | GCP service account key (JSON). Must have permissions for Cloud Run, Artifact Registry, GCS, and Vertex AI. |
+| `GCP_PROJECT_ID` | GCP project ID. |
+| `GCS_BUCKET` | GCS bucket name for data and model storage. |
+| `API_KEY` | API key(s) for the deployed inference service. Set as `API_KEYS` environment variable on Cloud Run. |
 
 ### Service Account Permissions
 
 The service account referenced by `GCP_SA_KEY` requires the following IAM roles:
 
-- `roles/run.admin` -- deploy and manage Cloud Run services
-- `roles/artifactregistry.writer` -- push Docker images
-- `roles/storage.objectAdmin` -- read/write GCS objects (data, models)
-- `roles/aiplatform.user` -- submit Vertex AI training jobs
-- `roles/iam.serviceAccountUser` -- act as the Cloud Run service account
+- `roles/run.admin` — deploy and manage Cloud Run services
+- `roles/artifactregistry.writer` — push Docker images
+- `roles/storage.objectAdmin` — read/write GCS objects (data, models)
+- `roles/aiplatform.user` — submit Vertex AI training jobs
+- `roles/iam.serviceAccountUser` — act as the Cloud Run service account
 
 ---
 
@@ -327,8 +304,7 @@ The service account referenced by `GCP_SA_KEY` requires the following IAM roles:
 
 **File:** `.github/workflows/pr-preview.yml`
 
-The PR Preview workflow deploys a temporary preview environment for each pull
-request, allowing reviewers to test changes before merging.
+The PR Preview workflow deploys a temporary preview environment for each pull request, allowing reviewers to test changes before merging.
 
 ### Trigger
 
@@ -346,8 +322,7 @@ request, allowing reviewers to test changes before merging.
 
 ### CI (automatic)
 
-Triggers automatically on every push or pull request to `main`. No manual
-action required.
+Triggers automatically on every push or pull request to `main`. No manual action required.
 
 ### CD (automatic + manual)
 
@@ -358,15 +333,12 @@ action required.
 
 ### Model Training (manual + automatic)
 
-- **Manual:** Go to **Actions > Model Training (Vertex AI) > Run workflow**.
-  Configure epochs, batch size, and whether to auto-deploy.
-- **Automatic:** Triggers on push to `main` when files under `data/**` are
-  modified.
+- **Manual:** Go to **Actions > Model Training (Vertex AI) > Run workflow**. Configure epochs, batch size, and whether to auto-deploy.
+- **Automatic:** Triggers on push to `main` when files under `data/**` are modified.
 
 ### PR Preview (automatic)
 
-Triggers automatically when a pull request is opened or updated. The preview
-URL is posted as a comment on the PR.
+Triggers automatically when a pull request is opened or updated. The preview URL is posted as a comment on the PR.
 
 ---
 
@@ -375,28 +347,21 @@ URL is posted as a comment on the PR.
 ### Adding a new CI check
 
 1. Add a new job in `.github/workflows/ci.yml`.
-2. If the CD workflow should wait for it, update the `check-regexp` pattern in
-   the `ci-check` job of `cd.yml`.
+2. If the CD workflow should wait for it, update the `check-regexp` pattern in the `ci-check` job of `cd.yml`.
 
 ### Changing deployment configuration
 
-- **Region/service name:** Update the `env` block at the top of `cd.yml` and
-  `model-training.yml`.
-- **Cloud Run settings:** Modify the `gcloud run deploy` command arguments in
-  the `deploy` job.
+- **Region/service name:** Update the `env` block at the top of `cd.yml` and `model-training.yml`.
+- **Cloud Run settings:** Modify the `gcloud run deploy` command arguments in the `deploy` job.
 
 ### Changing training configuration
 
-- **Machine type/GPU:** Update the `MACHINE_TYPE`, `ACCELERATOR_TYPE`, and
-  `ACCELERATOR_COUNT` environment variables in `model-training.yml`.
-- **Hyperparameters:** Modify `configs/train_config.yaml` or override via
-  workflow dispatch inputs.
+- **Machine type/GPU:** Update the `MACHINE_TYPE`, `ACCELERATOR_TYPE`, and `ACCELERATOR_COUNT` environment variables in `model-training.yml`.
+- **Hyperparameters:** Modify `configs/train_config.yaml` or override via workflow dispatch inputs.
 
 ### Adding environment-specific deployments
 
-To add staging/production environments, duplicate the `deploy` job with
-different Cloud Run service names and create separate GitHub Environments with
-approval rules.
+To add staging/production environments, duplicate the `deploy` job with different Cloud Run service names and create separate GitHub Environments with approval rules.
 
 ---
 
@@ -419,5 +384,4 @@ The following branch protection settings are recommended for the `main` branch:
 1. Go to **Settings > Branches > Add rule**.
 2. Set branch name pattern to `main`.
 3. Enable the settings listed above.
-4. Select the required status checks from the list (they appear after the first
-   CI run).
+4. Select the required status checks from the list (they appear after the first CI run).

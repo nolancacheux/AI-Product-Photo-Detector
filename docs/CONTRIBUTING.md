@@ -136,18 +136,10 @@ test(api): add tests for health endpoint
 ```
 AI-Product-Photo-Detector/
 ├── .github/workflows/      # CI/CD pipelines
-│   ├── ci.yml              # Lint, type check, test, security scan
-│   ├── cd.yml              # Build, push, deploy to Cloud Run
-│   ├── model-training.yml  # Vertex AI GPU training pipeline
-│   └── pr-preview.yml      # PR preview deployments
 ├── src/
 │   ├── data/               # Data download and validation
 │   ├── inference/          # API server
 │   │   ├── routes/         # API route handlers
-│   │   │   ├── predict.py  # Prediction endpoints
-│   │   │   ├── monitoring.py # Health and metrics endpoints
-│   │   │   ├── info.py     # Root and privacy endpoints
-│   │   │   └── v1/         # API v1 versioned routes
 │   │   ├── api.py          # FastAPI application
 │   │   ├── predictor.py    # Model loading and inference
 │   │   ├── explainer.py    # Grad-CAM heatmap generation
@@ -165,30 +157,13 @@ AI-Product-Photo-Detector/
 │   │   ├── gcs.py          # GCS integration
 │   │   └── vertex_submit.py # Vertex AI job submission
 │   ├── pipelines/          # Pipeline orchestration
-│   │   ├── evaluate.py     # Model evaluation
-│   │   └── training_pipeline.py # End-to-end training
 │   ├── monitoring/         # Observability
-│   │   ├── metrics.py      # Prometheus metrics
-│   │   └── drift.py        # Drift detection
 │   ├── ui/                 # Streamlit web interface
 │   └── utils/              # Shared utilities
 ├── tests/                  # Unit and integration tests
 ├── configs/                # Configuration files
-│   ├── train_config.yaml   # Training hyperparameters
-│   ├── inference_config.yaml # API configuration
-│   ├── pipeline_config.yaml  # Pipeline configuration
-│   ├── prometheus.yml      # Prometheus scrape config
-│   ├── prometheus/         # Alerting rules
-│   └── grafana/            # Dashboards and provisioning
 ├── docker/                 # Dockerfiles
-│   ├── Dockerfile          # Production API image
-│   ├── Dockerfile.training # Vertex AI GPU training
-│   ├── serve.Dockerfile    # Serving-optimized image
-│   ├── train.Dockerfile    # Local training
-│   └── ui.Dockerfile       # Streamlit UI
 ├── terraform/              # Infrastructure as Code
-│   ├── environments/       # Per-environment configs (dev/prod)
-│   └── modules/            # Reusable Terraform modules
 ├── scripts/                # Data download utilities
 ├── notebooks/              # Jupyter notebooks (Colab training)
 ├── dvc.yaml                # DVC pipeline definition
@@ -198,8 +173,6 @@ AI-Product-Photo-Detector/
 ```
 
 ## Makefile Commands
-
-The `Makefile` provides shortcuts for common tasks:
 
 ```bash
 make help          # List all commands
@@ -247,8 +220,7 @@ make docker-down
 
 ## Infrastructure (Terraform)
 
-The `terraform/` directory provisions GCP resources using a modular structure.
-See [INFRASTRUCTURE.md](INFRASTRUCTURE.md) for full details.
+The `terraform/` directory provisions GCP resources using a modular structure. See [INFRASTRUCTURE.md](INFRASTRUCTURE.md) for full details.
 
 ```bash
 # Choose environment
@@ -276,4 +248,4 @@ terraform apply
 2. Update `CHANGELOG.md` with the new version and changes
 3. Create a release tag: `git tag v1.x.x`
 4. Push the tag: `git push origin v1.x.x`
-5. The CI/CD pipeline automatically builds and deploys to Cloud Run
+5. The CI/CD pipeline automatically builds and deploys

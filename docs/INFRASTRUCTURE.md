@@ -1,8 +1,6 @@
 # GCP Infrastructure and Terraform
 
-All cloud infrastructure is defined as code using Terraform in the `terraform/`
-directory. This document covers every provisioned resource, setup instructions,
-cost considerations, and teardown procedures.
+All cloud infrastructure is defined as code using Terraform in the `terraform/` directory. This document covers every provisioned resource, setup instructions, cost considerations, and teardown procedures.
 
 ---
 
@@ -63,31 +61,30 @@ cost considerations, and teardown procedures.
 
 ## Module Structure
 
-The Terraform configuration follows a modular architecture with per-environment
-configurations:
+The Terraform configuration follows a modular architecture with per-environment configurations:
 
 ```
 terraform/
 ├── environments/          # Per-environment configurations
 │   ├── dev/               # Development (scale-to-zero, 512Mi, 10€ budget)
-│   │   ├── main.tf        # Module calls with dev values
-│   │   ├── variables.tf   # Dev-specific variables
-│   │   ├── outputs.tf     # Dev outputs
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
 │   │   └── terraform.tfvars
 │   └── prod/              # Production (min 1 instance, 1Gi, 50€ budget)
-│       ├── main.tf        # Module calls with prod values
-│       ├── variables.tf   # Prod-specific variables
-│       ├── outputs.tf     # Prod outputs
+│       ├── main.tf
+│       ├── variables.tf
+│       ├── outputs.tf
 │       └── terraform.tfvars
 ├── modules/               # Reusable infrastructure modules
-│   ├── cloud-run/         # Cloud Run service (FastAPI API)
-│   ├── storage/           # GCS buckets (DVC data & models)
-│   ├── registry/          # Artifact Registry (Docker images)
-│   ├── monitoring/        # Uptime checks, alerts, notifications
-│   └── iam/               # Service accounts & role bindings
-├── backend.tf             # Remote state documentation
-├── versions.tf            # Required providers
-└── README.md              # Module documentation
+│   ├── cloud-run/
+│   ├── storage/
+│   ├── registry/
+│   ├── monitoring/
+│   └── iam/
+├── backend.tf
+├── versions.tf
+└── README.md
 ```
 
 ### Modules Overview
@@ -138,14 +135,13 @@ Terraform enables the following GCP APIs automatically:
 | Property | Value |
 |----------|-------|
 | Module | `modules/storage` |
-| Name | `<project_id>-mlops-data` |
+| Name | `<PROJECT_ID>-mlops-data` |
 | Location | Same as `var.region` (default: `europe-west1`) |
 | Access | Uniform bucket-level, public access prevented |
 | Versioning | Enabled |
 | Lifecycle | Configurable version retention and archive cleanup |
 
-**Purpose:** Stores DVC-tracked training data, model checkpoints, and MLflow
-artifacts.
+**Purpose:** Stores DVC-tracked training data, model checkpoints, and MLflow artifacts.
 
 ### Artifact Registry Repository
 
@@ -156,8 +152,7 @@ artifacts.
 | Format | Docker |
 | Cleanup | Configurable retention for recent and untagged images |
 
-**Purpose:** Stores Docker images for both the inference API and the training
-container.
+**Purpose:** Stores Docker images for both the inference API and the training container.
 
 ### Cloud Run Service
 
@@ -192,7 +187,6 @@ container.
 |----------|-------|
 | Module | `modules/iam` |
 | Account ID | `ai-product-detector-sa` |
-| Roles | See table below |
 
 | IAM Role | Purpose |
 |----------|---------|
@@ -254,14 +248,13 @@ cd terraform/environments/prod
 #### 3. Configure variables
 
 ```bash
-# Edit terraform.tfvars with your project ID
 vim terraform.tfvars
 ```
 
 At minimum, set `project_id`:
 
 ```hcl
-project_id = "my-gcp-project-id"
+project_id = "<YOUR-PROJECT-ID>"
 ```
 
 #### 4. Initialize Terraform
@@ -270,15 +263,11 @@ project_id = "my-gcp-project-id"
 terraform init
 ```
 
-This downloads the Google provider plugin and initializes the working directory.
-
 #### 5. Preview changes
 
 ```bash
 terraform plan
 ```
-
-Review the output. Terraform will show every resource it intends to create.
 
 #### 6. Apply
 
@@ -286,8 +275,7 @@ Review the output. Terraform will show every resource it intends to create.
 terraform apply
 ```
 
-Type `yes` when prompted. Terraform will provision all resources and print
-outputs including the Cloud Run URL, bucket name, and registry URL.
+Type `yes` when prompted. Terraform will provision all resources and print outputs including the Cloud Run URL, bucket name, and registry URL.
 
 #### 7. Verify outputs
 
@@ -339,8 +327,7 @@ terraform output
 
 ### Terraform Execution
 
-The identity running `terraform apply` (your user account or a CI service
-account) needs:
+The identity running `terraform apply` needs:
 
 - `roles/editor` or a combination of:
   - `roles/run.admin`
@@ -379,7 +366,7 @@ Provisioned by Terraform with minimal permissions:
 
 ## Cost Estimation
 
-These estimates assume a student or small-scale project with minimal traffic.
+These estimates assume a small-scale project with minimal traffic.
 
 ### Cloud Run
 
@@ -388,7 +375,7 @@ These estimates assume a student or small-scale project with minimal traffic.
 | CPU (idle) | Free | Scale-to-zero with `min_instances = 0` |
 | CPU (active) | ~$0.00002400/vCPU-second | Billed only when handling requests |
 | Memory (active) | ~$0.00000250/GiB-second | |
-| Free tier | 2M requests/month, 360K vCPU-seconds | Generous free tier covers most student usage |
+| Free tier | 2M requests/month, 360K vCPU-seconds | Generous free tier covers most light usage |
 
 **Estimated monthly cost (low traffic):** $0 – $2
 
@@ -422,8 +409,7 @@ These estimates assume a student or small-scale project with minimal traffic.
 
 ### Budget Alert
 
-The Terraform configuration includes a budget alert (default: 10€/month for dev,
-50€/month for prod) with notifications at 50%, 80%, and 100% thresholds.
+The Terraform configuration includes a budget alert (default: 10€/month for dev, 50€/month for prod) with notifications at 50%, 80%, and 100% thresholds.
 
 ### Total Estimated Monthly Cost
 
@@ -436,14 +422,12 @@ The Terraform configuration includes a budget alert (default: 10€/month for de
 
 ## Remote State
 
-By default, Terraform stores state locally. For team collaboration, enable GCS
-remote state.
+By default, Terraform stores state locally. For team collaboration, enable GCS remote state.
 
 ### Setup (one-time)
 
 ```bash
-# Replace with your project ID
-PROJECT_ID="your-project-id"
+PROJECT_ID="<YOUR-PROJECT-ID>"
 
 # Create state bucket
 gsutil mb -l europe-west1 gs://${PROJECT_ID}-tfstate
@@ -457,7 +441,7 @@ Uncomment the `backend "gcs"` block in your environment's `main.tf`:
 ```hcl
 terraform {
   backend "gcs" {
-    bucket = "your-project-id-tfstate"
+    bucket = "<YOUR-PROJECT-ID>-tfstate"
     prefix = "terraform/state/dev"  # or "terraform/state/prod"
   }
 }
@@ -487,13 +471,11 @@ Type `yes` when prompted. This removes:
 - Monitoring resources (uptime checks, alerts)
 - Billing budget alert
 
-**Note:** The GCS bucket has `force_destroy = false` by default in production,
-meaning Terraform will refuse to delete it if it contains objects. To force
-deletion:
+**Note:** The GCS bucket has `force_destroy = false` by default in production, meaning Terraform will refuse to delete it if it contains objects. To force deletion:
 
 ```bash
 # Empty the bucket first
-gsutil -m rm -r gs://<PROJECT_ID>-mlops-data/**
+gsutil -m rm -r gs://<YOUR-PROJECT-ID>-mlops-data/**
 
 # Then destroy
 terraform destroy
@@ -505,19 +487,18 @@ If Terraform state becomes inconsistent, remove resources manually:
 
 ```bash
 # Delete Cloud Run service
-gcloud run services delete ai-product-detector --region=europe-west1
+gcloud run services delete <SERVICE-NAME> --region=<REGION>
 
 # Delete Artifact Registry repository
-gcloud artifacts repositories delete ai-product-detector \
-  --location=europe-west1
+gcloud artifacts repositories delete <REPO-NAME> --location=<REGION>
 
 # Delete GCS bucket
-gsutil -m rm -r gs://<PROJECT_ID>-mlops-data
-gsutil rb gs://<PROJECT_ID>-mlops-data
+gsutil -m rm -r gs://<YOUR-PROJECT-ID>-mlops-data
+gsutil rb gs://<YOUR-PROJECT-ID>-mlops-data
 
 # Delete service account
 gcloud iam service-accounts delete \
-  ai-product-detector-sa@<PROJECT_ID>.iam.gserviceaccount.com
+  ai-product-detector-sa@<YOUR-PROJECT-ID>.iam.gserviceaccount.com
 ```
 
 ### Disable APIs (optional)
@@ -538,8 +519,7 @@ This is usually unnecessary and may affect other resources in the project.
 ### Deploy a new image
 
 ```bash
-# Build and push
-IMAGE="europe-west1-docker.pkg.dev/YOUR_PROJECT/ai-product-detector/ai-product-detector:v1.0.0"
+IMAGE="<REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/ai-product-detector/api:v1.0.0"
 docker build -f docker/Dockerfile -t $IMAGE .
 docker push $IMAGE
 
@@ -565,5 +545,5 @@ terraform validate
 
 ```bash
 terraform import module.cloud_run.google_cloud_run_v2_service.api \
-  projects/PROJECT/locations/REGION/services/SERVICE
+  projects/<YOUR-PROJECT-ID>/locations/<REGION>/services/<SERVICE-NAME>
 ```

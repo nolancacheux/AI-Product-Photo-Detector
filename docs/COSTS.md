@@ -8,7 +8,7 @@
 | **Alert Thresholds** | 50%, 80%, 100% |
 | **Billing Account** | Configured via GCP Console |
 | **Budget ID** | Managed by Terraform |
-| **Scope** | Project `ai-product-detector-487013` only |
+| **Scope** | Single GCP project |
 
 > Budget alerts are sent to the billing account administrators via email.
 > To add specific notification channels (e.g., Pub/Sub, Slack), configure them in the
@@ -16,13 +16,13 @@
 
 ### Manual Budget Setup (Console)
 
-If the `gcloud` budget command fails (permission issues), follow these steps:
+If the `gcloud` budget command fails (permission issues):
 
-1. Go to **[GCP Console → Billing → Budgets & alerts](https://console.cloud.google.com/billing/budgets)**
+1. Go to **GCP Console → Billing → Budgets & alerts**
 2. Click **Create Budget**
-3. Set **Name**: `ai-product-detector-monthly-5eur`
-4. **Scope** → Select project `ai-product-detector-487013`
-5. **Amount**→ 5.00 EUR, **Budget type**: Specified amount
+3. Set **Name**: `ai-product-detector-monthly`
+4. **Scope** → Select your project
+5. **Amount** → 5.00 EUR, **Budget type**: Specified amount
 6. **Thresholds** → Add rules at 50%, 80%, 100% of actual spend
 7. Under **Notifications**, add your email via a Monitoring Notification Channel
 8. Click **Finish**
@@ -59,8 +59,6 @@ If the `gcloud` budget command fails (permission issues), follow these steps:
 
 ## Google Cloud Storage (GCS)
 
-**Bucket:** `gs://ai-product-detector-487013-mlops-data`
-
 ### Lifecycle Rules (configured)
 
 | Rule | Condition | Action |
@@ -77,21 +75,11 @@ If the `gcloud` budget command fails (permission issues), follow these steps:
 | Class B ops (read) | $0.0004/1,000 | 50,000 ops |
 | Egress (same region) | Free | — |
 
-**Estimated usage:**< 1 GB DVC data → **$0.00** (free tier).
+**Estimated usage:** < 1 GB DVC data → **$0.00** (free tier).
 
 ---
 
 ## Artifact Registry
-
-**Repository:** `europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector`
-
-### Current State (after cleanup)
-
-| Image | Tag | Status |
-|-------|-----|--------|
-| `api@sha256:d93ed58b...` | `latest` | Active (revision 4) |
-
-3 failed images and 3 failed Cloud Run revisions were deleted.
 
 ### Artifact Registry Pricing
 
@@ -100,7 +88,7 @@ If the `gcloud` budget command fails (permission issues), follow these steps:
 | Storage | $0.10/GB/month | 0.5 GB |
 | Egress (same region) | Free | — |
 
-**Estimated usage:**~1-2 GB Docker image → **$0.05-0.15/month**.
+**Estimated usage:** ~1-2 GB Docker image → **$0.05-0.15/month**.
 
 ---
 
@@ -108,13 +96,13 @@ If the `gcloud` budget command fails (permission issues), follow these steps:
 
 | Service | Estimated Usage | Estimated Cost |
 |---------|-----------------|----------------|
-| **Cloud Run**| Light usage (~100 req/day) | **$0.00** (free tier) |
-| **GCS**| < 1 GB storage | **$0.00** (free tier) |
-| **Artifact Registry**| ~1.5 GB (1 image) | **~$0.10** |
-| **Cloud Build**(if used) | < 120 min/day | **$0.00** (free tier) |
-| **Networking**| Same-region traffic | **$0.00** |
+| **Cloud Run** | Light usage (~100 req/day) | **$0.00** (free tier) |
+| **GCS** | < 1 GB storage | **$0.00** (free tier) |
+| **Artifact Registry** | ~1.5 GB (1 image) | **~$0.10** |
+| **Cloud Build** (if used) | < 120 min/day | **$0.00** (free tier) |
+| **Networking** | Same-region traffic | **$0.00** |
 | | | |
-| **Total estimated**| | **< $0.50/month** |
+| **Total estimated** | | **< $0.50/month** |
 
 ### GCP Free Tier Summary (Always Free)
 
@@ -127,7 +115,7 @@ If the `gcloud` budget command fails (permission issues), follow these steps:
 | Cloud Logging | 50 GB/month |
 | Cloud Monitoring | Basic (free) |
 
-> **For a student project with light traffic, monthly costs should stay well under the 5€ budget.**
+> **For a project with light traffic, monthly costs should stay well under the 5€ budget.**
 > The main potential cost driver is Artifact Registry storage if many large images accumulate.
 
 ---
@@ -137,8 +125,7 @@ If the `gcloud` budget command fails (permission issues), follow these steps:
 1. **Budget alert** at 5€/month with 50%/80%/100% thresholds
 2. **Cloud Run** scale-to-zero (min-instances=0), max 3 instances
 3. **GCS lifecycle** auto-deletes temp files (90d) and old versions (30d)
-4. **Artifact Registry** cleaned: removed 2 failed images (~2-3 GB saved)
-5. **Cloud Run revisions** cleaned: removed 3 failed revisions
+4. **Artifact Registry** cleanup: remove unused images periodically
 
 ## Maintenance Checklist
 
