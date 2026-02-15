@@ -26,7 +26,7 @@
 
 ## Overview
 
-End-to-end machine learning system that classifies product photos as real or AI-generated using an EfficientNet-B0 model with Grad-CAM explainability. The project covers the full MLOps lifecycle — from DVC-managed data pipelines and GPU training (local, Colab, or Vertex AI) to a FastAPI serving layer with authentication, rate limiting, and Prometheus monitoring. Infrastructure is provisioned with Terraform and deployed serverlessly via Docker and GitHub Actions CI/CD.
+End-to-end machine learning system that classifies product photos as real or AI-generated using an EfficientNet-B0 model with Grad-CAM explainability. The project covers the full MLOps lifecycle: from DVC-managed data pipelines and GPU training (local, Colab, or Vertex AI) to a FastAPI serving layer with authentication, rate limiting, and Prometheus monitoring. Infrastructure is provisioned with Terraform and deployed serverlessly via Docker and GitHub Actions CI/CD.
 
 ## Features
 
@@ -42,7 +42,7 @@ End-to-end machine learning system that classifies product photos as real or AI-
 ## Training Options
 
 <details>
-<summary>🏠 Local Training — Docker-based, for development</summary>
+<summary>Local Training: Docker-based, for development</summary>
 
 **When to use:** Development, debugging, quick iterations on CPU.
 
@@ -67,7 +67,7 @@ Training takes ~1–2 hours on CPU. Edit `configs/train_config.yaml` to adjust h
 </details>
 
 <details>
-<summary>📓 Google Colab — Free T4 GPU, one-click notebook</summary>
+<summary>Google Colab: Free T4 GPU, one-click notebook</summary>
 
 **When to use:** Quick experiments with free GPU, no local setup needed.
 
@@ -86,7 +86,7 @@ Open in Colab → set runtime to **T4 GPU** → Run all cells. Training takes ~2
 </details>
 
 <details>
-<summary>☁️ Vertex AI Pipeline — Production training on GCP</summary>
+<summary>Vertex AI Pipeline: Production training on GCP</summary>
 
 **When to use:** Production retraining, CI/CD-triggered training, reproducible GPU runs.
 
@@ -156,8 +156,8 @@ make lint  # ruff + mypy
 | `POST` | `/predict` | Single image classification | 30/min |
 | `POST` | `/predict/batch` | Batch classification (up to 10 images) | 5/min |
 | `POST` | `/predict/explain` | Prediction + Grad-CAM heatmap | 10/min |
-| `GET` | `/health` | Readiness probe (model status, uptime, drift) | — |
-| `GET` | `/metrics` | Prometheus metrics (text format) | — |
+| `GET` | `/health` | Readiness probe (model status, uptime, drift) | - |
+| `GET` | `/metrics` | Prometheus metrics (text format) | - |
 
 ### Authentication
 
@@ -206,10 +206,10 @@ All exposed at `GET /metrics` in Prometheus text format:
 
 Pre-configured and auto-provisioned via `configs/grafana/provisioning/`:
 
-- **Request throughput** — Requests/sec by endpoint
-- **Latency percentiles** — p50, p90, p99 per endpoint
-- **Prediction distribution** — Real vs AI-generated ratio over time
-- **Model health** — Load status, drift alerts, error rates
+- **Request throughput** - Requests/sec by endpoint
+- **Latency percentiles** - p50, p90, p99 per endpoint
+- **Prediction distribution** - Real vs AI-generated ratio over time
+- **Model health** - Load status, drift alerts, error rates
 
 Default credentials: `admin` / `admin`
 
@@ -338,8 +338,8 @@ AI-Product-Photo-Detector/
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-<p align="center">Made with ❤️ by <a href="https://github.com/nolancacheux">Nolan Cacheux</a></p>
+<p align="center">Made by <a href="https://github.com/nolancacheux">Nolan Cacheux</a></p>

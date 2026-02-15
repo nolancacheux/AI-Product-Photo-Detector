@@ -32,19 +32,19 @@ All metrics are prefixed with `aidetect_`.
 |--------|------|--------|-------------|
 | `aidetect_app_info` | Info | `version`, `environment` | Application version and environment |
 | `aidetect_model_info` | Info | `name`, `version`, `architecture`, `parameters` | Model metadata |
-| `aidetect_model_loaded` | Gauge | — | Whether the model is loaded (0/1) |
-| `aidetect_model_load_seconds` | Gauge | — | Time taken to load the model |
+| `aidetect_model_loaded` | Gauge | - | Whether the model is loaded (0/1) |
+| `aidetect_model_load_seconds` | Gauge | - | Time taken to load the model |
 
 ### Prediction Metrics
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
 | `aidetect_predictions_total` | Counter | `status`, `prediction`, `confidence` | Total predictions |
-| `aidetect_prediction_latency_seconds` | Histogram | — | Prediction inference latency |
-| `aidetect_prediction_probability` | Histogram | — | Distribution of prediction probabilities |
+| `aidetect_prediction_latency_seconds` | Histogram | - | Prediction inference latency |
+| `aidetect_prediction_probability` | Histogram | - | Distribution of prediction probabilities |
 | `aidetect_batch_predictions_total` | Counter | `status` | Total batch prediction requests |
-| `aidetect_batch_size` | Histogram | — | Number of images per batch |
-| `aidetect_batch_latency_seconds` | Histogram | — | Batch prediction latency |
+| `aidetect_batch_size` | Histogram | - | Number of images per batch |
+| `aidetect_batch_latency_seconds` | Histogram | - | Batch prediction latency |
 
 ### HTTP Metrics
 
@@ -52,10 +52,10 @@ All metrics are prefixed with `aidetect_`.
 |--------|------|--------|-------------|
 | `aidetect_http_requests_total` | Counter | `method`, `endpoint`, `status_code` | Total HTTP requests |
 | `aidetect_http_request_duration_seconds` | Histogram | `method`, `endpoint` | Request duration |
-| `aidetect_request_size_bytes` | Histogram | — | Request body size |
-| `aidetect_response_size_bytes` | Histogram | — | Response body size |
-| `aidetect_active_requests` | Gauge | — | Currently processing requests |
-| `aidetect_concurrent_requests_max` | Gauge | — | High watermark of concurrent requests |
+| `aidetect_request_size_bytes` | Histogram | - | Request body size |
+| `aidetect_response_size_bytes` | Histogram | - | Response body size |
+| `aidetect_active_requests` | Gauge | - | Currently processing requests |
+| `aidetect_concurrent_requests_max` | Gauge | - | High watermark of concurrent requests |
 | `aidetect_rate_limit_exceeded_total` | Counter | `endpoint` | Rate limit violations |
 
 ### Error Metrics
@@ -69,14 +69,14 @@ All metrics are prefixed with `aidetect_`.
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
-| `aidetect_image_size_bytes` | Histogram | — | Uploaded image file sizes |
-| `aidetect_image_dimension_pixels` | Histogram | — | Image dimensions (max side) |
+| `aidetect_image_size_bytes` | Histogram | - | Uploaded image file sizes |
+| `aidetect_image_dimension_pixels` | Histogram | - | Image dimensions (max side) |
 
 ### Drift Metrics
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
-| `aidetect_drift_score` | Gauge | — | Current drift score (0-1) |
+| `aidetect_drift_score` | Gauge | - | Current drift score (0-1) |
 
 ### Process Metrics (automatic via prometheus_client)
 

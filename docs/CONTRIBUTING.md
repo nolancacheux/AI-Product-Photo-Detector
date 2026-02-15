@@ -88,10 +88,10 @@ pytest tests/test_model.py::TestAIImageDetector::test_model_creation
 
 ### Branch Naming
 
-- `feature/description` — New features
-- `fix/description` — Bug fixes
-- `docs/description` — Documentation
-- `refactor/description` — Code refactoring
+- `feature/description` - New features
+- `fix/description` - Bug fixes
+- `docs/description` - Documentation
+- `refactor/description` - Code refactoring
 
 ### Commit Messages
 

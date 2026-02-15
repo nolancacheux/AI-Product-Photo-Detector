@@ -714,13 +714,13 @@ Client → FastAPI → Auth → Rate Limit → Validate Image → Preprocess (22
 | `/predict` | POST | Single image classification | 30/min |
 | `/predict/batch` | POST | Batch (up to 10 images) | 5/min |
 | `/predict/explain` | POST | Prediction + Grad-CAM heatmap | 10/min |
-| `/health` | GET | Detailed health check with metrics | — |
-| `/healthz` | GET | Liveness probe (process alive) | — |
-| `/readyz` | GET | Readiness probe (model loaded) | — |
-| `/startup` | GET | Startup probe (model loading complete) | — |
-| `/metrics` | GET | Prometheus metrics | — |
-| `/drift` | GET | Drift detection status | — |
-| `/privacy` | GET | Privacy policy | — |
+| `/health` | GET | Detailed health check with metrics | - |
+| `/healthz` | GET | Liveness probe (process alive) | - |
+| `/readyz` | GET | Readiness probe (model loaded) | - |
+| `/startup` | GET | Startup probe (model loading complete) | - |
+| `/metrics` | GET | Prometheus metrics | - |
+| `/drift` | GET | Drift detection status | - |
+| `/privacy` | GET | Privacy policy | - |
 
 **API versioning:**
 - All endpoints are available at both root (`/predict`) and versioned (`/v1/predict`)
@@ -788,9 +788,9 @@ docker/
 
 | Service | Port | Dependencies |
 |---------|------|-------------|
-| `api` (FastAPI) | 8080 | — |
+| `api` (FastAPI) | 8080 | - |
 | `ui` (Streamlit) | 8501 | api (healthy) |
-| `mlflow` (Tracking) | 5000 | — |
+| `mlflow` (Tracking) | 5000 | - |
 | `prometheus` (Metrics) | 9090 | api (healthy) |
 | `grafana` (Dashboards) | 3000 | prometheus |
 

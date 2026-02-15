@@ -75,8 +75,8 @@ The CI workflow runs on every push and pull request targeting `main`. It validat
 
 - **Runner:** `ubuntu-latest`, Python 3.11
 - **Tools:**
-  - [pip-audit](https://pypi.org/project/pip-audit/) — checks installed dependencies for known vulnerabilities.
-  - [bandit](https://bandit.readthedocs.io/) — static analysis for common security issues in Python source code. Skips `B101` (assert) and `B601` (shell injection in parameterized calls).
+  - [pip-audit](https://pypi.org/project/pip-audit/) - checks installed dependencies for known vulnerabilities.
+  - [bandit](https://bandit.readthedocs.io/) - static analysis for common security issues in Python source code. Skips `B101` (assert) and `B601` (shell injection in parameterized calls).
 - **Note:** Both steps use `continue-on-error: true` so they report findings without blocking the pipeline.
 
 #### 5. Docker Build Validation (PR only)
@@ -292,11 +292,11 @@ Configure these in **Settings > Secrets and variables > Actions** in your GitHub
 
 The service account referenced by `GCP_SA_KEY` requires the following IAM roles:
 
-- `roles/run.admin` — deploy and manage Cloud Run services
-- `roles/artifactregistry.writer` — push Docker images
-- `roles/storage.objectAdmin` — read/write GCS objects (data, models)
-- `roles/aiplatform.user` — submit Vertex AI training jobs
-- `roles/iam.serviceAccountUser` — act as the Cloud Run service account
+- `roles/run.admin` - deploy and manage Cloud Run services
+- `roles/artifactregistry.writer` - push Docker images
+- `roles/storage.objectAdmin` - read/write GCS objects (data, models)
+- `roles/aiplatform.user` - submit Vertex AI training jobs
+- `roles/iam.serviceAccountUser` - act as the Cloud Run service account
 
 ---
 

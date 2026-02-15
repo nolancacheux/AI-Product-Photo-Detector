@@ -73,7 +73,7 @@ If the `gcloud` budget command fails (permission issues):
 | Storage | $0.020/GB/month | 5 GB |
 | Class A ops (write) | $0.005/1,000 | 5,000 ops |
 | Class B ops (read) | $0.0004/1,000 | 50,000 ops |
-| Egress (same region) | Free | — |
+| Egress (same region) | Free | - |
 
 **Estimated usage:** < 1 GB DVC data → **$0.00** (free tier).
 
@@ -86,7 +86,7 @@ If the `gcloud` budget command fails (permission issues):
 | Resource | Price | Free Tier (monthly) |
 |----------|-------|---------------------|
 | Storage | $0.10/GB/month | 0.5 GB |
-| Egress (same region) | Free | — |
+| Egress (same region) | Free | - |
 
 **Estimated usage:** ~1-2 GB Docker image → **$0.05-0.15/month**.
 

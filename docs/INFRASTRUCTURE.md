@@ -178,8 +178,8 @@ Terraform enables the following GCP APIs automatically:
 
 **Environment variables injected:**
 
-- `ENVIRONMENT` — deployment environment (dev/staging/prod)
-- `GCS_BUCKET` — bucket name for model/data access
+- `ENVIRONMENT` - deployment environment (dev/staging/prod)
+- `GCS_BUCKET` - bucket name for model/data access
 
 ### IAM Service Account
 
