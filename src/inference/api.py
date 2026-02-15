@@ -242,7 +242,13 @@ async def security_headers_middleware(request: Request, call_next: Any) -> Respo
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000"
-    response.headers["Content-Security-Policy"] = "default-src 'none'"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "img-src 'self' data: https://fastapi.tiangolo.com; "
+        "font-src 'self' https://cdn.jsdelivr.net"
+    )
 
     # No-cache for prediction endpoints (contain sensitive classification data)
     if request.url.path in _PREDICTION_PATHS:
