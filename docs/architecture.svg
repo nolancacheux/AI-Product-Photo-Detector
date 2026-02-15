@@ -1,14 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 920" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
   <defs>
-    <!-- Shadow Filters -->
     <filter id="sh" x="-2%" y="-2%" width="104%" height="108%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#94a3b8" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#94a3b8" flood-opacity="0.15"/>
     </filter>
-    <filter id="sh-lg" x="-2%" y="-2%" width="106%" height="112%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#94a3b8" flood-opacity="0.22"/>
+    <filter id="sh-lg" x="-3%" y="-3%" width="106%" height="112%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#94a3b8" flood-opacity="0.18"/>
     </filter>
-
-    <!-- Section Gradients -->
     <linearGradient id="gGreen" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#ecfdf5"/><stop offset="100%" stop-color="#d1fae5"/>
     </linearGradient>
@@ -24,37 +21,29 @@
     <linearGradient id="gRed" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#fef2f2"/><stop offset="100%" stop-color="#fecdd3"/>
     </linearGradient>
-
-    <!-- Card Gradients -->
-    <linearGradient id="cWhite" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="cW" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#f8fafc"/>
     </linearGradient>
-
-    <!-- Arrow Markers -->
-    <marker id="arrowGreen" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+    <marker id="aG" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
       <path d="M0,0 L10,4 L0,8 Z" fill="#059669"/>
     </marker>
-    <marker id="arrowPurple" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+    <marker id="aP" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
       <path d="M0,0 L10,4 L0,8 Z" fill="#7c3aed"/>
     </marker>
-    <marker id="arrowBlue" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+    <marker id="aB" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
       <path d="M0,0 L10,4 L0,8 Z" fill="#3b82f6"/>
     </marker>
-    <marker id="arrowOrange" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+    <marker id="aO" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
       <path d="M0,0 L10,4 L0,8 Z" fill="#ea580c"/>
     </marker>
-    <marker id="arrowRed" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+    <marker id="aR" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
       <path d="M0,0 L10,4 L0,8 Z" fill="#dc2626"/>
     </marker>
   </defs>
 
   <!-- Background -->
-  <rect width="1200" height="920" fill="#f8fafc" rx="0"/>
-
-  <!-- Top Accent Bar (gradient stripe) -->
-  <rect width="1200" height="4" y="0">
-    <animate attributeName="fill" values="#059669;#7c3aed;#3b82f6;#ea580c;#dc2626;#059669" dur="12s" repeatCount="indefinite"/>
-  </rect>
+  <rect width="1200" height="900" fill="#f8fafc"/>
+  <!-- Accent bar -->
   <rect x="0" y="0" width="240" height="4" fill="#059669"/>
   <rect x="240" y="0" width="240" height="4" fill="#7c3aed"/>
   <rect x="480" y="0" width="240" height="4" fill="#3b82f6"/>
@@ -62,460 +51,406 @@
   <rect x="960" y="0" width="240" height="4" fill="#dc2626"/>
 
   <!-- Title -->
-  <text x="600" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a" letter-spacing="-0.5">AI Product Photo Detector — System Architecture</text>
-  <text x="600" y="50" text-anchor="middle" font-size="11" fill="#64748b">EfficientNet-B0 · FastAPI · Cloud Run · Terraform · MLOps</text>
+  <text x="600" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">AI Product Photo Detector — System Architecture</text>
+  <text x="600" y="49" text-anchor="middle" font-size="11" fill="#64748b">EfficientNet-B0 · FastAPI · Cloud Run · Terraform · MLOps</text>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- ROW 1 — DATA PIPELINE (Green)                                  -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- ============================================================= -->
+  <!-- ROW 1: DATA PIPELINE (Green) y=62..205                        -->
+  <!-- ============================================================= -->
   <g filter="url(#sh-lg)">
-    <rect x="24" y="64" width="940" height="160" rx="12" fill="url(#gGreen)" stroke="#a7f3d0" stroke-width="1.5"/>
-    <rect x="24" y="64" width="940" height="5" rx="12" ry="0" fill="#059669"/>
-    <!-- Fix top corners -->
-    <rect x="24" y="67" width="940" height="4" fill="url(#gGreen)"/>
-    <rect x="24" y="64" width="940" height="5" rx="12" ry="2" fill="#059669" clip-path="inset(0 0 2px 0)"/>
+    <rect x="24" y="62" width="1152" height="143" rx="12" fill="url(#gGreen)" stroke="#a7f3d0" stroke-width="1.2"/>
+    <rect x="24" y="62" width="1152" height="5" rx="12" ry="2" fill="#059669"/>
   </g>
-  <text x="494" y="86" text-anchor="middle" font-size="13" font-weight="700" fill="#065f46" letter-spacing="0.5">📦 DATA PIPELINE</text>
+  <text x="600" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="#065f46" letter-spacing="1">DATA PIPELINE</text>
 
   <!-- Card: CIFAKE Dataset -->
   <g filter="url(#sh)">
-    <rect x="44" y="96" width="280" height="115" rx="10" fill="url(#cWhite)" stroke="#a7f3d0" stroke-width="1"/>
-    <rect x="44" y="96" width="280" height="4" rx="10" ry="2" fill="#059669"/>
+    <rect x="48" y="92" width="340" height="100" rx="8" fill="url(#cW)" stroke="#a7f3d0" stroke-width="1"/>
+    <rect x="48" y="92" width="340" height="4" rx="8" ry="2" fill="#059669"/>
   </g>
-  <circle cx="66" cy="116" r="11" fill="#059669"/>
-  <text x="66" y="120" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">D</text>
-  <text x="82" y="120" font-size="13" font-weight="700" fill="#065f46">CIFAKE Dataset</text>
-  <text x="56" y="138" font-size="10.5" fill="#475569">140,000 images (real + AI-generated)</text>
-  <text x="56" y="153" font-size="10.5" fill="#475569">Binary classification benchmark</text>
-  <rect x="56" y="168" width="190" height="20" rx="4" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="0.8"/>
-  <text x="63" y="182" font-size="9" fill="#065f46" font-family="'SF Mono', 'Fira Code', monospace">scripts/download_cifake.py</text>
+  <circle cx="70" cy="112" r="10" fill="#059669"/>
+  <text x="70" y="116" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">D</text>
+  <text x="86" y="115" font-size="12" font-weight="700" fill="#065f46">CIFAKE Dataset</text>
+  <text x="60" y="132" font-size="10" fill="#475569">140,000 images (real + AI-generated)</text>
+  <text x="60" y="146" font-size="10" fill="#475569">Binary classification benchmark</text>
+  <rect x="60" y="160" width="178" height="18" rx="4" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="0.8"/>
+  <text x="66" y="173" font-size="8" fill="#065f46" font-family="monospace">scripts/download_cifake.py</text>
 
   <!-- Card: Data Processing -->
   <g filter="url(#sh)">
-    <rect x="344" y="96" width="280" height="115" rx="10" fill="url(#cWhite)" stroke="#a7f3d0" stroke-width="1"/>
-    <rect x="344" y="96" width="280" height="4" rx="10" ry="2" fill="#059669"/>
+    <rect x="430" y="92" width="340" height="100" rx="8" fill="url(#cW)" stroke="#a7f3d0" stroke-width="1"/>
+    <rect x="430" y="92" width="340" height="4" rx="8" ry="2" fill="#059669"/>
   </g>
-  <circle cx="366" cy="116" r="11" fill="#059669"/>
-  <text x="366" y="120" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">P</text>
-  <text x="382" y="120" font-size="13" font-weight="700" fill="#065f46">Data Processing</text>
-  <text x="356" y="138" font-size="10.5" fill="#475569">Augmentation &amp; validation</text>
-  <text x="356" y="153" font-size="10.5" fill="#475569">Train/val/test splits, transforms</text>
-  <rect x="356" y="168" width="180" height="20" rx="4" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="0.8"/>
-  <text x="363" y="182" font-size="9" fill="#065f46" font-family="'SF Mono', 'Fira Code', monospace">src/training/dataset.py</text>
+  <circle cx="452" cy="112" r="10" fill="#059669"/>
+  <text x="452" y="116" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">P</text>
+  <text x="468" y="115" font-size="12" font-weight="700" fill="#065f46">Data Processing</text>
+  <text x="442" y="132" font-size="10" fill="#475569">Augmentation, validation, transforms</text>
+  <text x="442" y="146" font-size="10" fill="#475569">Train / val / test splits</text>
+  <rect x="442" y="160" width="158" height="18" rx="4" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="0.8"/>
+  <text x="448" y="173" font-size="8" fill="#065f46" font-family="monospace">src/training/dataset.py</text>
 
   <!-- Card: DVC Pipeline -->
   <g filter="url(#sh)">
-    <rect x="644" y="96" width="280" height="115" rx="10" fill="url(#cWhite)" stroke="#a7f3d0" stroke-width="1"/>
-    <rect x="644" y="96" width="280" height="4" rx="10" ry="2" fill="#059669"/>
+    <rect x="812" y="92" width="340" height="100" rx="8" fill="url(#cW)" stroke="#a7f3d0" stroke-width="1"/>
+    <rect x="812" y="92" width="340" height="4" rx="8" ry="2" fill="#059669"/>
   </g>
-  <circle cx="666" cy="116" r="11" fill="#059669"/>
-  <text x="666" y="120" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">V</text>
-  <text x="682" y="120" font-size="13" font-weight="700" fill="#065f46">DVC Pipeline</text>
-  <text x="656" y="138" font-size="10.5" fill="#475569">Versioned data &amp; model artifacts</text>
-  <text x="656" y="153" font-size="10.5" fill="#475569">Reproducible ML pipelines</text>
-  <rect x="656" y="168" width="90" height="20" rx="4" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="0.8"/>
-  <text x="663" y="182" font-size="9" fill="#065f46" font-family="'SF Mono', 'Fira Code', monospace">dvc.yaml</text>
+  <circle cx="834" cy="112" r="10" fill="#059669"/>
+  <text x="834" y="116" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">V</text>
+  <text x="850" y="115" font-size="12" font-weight="700" fill="#065f46">DVC Pipeline</text>
+  <text x="824" y="132" font-size="10" fill="#475569">Versioned data and model artifacts</text>
+  <text x="824" y="146" font-size="10" fill="#475569">Reproducible ML pipelines</text>
+  <rect x="824" y="160" width="78" height="18" rx="4" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="0.8"/>
+  <text x="830" y="173" font-size="8" fill="#065f46" font-family="monospace">dvc.yaml</text>
 
-  <!-- Green arrows: Dataset → Processing → DVC -->
-  <line x1="324" y1="153" x2="344" y2="153" stroke="#059669" stroke-width="2" marker-end="url(#arrowGreen)"/>
-  <line x1="624" y1="153" x2="644" y2="153" stroke="#059669" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <!-- Arrows: Dataset → Processing → DVC -->
+  <line x1="388" y1="142" x2="430" y2="142" stroke="#059669" stroke-width="2" marker-end="url(#aG)"/>
+  <line x1="770" y1="142" x2="812" y2="142" stroke="#059669" stroke-width="2" marker-end="url(#aG)"/>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- ROW 2 — TRAINING PIPELINE (Purple)                             -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- ============================================================= -->
+  <!-- VERTICAL ARROW: Data → Training                                -->
+  <!-- ============================================================= -->
+  <path d="M600 205 L600 225" stroke="#059669" stroke-width="2" marker-end="url(#aG)" fill="none"/>
+
+  <!-- ============================================================= -->
+  <!-- ROW 2: TRAINING PIPELINE (Purple) y=228..400                   -->
+  <!-- ============================================================= -->
   <g filter="url(#sh-lg)">
-    <rect x="24" y="236" width="940" height="182" rx="12" fill="url(#gPurple)" stroke="#c4b5fd" stroke-width="1.5"/>
-    <rect x="24" y="236" width="940" height="5" rx="12" ry="2" fill="#7c3aed"/>
-    <rect x="24" y="239" width="940" height="4" fill="url(#gPurple)"/>
+    <rect x="24" y="228" width="1152" height="172" rx="12" fill="url(#gPurple)" stroke="#c4b5fd" stroke-width="1.2"/>
+    <rect x="24" y="228" width="1152" height="5" rx="12" ry="2" fill="#7c3aed"/>
   </g>
-  <text x="494" y="258" text-anchor="middle" font-size="13" font-weight="700" fill="#4c1d95" letter-spacing="0.5">🧠 TRAINING PIPELINE</text>
+  <text x="600" y="248" text-anchor="middle" font-size="12" font-weight="700" fill="#4c1d95" letter-spacing="1">TRAINING PIPELINE</text>
 
   <!-- Card: Local Training -->
   <g filter="url(#sh)">
-    <rect x="36" y="268" width="185" height="105" rx="10" fill="url(#cWhite)" stroke="#c4b5fd" stroke-width="1"/>
-    <rect x="36" y="268" width="185" height="4" rx="10" ry="2" fill="#7c3aed"/>
+    <rect x="48" y="258" width="220" height="90" rx="8" fill="url(#cW)" stroke="#c4b5fd" stroke-width="1"/>
+    <rect x="48" y="258" width="220" height="4" rx="8" ry="2" fill="#7c3aed"/>
   </g>
-  <circle cx="56" cy="288" r="10" fill="#7c3aed"/>
-  <text x="56" y="292" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">L</text>
-  <text x="72" y="291" font-size="12" font-weight="700" fill="#4c1d95">Local Training</text>
-  <text x="48" y="307" font-size="9.5" fill="#475569">Docker, CPU/GPU</text>
-  <text x="48" y="320" font-size="9.5" fill="#475569">Development &amp; testing</text>
-  <rect x="48" y="340" width="160" height="18" rx="4" fill="#faf5ff" stroke="#c4b5fd" stroke-width="0.8"/>
-  <text x="53" y="353" font-size="8" fill="#4c1d95" font-family="'SF Mono', 'Fira Code', monospace">docker/Dockerfile.training</text>
+  <circle cx="68" cy="278" r="10" fill="#7c3aed"/>
+  <text x="68" y="282" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">L</text>
+  <text x="84" y="281" font-size="11" font-weight="700" fill="#4c1d95">Local Training</text>
+  <text x="60" y="297" font-size="9.5" fill="#475569">Docker, CPU/GPU dev</text>
+  <rect x="60" y="318" width="152" height="17" rx="4" fill="#faf5ff" stroke="#c4b5fd" stroke-width="0.8"/>
+  <text x="66" y="330" font-size="7.5" fill="#4c1d95" font-family="monospace">docker/Dockerfile.training</text>
 
   <!-- Card: Google Colab -->
   <g filter="url(#sh)">
-    <rect x="232" y="268" width="185" height="105" rx="10" fill="url(#cWhite)" stroke="#c4b5fd" stroke-width="1"/>
-    <rect x="232" y="268" width="185" height="4" rx="10" ry="2" fill="#7c3aed"/>
+    <rect x="286" y="258" width="220" height="90" rx="8" fill="url(#cW)" stroke="#c4b5fd" stroke-width="1"/>
+    <rect x="286" y="258" width="220" height="4" rx="8" ry="2" fill="#7c3aed"/>
   </g>
-  <circle cx="252" cy="288" r="10" fill="#7c3aed"/>
-  <text x="252" y="292" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">C</text>
-  <text x="268" y="291" font-size="12" font-weight="700" fill="#4c1d95">Google Colab</text>
-  <text x="244" y="307" font-size="9.5" fill="#475569">Free T4 GPU</text>
-  <text x="244" y="320" font-size="9.5" fill="#475569">Interactive notebook</text>
-  <rect x="244" y="340" width="162" height="18" rx="4" fill="#faf5ff" stroke="#c4b5fd" stroke-width="0.8"/>
-  <text x="249" y="353" font-size="8" fill="#4c1d95" font-family="'SF Mono', 'Fira Code', monospace">notebooks/train_colab.ipynb</text>
+  <circle cx="306" cy="278" r="10" fill="#7c3aed"/>
+  <text x="306" y="282" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">C</text>
+  <text x="322" y="281" font-size="11" font-weight="700" fill="#4c1d95">Google Colab</text>
+  <text x="298" y="297" font-size="9.5" fill="#475569">Free T4 GPU, notebook</text>
+  <rect x="298" y="318" width="166" height="17" rx="4" fill="#faf5ff" stroke="#c4b5fd" stroke-width="0.8"/>
+  <text x="304" y="330" font-size="7.5" fill="#4c1d95" font-family="monospace">notebooks/train_colab.ipynb</text>
 
   <!-- Card: Vertex AI -->
   <g filter="url(#sh)">
-    <rect x="428" y="268" width="185" height="105" rx="10" fill="url(#cWhite)" stroke="#c4b5fd" stroke-width="1"/>
-    <rect x="428" y="268" width="185" height="4" rx="10" ry="2" fill="#7c3aed"/>
+    <rect x="524" y="258" width="220" height="90" rx="8" fill="url(#cW)" stroke="#c4b5fd" stroke-width="1"/>
+    <rect x="524" y="258" width="220" height="4" rx="8" ry="2" fill="#7c3aed"/>
   </g>
-  <circle cx="448" cy="288" r="10" fill="#7c3aed"/>
-  <text x="448" y="292" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">V</text>
-  <text x="464" y="291" font-size="12" font-weight="700" fill="#4c1d95">Vertex AI</text>
-  <text x="440" y="307" font-size="9.5" fill="#475569">Production, managed GPU</text>
-  <text x="440" y="320" font-size="9.5" fill="#475569">Scalable training jobs</text>
-  <rect x="440" y="340" width="164" height="18" rx="4" fill="#faf5ff" stroke="#c4b5fd" stroke-width="0.8"/>
-  <text x="445" y="353" font-size="8" fill="#4c1d95" font-family="'SF Mono', 'Fira Code', monospace">src/training/vertex_submit.py</text>
+  <circle cx="544" cy="278" r="10" fill="#7c3aed"/>
+  <text x="544" y="282" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">V</text>
+  <text x="560" y="281" font-size="11" font-weight="700" fill="#4c1d95">Vertex AI</text>
+  <text x="536" y="297" font-size="9.5" fill="#475569">Production, managed GPU</text>
+  <rect x="536" y="318" width="170" height="17" rx="4" fill="#faf5ff" stroke="#c4b5fd" stroke-width="0.8"/>
+  <text x="542" y="330" font-size="7.5" fill="#4c1d95" font-family="monospace">src/training/vertex_submit.py</text>
 
-  <!-- Model Card: EfficientNet-B0 (center-right) -->
+  <!-- Trained Model Card (purple solid) -->
   <g filter="url(#sh)">
-    <rect x="636" y="270" width="155" height="100" rx="12" fill="#7c3aed" stroke="#6d28d9" stroke-width="1.5"/>
+    <rect x="770" y="258" width="150" height="90" rx="10" fill="#7c3aed" stroke="#6d28d9" stroke-width="1.5"/>
   </g>
-  <text x="714" y="294" text-anchor="middle" font-size="10" font-weight="700" fill="#e9d5ff">TRAINED MODEL</text>
-  <text x="714" y="315" text-anchor="middle" font-size="14" font-weight="800" fill="#ffffff">EfficientNet-B0</text>
-  <text x="714" y="333" text-anchor="middle" font-size="9" fill="#e9d5ff">Binary classifier</text>
-  <text x="714" y="348" text-anchor="middle" font-size="9" fill="#e9d5ff">Real vs AI-generated</text>
-  <rect x="672" y="355" width="84" height="12" rx="3" fill="#6d28d9"/>
-  <text x="714" y="364" text-anchor="middle" font-size="7.5" fill="#e9d5ff" font-weight="600">95%+ Accuracy</text>
+  <text x="845" y="280" text-anchor="middle" font-size="9" font-weight="700" fill="#e9d5ff">TRAINED MODEL</text>
+  <text x="845" y="298" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">EfficientNet-B0</text>
+  <text x="845" y="314" text-anchor="middle" font-size="9" fill="#e9d5ff">Binary classifier</text>
+  <rect x="808" y="324" width="74" height="14" rx="4" fill="#6d28d9"/>
+  <text x="845" y="334" text-anchor="middle" font-size="7.5" fill="#e9d5ff" font-weight="600">95%+ Accuracy</text>
 
-  <!-- Card: MLflow + GCS -->
+  <!-- MLflow + GCS -->
   <g filter="url(#sh)">
-    <rect x="808" y="270" width="148" height="45" rx="8" fill="url(#cWhite)" stroke="#c4b5fd" stroke-width="1"/>
-    <rect x="808" y="270" width="148" height="4" rx="8" ry="2" fill="#7c3aed"/>
+    <rect x="940" y="258" width="210" height="40" rx="8" fill="url(#cW)" stroke="#c4b5fd" stroke-width="1"/>
+    <rect x="940" y="258" width="210" height="3" rx="8" ry="2" fill="#7c3aed"/>
   </g>
-  <circle cx="824" cy="289" r="8" fill="#7c3aed"/>
-  <text x="824" y="292" text-anchor="middle" font-size="7" font-weight="700" fill="#fff">M</text>
-  <text x="838" y="292" font-size="11" font-weight="700" fill="#4c1d95">MLflow Tracking</text>
-  <text x="820" y="306" font-size="8.5" fill="#475569">Experiment metrics &amp; params</text>
+  <circle cx="958" cy="276" r="8" fill="#7c3aed"/>
+  <text x="958" y="279" text-anchor="middle" font-size="7" font-weight="700" fill="#fff">M</text>
+  <text x="972" y="280" font-size="10" font-weight="700" fill="#4c1d95">MLflow Tracking</text>
 
   <g filter="url(#sh)">
-    <rect x="808" y="325" width="148" height="45" rx="8" fill="url(#cWhite)" stroke="#c4b5fd" stroke-width="1"/>
-    <rect x="808" y="325" width="148" height="4" rx="8" ry="2" fill="#7c3aed"/>
+    <rect x="940" y="306" width="210" height="40" rx="8" fill="url(#cW)" stroke="#c4b5fd" stroke-width="1"/>
+    <rect x="940" y="306" width="210" height="3" rx="8" ry="2" fill="#7c3aed"/>
   </g>
-  <circle cx="824" cy="344" r="8" fill="#7c3aed"/>
-  <text x="824" y="347" text-anchor="middle" font-size="7" font-weight="700" fill="#fff">G</text>
-  <text x="838" y="347" font-size="11" font-weight="700" fill="#4c1d95">GCS Registry</text>
-  <text x="820" y="361" font-size="8.5" fill="#475569">Model artifact storage</text>
+  <circle cx="958" cy="324" r="8" fill="#7c3aed"/>
+  <text x="958" y="327" text-anchor="middle" font-size="7" font-weight="700" fill="#fff">G</text>
+  <text x="972" y="328" font-size="10" font-weight="700" fill="#4c1d95">GCS Model Registry</text>
 
-  <!-- Purple arrows: Training modes → Model card -->
-  <line x1="221" y1="320" x2="232" y2="320" stroke="#c4b5fd" stroke-width="1.5" stroke-dasharray="4,3"/>
-  <path d="M613 320 L636 320" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrowPurple)"/>
-  <!-- Arrow from Local to Model -->
-  <path d="M221 320 Q 225 320 228 310 Q 230 300 240 300" stroke="#c4b5fd" stroke-width="1" stroke-dasharray="3,2" fill="none"/>
+  <!-- Arrows: training cards → model card -->
+  <line x1="268" y1="303" x2="286" y2="303" stroke="#c4b5fd" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="744" y1="303" x2="770" y2="303" stroke="#7c3aed" stroke-width="2" marker-end="url(#aP)"/>
+  <!-- Arrow: model → registry -->
+  <line x1="920" y1="303" x2="940" y2="303" stroke="#7c3aed" stroke-width="1.8" marker-end="url(#aP)"/>
+  <!-- Converge arrows from 3 training modes -->
+  <path d="M158 348 L158 362 Q158 366 163 366 L760 366 Q766 366 766 360 L766 348" stroke="#7c3aed" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>
+  <path d="M396 348 L396 358 Q396 362 401 362 L760 362 Q766 362 766 354" stroke="#7c3aed" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>
+  <path d="M634 348 L634 354 Q634 358 639 358 L760 358 Q766 358 766 352" stroke="#7c3aed" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>
 
-  <!-- Converging arrows to EfficientNet -->
-  <path d="M128 373 L128 393 Q128 398 133 398 L636 398 Q640 398 640 393 L640 370" stroke="#7c3aed" stroke-width="1.8" fill="none" marker-end="url(#arrowPurple)" stroke-dasharray="6,3"/>
-  <path d="M324 373 L324 388 Q324 392 329 392 L636 392 Q640 392 640 385" stroke="#7c3aed" stroke-width="1.8" fill="none" stroke-dasharray="6,3"/>
-  <path d="M520 373 L520 383 Q520 386 525 386 L636 386 Q640 386 640 380" stroke="#7c3aed" stroke-width="1.8" fill="none" stroke-dasharray="6,3"/>
+  <!-- ============================================================= -->
+  <!-- VERTICAL ARROW: Training → Inference                           -->
+  <!-- ============================================================= -->
+  <path d="M600 400 L600 420" stroke="#7c3aed" stroke-width="2" marker-end="url(#aP)" fill="none"/>
 
-  <!-- Arrow Model → GCS Registry -->
-  <line x1="791" y1="340" x2="808" y2="340" stroke="#7c3aed" stroke-width="1.8" marker-end="url(#arrowPurple)"/>
-
-  <!-- Green arrow: DVC → Training (vertical) -->
-  <path d="M784 211 L784 228 Q784 232 780 232 L500 256" stroke="#059669" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
-
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- ROW 3 — INFERENCE API (Blue)                                    -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- ============================================================= -->
+  <!-- ROW 3: INFERENCE API (Blue) y=423..560                         -->
+  <!-- ============================================================= -->
   <g filter="url(#sh-lg)">
-    <rect x="24" y="430" width="940" height="145" rx="12" fill="url(#gBlue)" stroke="#bfdbfe" stroke-width="1.5"/>
-    <rect x="24" y="430" width="940" height="5" rx="12" ry="2" fill="#3b82f6"/>
-    <rect x="24" y="433" width="940" height="4" fill="url(#gBlue)"/>
+    <rect x="24" y="423" width="1152" height="137" rx="12" fill="url(#gBlue)" stroke="#bfdbfe" stroke-width="1.2"/>
+    <rect x="24" y="423" width="1152" height="5" rx="12" ry="2" fill="#3b82f6"/>
   </g>
-  <text x="494" y="452" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af" letter-spacing="0.5">⚡ INFERENCE API</text>
+  <text x="600" y="443" text-anchor="middle" font-size="12" font-weight="700" fill="#1e40af" letter-spacing="1">INFERENCE API</text>
 
   <!-- Card: FastAPI Server -->
   <g filter="url(#sh)">
-    <rect x="44" y="462" width="280" height="100" rx="10" fill="url(#cWhite)" stroke="#bfdbfe" stroke-width="1"/>
-    <rect x="44" y="462" width="280" height="4" rx="10" ry="2" fill="#3b82f6"/>
+    <rect x="48" y="453" width="340" height="95" rx="8" fill="url(#cW)" stroke="#bfdbfe" stroke-width="1"/>
+    <rect x="48" y="453" width="340" height="4" rx="8" ry="2" fill="#3b82f6"/>
   </g>
-  <circle cx="66" cy="482" r="11" fill="#3b82f6"/>
-  <text x="66" y="486" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">A</text>
-  <text x="82" y="486" font-size="13" font-weight="700" fill="#1e40af">FastAPI Server</text>
-  <text x="56" y="502" font-size="10.5" fill="#475569">REST API, JWT auth, rate limiting</text>
-  <text x="56" y="517" font-size="10.5" fill="#475569">Health checks, CORS, OpenAPI</text>
-  <rect x="56" y="532" width="155" height="20" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.8"/>
-  <text x="63" y="546" font-size="9" fill="#1e40af" font-family="'SF Mono', 'Fira Code', monospace">src/inference/api.py</text>
+  <circle cx="70" cy="473" r="10" fill="#3b82f6"/>
+  <text x="70" y="477" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">A</text>
+  <text x="86" y="476" font-size="12" font-weight="700" fill="#1e40af">FastAPI Server</text>
+  <text x="60" y="493" font-size="10" fill="#475569">REST API, auth, rate limiting, CORS</text>
+  <text x="60" y="507" font-size="10" fill="#475569">Single, batch, and explain endpoints</text>
+  <rect x="60" y="520" width="140" height="18" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.8"/>
+  <text x="66" y="533" font-size="8" fill="#1e40af" font-family="monospace">src/inference/api.py</text>
 
   <!-- Card: Predictor -->
   <g filter="url(#sh)">
-    <rect x="344" y="462" width="280" height="100" rx="10" fill="url(#cWhite)" stroke="#bfdbfe" stroke-width="1"/>
-    <rect x="344" y="462" width="280" height="4" rx="10" ry="2" fill="#3b82f6"/>
+    <rect x="430" y="453" width="340" height="95" rx="8" fill="url(#cW)" stroke="#bfdbfe" stroke-width="1"/>
+    <rect x="430" y="453" width="340" height="4" rx="8" ry="2" fill="#3b82f6"/>
   </g>
-  <circle cx="366" cy="482" r="11" fill="#3b82f6"/>
-  <text x="366" y="486" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">P</text>
-  <text x="382" y="486" font-size="13" font-weight="700" fill="#1e40af">EfficientNet-B0 Predictor</text>
-  <text x="356" y="502" font-size="10.5" fill="#475569">Real-time image classification</text>
-  <text x="356" y="517" font-size="10.5" fill="#475569">Batch inference, confidence scores</text>
-  <rect x="356" y="532" width="190" height="20" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.8"/>
-  <text x="363" y="546" font-size="9" fill="#1e40af" font-family="'SF Mono', 'Fira Code', monospace">src/inference/predictor.py</text>
+  <circle cx="452" cy="473" r="10" fill="#3b82f6"/>
+  <text x="452" y="477" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">P</text>
+  <text x="468" y="476" font-size="12" font-weight="700" fill="#1e40af">EfficientNet-B0 Predictor</text>
+  <text x="442" y="493" font-size="10" fill="#475569">Real-time image classification</text>
+  <text x="442" y="507" font-size="10" fill="#475569">Batch inference, confidence scores</text>
+  <rect x="442" y="520" width="172" height="18" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.8"/>
+  <text x="448" y="533" font-size="8" fill="#1e40af" font-family="monospace">src/inference/predictor.py</text>
 
   <!-- Card: Grad-CAM -->
   <g filter="url(#sh)">
-    <rect x="644" y="462" width="280" height="100" rx="10" fill="url(#cWhite)" stroke="#bfdbfe" stroke-width="1"/>
-    <rect x="644" y="462" width="280" height="4" rx="10" ry="2" fill="#3b82f6"/>
+    <rect x="812" y="453" width="340" height="95" rx="8" fill="url(#cW)" stroke="#bfdbfe" stroke-width="1"/>
+    <rect x="812" y="453" width="340" height="4" rx="8" ry="2" fill="#3b82f6"/>
   </g>
-  <circle cx="666" cy="482" r="11" fill="#3b82f6"/>
-  <text x="666" y="486" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">X</text>
-  <text x="682" y="486" font-size="13" font-weight="700" fill="#1e40af">Grad-CAM Explainer</text>
-  <text x="656" y="502" font-size="10.5" fill="#475569">Visual heatmap explanations</text>
-  <text x="656" y="517" font-size="10.5" fill="#475569">Model interpretability layer</text>
-  <rect x="656" y="532" width="190" height="20" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.8"/>
-  <text x="663" y="546" font-size="9" fill="#1e40af" font-family="'SF Mono', 'Fira Code', monospace">src/inference/explainer.py</text>
+  <circle cx="834" cy="473" r="10" fill="#3b82f6"/>
+  <text x="834" y="477" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">E</text>
+  <text x="850" y="476" font-size="12" font-weight="700" fill="#1e40af">Grad-CAM Explainer</text>
+  <text x="824" y="493" font-size="10" fill="#475569">Visual heatmap explanations</text>
+  <text x="824" y="507" font-size="10" fill="#475569">Model interpretability layer</text>
+  <rect x="824" y="520" width="178" height="18" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.8"/>
+  <text x="830" y="533" font-size="8" fill="#1e40af" font-family="monospace">src/inference/explainer.py</text>
 
-  <!-- Blue arrows: API → Predictor → Explainer -->
-  <line x1="324" y1="512" x2="344" y2="512" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowBlue)"/>
-  <line x1="624" y1="512" x2="644" y2="512" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <!-- Arrows: API → Predictor → Explainer -->
+  <line x1="388" y1="500" x2="430" y2="500" stroke="#3b82f6" stroke-width="2" marker-end="url(#aB)"/>
+  <line x1="770" y1="500" x2="812" y2="500" stroke="#3b82f6" stroke-width="2" marker-end="url(#aB)"/>
 
-  <!-- Purple arrow: Model Registry → Inference (vertical) -->
-  <path d="M882 370 L882 410 Q882 418 874 418 L500 430" stroke="#7c3aed" stroke-width="2" fill="none" marker-end="url(#arrowPurple)"/>
+  <!-- ============================================================= -->
+  <!-- VERTICAL ARROW: Inference → Deploy/Monitor                     -->
+  <!-- ============================================================= -->
+  <path d="M350 560 L350 582" stroke="#3b82f6" stroke-width="2" marker-end="url(#aB)" fill="none"/>
+  <path d="M850 560 L850 582" stroke="#ea580c" stroke-width="2" marker-end="url(#aO)" fill="none"/>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- ROW 4 — DEPLOYMENT (Blue) + MONITORING (Orange)                -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-
-  <!-- Cloud Deployment Section (Blue) -->
+  <!-- ============================================================= -->
+  <!-- ROW 4 LEFT: CLOUD DEPLOYMENT (Blue) y=585..740                 -->
+  <!-- ============================================================= -->
   <g filter="url(#sh-lg)">
-    <rect x="24" y="590" width="455" height="155" rx="12" fill="url(#gBlue)" stroke="#bfdbfe" stroke-width="1.5"/>
-    <rect x="24" y="590" width="455" height="5" rx="12" ry="2" fill="#3b82f6"/>
-    <rect x="24" y="593" width="455" height="4" fill="url(#gBlue)"/>
+    <rect x="24" y="585" width="555" height="155" rx="12" fill="url(#gBlue)" stroke="#bfdbfe" stroke-width="1.2"/>
+    <rect x="24" y="585" width="555" height="5" rx="12" ry="2" fill="#3b82f6"/>
   </g>
-  <text x="251" y="612" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af" letter-spacing="0.5">☁️ CLOUD DEPLOYMENT</text>
+  <text x="301" y="605" text-anchor="middle" font-size="12" font-weight="700" fill="#1e40af" letter-spacing="1">CLOUD DEPLOYMENT</text>
 
   <!-- Card: Docker -->
   <g filter="url(#sh)">
-    <rect x="36" y="622" width="135" height="110" rx="8" fill="url(#cWhite)" stroke="#bfdbfe" stroke-width="1"/>
-    <rect x="36" y="622" width="135" height="4" rx="8" ry="2" fill="#3b82f6"/>
+    <rect x="40" y="615" width="165" height="112" rx="8" fill="url(#cW)" stroke="#bfdbfe" stroke-width="1"/>
+    <rect x="40" y="615" width="165" height="4" rx="8" ry="2" fill="#3b82f6"/>
   </g>
-  <circle cx="54" cy="641" r="9" fill="#3b82f6"/>
-  <text x="54" y="644" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">D</text>
-  <text x="68" y="644" font-size="11" font-weight="700" fill="#1e40af">Docker</text>
-  <text x="46" y="660" font-size="9" fill="#475569">Multi-stage build</text>
-  <text x="46" y="673" font-size="9" fill="#475569">Optimized image</text>
-  <rect x="46" y="694" width="115" height="17" rx="3" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.8"/>
-  <text x="51" y="706" font-size="7.5" fill="#1e40af" font-family="'SF Mono', 'Fira Code', monospace">docker/Dockerfile</text>
+  <circle cx="58" cy="634" r="9" fill="#3b82f6"/>
+  <text x="58" y="637" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">D</text>
+  <text x="72" y="637" font-size="11" font-weight="700" fill="#1e40af">Docker</text>
+  <text x="52" y="653" font-size="9" fill="#475569">Multi-stage build</text>
+  <text x="52" y="666" font-size="9" fill="#475569">Optimized images</text>
+  <rect x="52" y="694" width="110" height="17" rx="3" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.8"/>
+  <text x="58" y="706" font-size="7" fill="#1e40af" font-family="monospace">docker/Dockerfile</text>
 
   <!-- Card: Cloud Run -->
   <g filter="url(#sh)">
-    <rect x="181" y="622" width="135" height="110" rx="8" fill="url(#cWhite)" stroke="#bfdbfe" stroke-width="1"/>
-    <rect x="181" y="622" width="135" height="4" rx="8" ry="2" fill="#3b82f6"/>
+    <rect x="218" y="615" width="165" height="112" rx="8" fill="url(#cW)" stroke="#bfdbfe" stroke-width="1"/>
+    <rect x="218" y="615" width="165" height="4" rx="8" ry="2" fill="#3b82f6"/>
   </g>
-  <circle cx="199" cy="641" r="9" fill="#3b82f6"/>
-  <text x="199" y="644" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">R</text>
-  <text x="213" y="644" font-size="11" font-weight="700" fill="#1e40af">Cloud Run</text>
-  <text x="191" y="660" font-size="9" fill="#475569">Serverless deploy</text>
-  <text x="191" y="673" font-size="9" fill="#475569">Auto-scaling</text>
-  <text x="191" y="686" font-size="9" fill="#475569">Zero to N instances</text>
+  <circle cx="236" cy="634" r="9" fill="#3b82f6"/>
+  <text x="236" y="637" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">R</text>
+  <text x="250" y="637" font-size="11" font-weight="700" fill="#1e40af">Cloud Run</text>
+  <text x="230" y="653" font-size="9" fill="#475569">Serverless deploy</text>
+  <text x="230" y="666" font-size="9" fill="#475569">Auto-scaling, 0 to N</text>
 
   <!-- Card: Terraform -->
   <g filter="url(#sh)">
-    <rect x="326" y="622" width="143" height="110" rx="8" fill="url(#cWhite)" stroke="#bfdbfe" stroke-width="1"/>
-    <rect x="326" y="622" width="143" height="4" rx="8" ry="2" fill="#3b82f6"/>
+    <rect x="396" y="615" width="165" height="112" rx="8" fill="url(#cW)" stroke="#bfdbfe" stroke-width="1"/>
+    <rect x="396" y="615" width="165" height="4" rx="8" ry="2" fill="#3b82f6"/>
   </g>
-  <circle cx="344" cy="641" r="9" fill="#3b82f6"/>
-  <text x="344" y="644" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">T</text>
-  <text x="358" y="644" font-size="11" font-weight="700" fill="#1e40af">Terraform IaC</text>
-  <text x="336" y="660" font-size="9" fill="#475569">Modular infra</text>
-  <text x="336" y="673" font-size="9" fill="#475569">Reproducible deploys</text>
-  <rect x="336" y="694" width="80" height="17" rx="3" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.8"/>
-  <text x="341" y="706" font-size="7.5" fill="#1e40af" font-family="'SF Mono', 'Fira Code', monospace">terraform/</text>
+  <circle cx="414" cy="634" r="9" fill="#3b82f6"/>
+  <text x="414" y="637" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">T</text>
+  <text x="428" y="637" font-size="11" font-weight="700" fill="#1e40af">Terraform IaC</text>
+  <text x="408" y="653" font-size="9" fill="#475569">Modular infrastructure</text>
+  <text x="408" y="666" font-size="9" fill="#475569">Reproducible deploys</text>
+  <rect x="408" y="694" width="72" height="17" rx="3" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.8"/>
+  <text x="414" y="706" font-size="7" fill="#1e40af" font-family="monospace">terraform/</text>
 
-  <!-- Monitoring Section (Orange) -->
+  <!-- Deployment internal arrows -->
+  <line x1="205" y1="671" x2="218" y2="671" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#aB)"/>
+  <line x1="383" y1="671" x2="396" y2="671" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#aB)"/>
+
+  <!-- ============================================================= -->
+  <!-- ROW 4 RIGHT: MONITORING (Orange) y=585..740                    -->
+  <!-- ============================================================= -->
   <g filter="url(#sh-lg)">
-    <rect x="497" y="590" width="467" height="155" rx="12" fill="url(#gOrange)" stroke="#fed7aa" stroke-width="1.5"/>
-    <rect x="497" y="590" width="467" height="5" rx="12" ry="2" fill="#ea580c"/>
-    <rect x="497" y="593" width="467" height="4" fill="url(#gOrange)"/>
+    <rect x="597" y="585" width="579" height="155" rx="12" fill="url(#gOrange)" stroke="#fed7aa" stroke-width="1.2"/>
+    <rect x="597" y="585" width="579" height="5" rx="12" ry="2" fill="#ea580c"/>
   </g>
-  <text x="730" y="612" text-anchor="middle" font-size="13" font-weight="700" fill="#7c2d12" letter-spacing="0.5">📊 MONITORING</text>
+  <text x="886" y="605" text-anchor="middle" font-size="12" font-weight="700" fill="#7c2d12" letter-spacing="1">MONITORING</text>
 
   <!-- Card: Prometheus -->
   <g filter="url(#sh)">
-    <rect x="509" y="622" width="143" height="110" rx="8" fill="url(#cWhite)" stroke="#fed7aa" stroke-width="1"/>
-    <rect x="509" y="622" width="143" height="4" rx="8" ry="2" fill="#ea580c"/>
+    <rect x="613" y="615" width="172" height="112" rx="8" fill="url(#cW)" stroke="#fed7aa" stroke-width="1"/>
+    <rect x="613" y="615" width="172" height="4" rx="8" ry="2" fill="#ea580c"/>
   </g>
-  <circle cx="527" cy="641" r="9" fill="#ea580c"/>
-  <text x="527" y="644" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">P</text>
-  <text x="541" y="644" font-size="11" font-weight="700" fill="#7c2d12">Prometheus</text>
-  <text x="519" y="660" font-size="9" fill="#475569">12+ custom metrics</text>
-  <text x="519" y="673" font-size="9" fill="#475569">Latency, accuracy</text>
-  <rect x="519" y="694" width="122" height="17" rx="3" fill="#fff7ed" stroke="#fed7aa" stroke-width="0.8"/>
-  <text x="524" y="706" font-size="7.5" fill="#7c2d12" font-family="'SF Mono', 'Fira Code', monospace">configs/prometheus.yml</text>
+  <circle cx="631" cy="634" r="9" fill="#ea580c"/>
+  <text x="631" y="637" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">P</text>
+  <text x="645" y="637" font-size="11" font-weight="700" fill="#7c2d12">Prometheus</text>
+  <text x="625" y="653" font-size="9" fill="#475569">12+ custom metrics</text>
+  <text x="625" y="666" font-size="9" fill="#475569">Latency, accuracy, drift</text>
+  <rect x="625" y="694" width="130" height="17" rx="3" fill="#fff7ed" stroke="#fed7aa" stroke-width="0.8"/>
+  <text x="631" y="706" font-size="7" fill="#7c2d12" font-family="monospace">configs/prometheus.yml</text>
 
   <!-- Card: Grafana -->
   <g filter="url(#sh)">
-    <rect x="662" y="622" width="143" height="110" rx="8" fill="url(#cWhite)" stroke="#fed7aa" stroke-width="1"/>
-    <rect x="662" y="622" width="143" height="4" rx="8" ry="2" fill="#ea580c"/>
+    <rect x="800" y="615" width="172" height="112" rx="8" fill="url(#cW)" stroke="#fed7aa" stroke-width="1"/>
+    <rect x="800" y="615" width="172" height="4" rx="8" ry="2" fill="#ea580c"/>
   </g>
-  <circle cx="680" cy="641" r="9" fill="#ea580c"/>
-  <text x="680" y="644" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">G</text>
-  <text x="694" y="644" font-size="11" font-weight="700" fill="#7c2d12">Grafana</text>
-  <text x="672" y="660" font-size="9" fill="#475569">Real-time dashboards</text>
-  <text x="672" y="673" font-size="9" fill="#475569">Alerting rules</text>
-  <rect x="672" y="694" width="100" height="17" rx="3" fill="#fff7ed" stroke="#fed7aa" stroke-width="0.8"/>
-  <text x="677" y="706" font-size="7.5" fill="#7c2d12" font-family="'SF Mono', 'Fira Code', monospace">configs/grafana/</text>
+  <circle cx="818" cy="634" r="9" fill="#ea580c"/>
+  <text x="818" y="637" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">G</text>
+  <text x="832" y="637" font-size="11" font-weight="700" fill="#7c2d12">Grafana</text>
+  <text x="812" y="653" font-size="9" fill="#475569">Real-time dashboards</text>
+  <text x="812" y="666" font-size="9" fill="#475569">Alerting rules</text>
+  <rect x="812" y="694" width="100" height="17" rx="3" fill="#fff7ed" stroke="#fed7aa" stroke-width="0.8"/>
+  <text x="818" y="706" font-size="7" fill="#7c2d12" font-family="monospace">configs/grafana/</text>
 
   <!-- Card: Drift Detection -->
   <g filter="url(#sh)">
-    <rect x="815" y="622" width="143" height="110" rx="8" fill="url(#cWhite)" stroke="#fed7aa" stroke-width="1"/>
-    <rect x="815" y="622" width="143" height="4" rx="8" ry="2" fill="#ea580c"/>
+    <rect x="987" y="615" width="172" height="112" rx="8" fill="url(#cW)" stroke="#fed7aa" stroke-width="1"/>
+    <rect x="987" y="615" width="172" height="4" rx="8" ry="2" fill="#ea580c"/>
   </g>
-  <circle cx="833" cy="641" r="9" fill="#ea580c"/>
-  <text x="833" y="644" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">D</text>
-  <text x="847" y="644" font-size="11" font-weight="700" fill="#7c2d12">Drift Detection</text>
-  <text x="825" y="660" font-size="9" fill="#475569">Data quality monitor</text>
-  <text x="825" y="673" font-size="9" fill="#475569">Shadow predictions</text>
-  <rect x="825" y="694" width="125" height="17" rx="3" fill="#fff7ed" stroke="#fed7aa" stroke-width="0.8"/>
-  <text x="830" y="706" font-size="7.5" fill="#7c2d12" font-family="'SF Mono', 'Fira Code', monospace">src/inference/shadow.py</text>
+  <circle cx="1005" cy="634" r="9" fill="#ea580c"/>
+  <text x="1005" y="637" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">S</text>
+  <text x="1019" y="637" font-size="11" font-weight="700" fill="#7c2d12">Drift Detection</text>
+  <text x="999" y="653" font-size="9" fill="#475569">Data quality monitor</text>
+  <text x="999" y="666" font-size="9" fill="#475569">Shadow predictions</text>
+  <rect x="999" y="694" width="142" height="17" rx="3" fill="#fff7ed" stroke="#fed7aa" stroke-width="0.8"/>
+  <text x="1005" y="706" font-size="7" fill="#7c2d12" font-family="monospace">src/inference/shadow.py</text>
 
-  <!-- Orange arrows: API → Prometheus → Grafana -->
-  <path d="M184 562 L184 582 Q184 586 188 586 L509 622" stroke="#ea580c" stroke-width="1.8" fill="none" marker-end="url(#arrowOrange)"/>
-  <line x1="652" y1="677" x2="662" y2="677" stroke="#ea580c" stroke-width="2" marker-end="url(#arrowOrange)"/>
+  <!-- Monitoring internal arrows -->
+  <line x1="785" y1="671" x2="800" y2="671" stroke="#ea580c" stroke-width="1.5" marker-end="url(#aO)"/>
+  <line x1="972" y1="671" x2="987" y2="671" stroke="#ea580c" stroke-width="1.5" marker-end="url(#aO)"/>
 
-  <!-- Blue arrow: API → Deployment (vertical) -->
-  <path d="M184 562 L184 582 Q184 586 180 586 L140 590" stroke="#3b82f6" stroke-width="1.8" fill="none" marker-end="url(#arrowBlue)"/>
-
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- CI/CD SIDEBAR (Red)                                             -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- ============================================================= -->
+  <!-- CI/CD RIBBON (Red) — bottom bar instead of sidebar             -->
+  <!-- ============================================================= -->
   <g filter="url(#sh-lg)">
-    <rect x="980" y="64" width="196" height="681" rx="12" fill="url(#gRed)" stroke="#fca5a5" stroke-width="1.5"/>
-    <rect x="980" y="64" width="196" height="5" rx="12" ry="2" fill="#dc2626"/>
-    <rect x="980" y="67" width="196" height="4" fill="url(#gRed)"/>
+    <rect x="24" y="755" width="1152" height="80" rx="12" fill="url(#gRed)" stroke="#fca5a5" stroke-width="1.2"/>
+    <rect x="24" y="755" width="1152" height="5" rx="12" ry="2" fill="#dc2626"/>
   </g>
-  <text x="1078" y="88" text-anchor="middle" font-size="13" font-weight="700" fill="#991b1b" letter-spacing="0.5">🔄 CI/CD</text>
+  <text x="600" y="774" text-anchor="middle" font-size="12" font-weight="700" fill="#991b1b" letter-spacing="1">CI/CD — GITHUB ACTIONS</text>
 
-  <!-- Card: CI -->
+  <!-- CI card -->
   <g filter="url(#sh)">
-    <rect x="992" y="100" width="172" height="170" rx="8" fill="url(#cWhite)" stroke="#fca5a5" stroke-width="1"/>
-    <rect x="992" y="100" width="172" height="4" rx="8" ry="2" fill="#dc2626"/>
+    <rect x="48" y="783" width="340" height="40" rx="8" fill="url(#cW)" stroke="#fca5a5" stroke-width="1"/>
+    <rect x="48" y="783" width="340" height="3" rx="8" ry="2" fill="#dc2626"/>
   </g>
-  <circle cx="1010" cy="120" r="10" fill="#dc2626"/>
-  <text x="1010" y="124" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">CI</text>
-  <text x="1026" y="123" font-size="12" font-weight="700" fill="#991b1b">Continuous Integration</text>
-  <text x="1004" y="142" font-size="9.5" fill="#475569">✓ Linting (Ruff, Black)</text>
-  <text x="1004" y="157" font-size="9.5" fill="#475569">✓ Unit tests (pytest)</text>
-  <text x="1004" y="172" font-size="9.5" fill="#475569">✓ Integration tests</text>
-  <text x="1004" y="187" font-size="9.5" fill="#475569">✓ Security scan (Bandit)</text>
-  <text x="1004" y="202" font-size="9.5" fill="#475569">✓ Type checking (mypy)</text>
-  <text x="1004" y="217" font-size="9.5" fill="#475569">✓ Coverage report</text>
-  <rect x="1004" y="235" width="148" height="18" rx="3" fill="#fef2f2" stroke="#fca5a5" stroke-width="0.8"/>
-  <text x="1009" y="248" font-size="7.5" fill="#991b1b" font-family="'SF Mono', 'Fira Code', monospace">.github/workflows/ci.yml</text>
+  <circle cx="66" cy="803" r="9" fill="#dc2626"/>
+  <text x="66" y="807" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">CI</text>
+  <text x="82" y="806" font-size="10" font-weight="700" fill="#991b1b">Continuous Integration</text>
+  <text x="210" y="806" font-size="9" fill="#475569">— Lint, test, type-check, security scan</text>
 
-  <!-- Card: CD -->
+  <!-- CD card -->
   <g filter="url(#sh)">
-    <rect x="992" y="285" width="172" height="155" rx="8" fill="url(#cWhite)" stroke="#fca5a5" stroke-width="1"/>
-    <rect x="992" y="285" width="172" height="4" rx="8" ry="2" fill="#dc2626"/>
+    <rect x="410" y="783" width="340" height="40" rx="8" fill="url(#cW)" stroke="#fca5a5" stroke-width="1"/>
+    <rect x="410" y="783" width="340" height="3" rx="8" ry="2" fill="#dc2626"/>
   </g>
-  <circle cx="1010" cy="305" r="10" fill="#dc2626"/>
-  <text x="1010" y="309" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">CD</text>
-  <text x="1026" y="308" font-size="12" font-weight="700" fill="#991b1b">Continuous Delivery</text>
-  <text x="1004" y="327" font-size="9.5" fill="#475569">✓ Docker build &amp; push</text>
-  <text x="1004" y="342" font-size="9.5" fill="#475569">✓ Cloud Run deploy</text>
-  <text x="1004" y="357" font-size="9.5" fill="#475569">✓ Terraform apply</text>
-  <text x="1004" y="372" font-size="9.5" fill="#475569">✓ Smoke tests</text>
-  <text x="1004" y="387" font-size="9.5" fill="#475569">✓ Rollback on failure</text>
-  <rect x="1004" y="404" width="148" height="18" rx="3" fill="#fef2f2" stroke="#fca5a5" stroke-width="0.8"/>
-  <text x="1009" y="417" font-size="7.5" fill="#991b1b" font-family="'SF Mono', 'Fira Code', monospace">.github/workflows/cd.yml</text>
+  <circle cx="428" cy="803" r="9" fill="#dc2626"/>
+  <text x="428" y="807" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">CD</text>
+  <text x="444" y="806" font-size="10" font-weight="700" fill="#991b1b">Continuous Delivery</text>
+  <text x="565" y="806" font-size="9" fill="#475569">— Build, push, deploy, smoke test</text>
 
-  <!-- Card: Training Pipeline -->
+  <!-- Training Pipeline card -->
   <g filter="url(#sh)">
-    <rect x="992" y="455" width="172" height="145" rx="8" fill="url(#cWhite)" stroke="#fca5a5" stroke-width="1"/>
-    <rect x="992" y="455" width="172" height="4" rx="8" ry="2" fill="#dc2626"/>
+    <rect x="772" y="783" width="380" height="40" rx="8" fill="url(#cW)" stroke="#fca5a5" stroke-width="1"/>
+    <rect x="772" y="783" width="380" height="3" rx="8" ry="2" fill="#dc2626"/>
   </g>
-  <circle cx="1010" cy="475" r="10" fill="#dc2626"/>
-  <text x="1010" y="479" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">T</text>
-  <text x="1026" y="478" font-size="12" font-weight="700" fill="#991b1b">Model Training</text>
-  <text x="1004" y="497" font-size="9.5" fill="#475569">✓ Vertex AI job trigger</text>
-  <text x="1004" y="512" font-size="9.5" fill="#475569">✓ Hyperparameter sweep</text>
-  <text x="1004" y="527" font-size="9.5" fill="#475569">✓ Model validation</text>
-  <text x="1004" y="542" font-size="9.5" fill="#475569">✓ Registry promotion</text>
-  <rect x="1004" y="562" width="148" height="18" rx="3" fill="#fef2f2" stroke="#fca5a5" stroke-width="0.8"/>
-  <text x="1009" y="575" font-size="7" fill="#991b1b" font-family="'SF Mono', 'Fira Code', monospace">.github/workflows/model-training.yml</text>
+  <circle cx="790" cy="803" r="9" fill="#dc2626"/>
+  <text x="790" y="807" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">T</text>
+  <text x="806" y="806" font-size="10" font-weight="700" fill="#991b1b">Model Training</text>
+  <text x="905" y="806" font-size="9" fill="#475569">— Vertex AI trigger, validation, registry</text>
 
-  <!-- Red dashed arrows: CI/CD → Deployment + Training -->
-  <line x1="992" y1="360" x2="469" y2="630" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="8,4" marker-end="url(#arrowRed)"/>
-  <line x1="992" y1="520" x2="636" y2="340" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="8,4" marker-end="url(#arrowRed)"/>
+  <!-- CI/CD arrows down from deploy section (subtle, vertical) -->
+  <path d="M301 740 L301 755" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#aR)" fill="none"/>
+  <path d="M886 740 L886 755" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#aR)" fill="none"/>
 
-  <!-- Vertical flow arrows between CI/CD cards -->
-  <line x1="1078" y1="270" x2="1078" y2="285" stroke="#dc2626" stroke-width="2" marker-end="url(#arrowRed)"/>
-  <line x1="1078" y1="440" x2="1078" y2="455" stroke="#dc2626" stroke-width="2" marker-end="url(#arrowRed)"/>
+  <!-- ============================================================= -->
+  <!-- FOOTER: Tech Stack Badges                                      -->
+  <!-- ============================================================= -->
+  <line x1="40" y1="845" x2="1160" y2="845" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="600" y="863" text-anchor="middle" font-size="10" font-weight="600" fill="#64748b" letter-spacing="1">TECH STACK</text>
 
-  <!-- CI/CD Status indicators -->
-  <rect x="992" y="615" width="172" height="55" rx="8" fill="#dc2626" opacity="0.9"/>
-  <text x="1078" y="637" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">GitHub Actions</text>
-  <text x="1078" y="654" text-anchor="middle" font-size="9" fill="#fecdd3">On push • On PR • Scheduled</text>
-  <rect x="1025" y="660" width="106" height="4" rx="2" fill="#fca5a5" opacity="0.5"/>
+  <rect x="78" y="872" width="62" height="22" rx="6" fill="#3776ab"/>
+  <text x="109" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">Python</text>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- FOOTER — Tech Stack Badges                                     -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <g>
-    <!-- Divider line -->
-    <line x1="40" y1="765" x2="1160" y2="765" stroke="#e2e8f0" stroke-width="1"/>
-    <text x="600" y="785" text-anchor="middle" font-size="11" font-weight="600" fill="#64748b" letter-spacing="1">TECH STACK</text>
+  <rect x="148" y="872" width="65" height="22" rx="6" fill="#ee4c2c"/>
+  <text x="180" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">PyTorch</text>
 
-    <!-- Badge Row 1 -->
-    <rect x="105" y="795" width="68" height="24" rx="6" fill="#3b82f6"/>
-    <text x="139" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">Python</text>
+  <rect x="221" y="872" width="62" height="22" rx="6" fill="#059669"/>
+  <text x="252" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">FastAPI</text>
 
-    <rect x="181" y="795" width="72" height="24" rx="6" fill="#ee4c2c"/>
-    <text x="217" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">PyTorch</text>
+  <rect x="291" y="872" width="60" height="22" rx="6" fill="#2496ed"/>
+  <text x="321" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">Docker</text>
 
-    <rect x="261" y="795" width="72" height="24" rx="6" fill="#059669"/>
-    <text x="297" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">FastAPI</text>
+  <rect x="359" y="872" width="76" height="22" rx="6" fill="#7c3aed"/>
+  <text x="397" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">Terraform</text>
 
-    <rect x="341" y="795" width="68" height="24" rx="6" fill="#2496ed"/>
-    <text x="375" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">Docker</text>
+  <rect x="443" y="872" width="48" height="22" rx="6" fill="#ea580c"/>
+  <text x="467" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">GCP</text>
 
-    <rect x="417" y="795" width="82" height="24" rx="6" fill="#7c3aed"/>
-    <text x="458" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">Terraform</text>
+  <rect x="499" y="872" width="82" height="22" rx="6" fill="#e6522c"/>
+  <text x="540" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">Prometheus</text>
 
-    <rect x="507" y="795" width="56" height="24" rx="6" fill="#ea580c"/>
-    <text x="535" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">GCP</text>
+  <rect x="589" y="872" width="62" height="22" rx="6" fill="#f46800"/>
+  <text x="620" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">Grafana</text>
 
-    <rect x="571" y="795" width="94" height="24" rx="6" fill="#e6522c"/>
-    <text x="618" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">Prometheus</text>
+  <rect x="659" y="872" width="46" height="22" rx="6" fill="#13adc7"/>
+  <text x="682" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">DVC</text>
 
-    <rect x="673" y="795" width="72" height="24" rx="6" fill="#f46800"/>
-    <text x="709" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">Grafana</text>
+  <rect x="713" y="872" width="58" height="22" rx="6" fill="#0194e2"/>
+  <text x="742" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">MLflow</text>
 
-    <rect x="753" y="795" width="52" height="24" rx="6" fill="#13adc7"/>
-    <text x="779" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">DVC</text>
+  <rect x="779" y="872" width="102" height="22" rx="6" fill="#24292f"/>
+  <text x="830" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">GitHub Actions</text>
 
-    <rect x="813" y="795" width="68" height="24" rx="6" fill="#0194e2"/>
-    <text x="847" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">MLflow</text>
+  <rect x="889" y="872" width="82" height="22" rx="6" fill="#4c1d95"/>
+  <text x="930" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">EfficientNet</text>
 
-    <rect x="889" y="795" width="110" height="24" rx="6" fill="#24292f"/>
-    <text x="944" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">GitHub Actions</text>
+  <rect x="979" y="872" width="72" height="22" rx="6" fill="#ff4b4b"/>
+  <text x="1015" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">Streamlit</text>
 
-    <rect x="1007" y="795" width="85" height="24" rx="6" fill="#4c1d95"/>
-    <text x="1049" y="811" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">EfficientNet</text>
-  </g>
+  <rect x="1059" y="872" width="60" height="22" rx="6" fill="#4285f4"/>
+  <text x="1089" y="887" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">Vertex AI</text>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- FLOW LEGEND                                                     -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <g transform="translate(40, 840)">
-    <text x="0" y="12" font-size="9" font-weight="600" fill="#64748b">FLOWS:</text>
+  <!-- Flow Legend (compact, under tech stack) -->
 
-    <line x1="60" y1="9" x2="90" y2="9" stroke="#059669" stroke-width="2" marker-end="url(#arrowGreen)"/>
-    <text x="96" y="13" font-size="8.5" fill="#065f46">Data</text>
-
-    <line x1="140" y1="9" x2="170" y2="9" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrowPurple)"/>
-    <text x="176" y="13" font-size="8.5" fill="#4c1d95">Model</text>
-
-    <line x1="225" y1="9" x2="255" y2="9" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowBlue)"/>
-    <text x="261" y="13" font-size="8.5" fill="#1e40af">Request</text>
-
-    <line x1="315" y1="9" x2="345" y2="9" stroke="#ea580c" stroke-width="2" marker-end="url(#arrowOrange)"/>
-    <text x="351" y="13" font-size="8.5" fill="#7c2d12">Metrics</text>
-
-    <line x1="410" y1="9" x2="440" y2="9" stroke="#dc2626" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrowRed)"/>
-    <text x="446" y="13" font-size="8.5" fill="#991b1b">CI/CD</text>
-  </g>
-
-  <!-- Footer credit -->
-  <text x="1160" y="908" text-anchor="end" font-size="8" fill="#cbd5e1">AI Product Photo Detector — Architecture v1.0</text>
+  <!-- Credit -->
+  <text x="1152" y="897" text-anchor="end" font-size="7" fill="#cbd5e1">AI Product Photo Detector — Architecture v1.0</text>
 </svg>
