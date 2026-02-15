@@ -1,308 +1,357 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 720" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 780" font-family="'Google Sans', 'Segoe UI', system-ui, sans-serif">
   <defs>
-    <filter id="s" x="-3%" y="-3%" width="106%" height="110%">
-      <feDropShadow dx="0" dy="1.5" stdDeviation="3" flood-color="#334155" flood-opacity="0.1"/>
+    <filter id="s1" x="-2%" y="-2%" width="104%" height="108%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2.5" flood-color="#1a237e" flood-opacity="0.08"/>
     </filter>
-    <marker id="ar" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="6" markerHeight="5" orient="auto-start-reverse">
-      <path d="M0,1 L8,4 L0,7 Z" fill="#94a3b8"/>
+    <filter id="s2" x="-3%" y="-3%" width="106%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="#1a237e" flood-opacity="0.12"/>
+    </filter>
+    <marker id="a" viewBox="0 0 12 9" refX="11" refY="4.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,1 L10,4.5 L0,8 Z" fill="#5f6368"/>
     </marker>
-    <marker id="arH" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="6" markerHeight="5" orient="auto-start-reverse">
-      <path d="M0,1 L8,4 L0,7 Z" fill="#7c3aed"/>
+    <marker id="aB" viewBox="0 0 12 9" refX="11" refY="4.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,1 L10,4.5 L0,8 Z" fill="#4285f4"/>
     </marker>
+    <marker id="aG" viewBox="0 0 12 9" refX="11" refY="4.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,1 L10,4.5 L0,8 Z" fill="#34a853"/>
+    </marker>
+    <marker id="aP" viewBox="0 0 12 9" refX="11" refY="4.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,1 L10,4.5 L0,8 Z" fill="#7c3aed"/>
+    </marker>
+    <linearGradient id="gModel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+    <clipPath id="roundL"><rect x="0" y="0" width="6" height="200" rx="3"/></clipPath>
   </defs>
 
   <!-- Background -->
-  <rect width="1100" height="720" fill="#ffffff"/>
+  <rect width="1160" height="780" fill="#fff" rx="4"/>
 
-  <!-- Title -->
-  <text x="550" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">AI Product Photo Detector</text>
-  <text x="550" y="46" text-anchor="middle" font-size="10" fill="#94a3b8">System Architecture</text>
+  <!-- Title block -->
+  <text x="580" y="34" text-anchor="middle" font-size="20" font-weight="700" fill="#202124" letter-spacing="-0.3">AI Product Photo Detector</text>
+  <text x="580" y="52" text-anchor="middle" font-size="11" fill="#5f6368">End-to-end MLOps architecture for detecting AI-generated product images</text>
 
-  <!-- ============================================================= -->
-  <!-- COLUMN 1: DATA + TRAINING (x: 30-310)                         -->
-  <!-- ============================================================= -->
+  <!-- ================================================================ -->
+  <!-- SECTION: DATA INGESTION (top-left green region)                  -->
+  <!-- ================================================================ -->
+  <rect x="24" y="68" width="360" height="200" rx="12" fill="#e6f4ea" opacity="0.5"/>
+  <text x="44" y="88" font-size="10" font-weight="700" fill="#137333" letter-spacing="1.2">DATA INGESTION</text>
 
-  <!-- Column label -->
-  <text x="170" y="74" text-anchor="middle" font-size="9" font-weight="700" fill="#94a3b8" letter-spacing="2">PREPARE</text>
-  <line x1="80" y1="80" x2="260" y2="80" stroke="#e2e8f0" stroke-width="1"/>
-
-  <!-- CIFAKE Dataset -->
-  <g filter="url(#s)">
-    <rect x="30" y="94" width="280" height="62" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="30" y="94" width="4" height="62" rx="2" fill="#64748b"/>
+  <g filter="url(#s1)">
+    <rect x="38" y="98" width="332" height="56" rx="8" fill="#fff"/>
+    <rect x="38" y="98" width="5" height="56" rx="2" fill="#34a853"/>
   </g>
-  <text x="48" y="115" font-size="11" font-weight="700" fill="#1e293b">CIFAKE Dataset</text>
-  <text x="48" y="130" font-size="9" fill="#64748b">140K images - real vs AI-generated</text>
-  <text x="48" y="145" font-size="8" fill="#94a3b8" font-family="monospace">scripts/download_cifake.py</text>
+  <rect x="52" y="108" width="28" height="28" rx="6" fill="#e8f5e9"/>
+  <text x="66" y="127" text-anchor="middle" font-size="14" fill="#34a853">D</text>
+  <text x="90" y="120" font-size="12" font-weight="600" fill="#202124">CIFAKE Dataset</text>
+  <text x="90" y="136" font-size="9.5" fill="#5f6368">140K images - real vs AI-generated benchmark</text>
+  <text x="90" y="148" font-size="8" fill="#9aa0a6" font-family="'Roboto Mono', monospace">scripts/download_cifake.py</text>
 
-  <!-- arrow down -->
-  <line x1="170" y1="156" x2="170" y2="172" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
-
-  <!-- Data Processing -->
-  <g filter="url(#s)">
-    <rect x="30" y="176" width="280" height="62" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="30" y="176" width="4" height="62" rx="2" fill="#64748b"/>
+  <g filter="url(#s1)">
+    <rect x="38" y="164" width="332" height="56" rx="8" fill="#fff"/>
+    <rect x="38" y="164" width="5" height="56" rx="2" fill="#34a853"/>
   </g>
-  <text x="48" y="197" font-size="11" font-weight="700" fill="#1e293b">Data Processing</text>
-  <text x="48" y="212" font-size="9" fill="#64748b">Augmentation, splits, validation</text>
-  <text x="48" y="227" font-size="8" fill="#94a3b8" font-family="monospace">src/training/dataset.py</text>
+  <rect x="52" y="174" width="28" height="28" rx="6" fill="#e8f5e9"/>
+  <text x="66" y="193" text-anchor="middle" font-size="14" fill="#34a853">P</text>
+  <text x="90" y="186" font-size="12" font-weight="600" fill="#202124">Data Processing</text>
+  <text x="90" y="202" font-size="9.5" fill="#5f6368">Augmentation, train/val/test splits, validation</text>
+  <text x="90" y="214" font-size="8" fill="#9aa0a6" font-family="'Roboto Mono', monospace">src/training/dataset.py</text>
 
-  <!-- arrow down -->
-  <line x1="170" y1="238" x2="170" y2="254" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
+  <!-- Arrow down from Data Ingestion -->
+  <line x1="204" y1="268" x2="204" y2="290" stroke="#5f6368" stroke-width="1.8" marker-end="url(#a)"/>
 
-  <!-- DVC Pipeline -->
-  <g filter="url(#s)">
-    <rect x="30" y="258" width="280" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="30" y="258" width="4" height="52" rx="2" fill="#64748b"/>
+  <!-- ================================================================ -->
+  <!-- SECTION: MODEL TRAINING (left, below data)                       -->
+  <!-- ================================================================ -->
+  <rect x="24" y="296" width="360" height="318" rx="12" fill="#fce8e6" opacity="0.35"/>
+  <text x="44" y="316" font-size="10" font-weight="700" fill="#c5221f" letter-spacing="1.2">MODEL TRAINING</text>
+
+  <!-- DVC -->
+  <g filter="url(#s1)">
+    <rect x="38" y="326" width="332" height="48" rx="8" fill="#fff"/>
+    <rect x="38" y="326" width="5" height="48" rx="2" fill="#ea4335"/>
   </g>
-  <text x="48" y="279" font-size="11" font-weight="700" fill="#1e293b">DVC Pipeline</text>
-  <text x="48" y="294" font-size="9" fill="#64748b">Versioned data and model artifacts</text>
+  <rect x="52" y="334" width="24" height="24" rx="5" fill="#fce8e6"/>
+  <text x="64" y="351" text-anchor="middle" font-size="12" fill="#ea4335">V</text>
+  <text x="86" y="349" font-size="11" font-weight="600" fill="#202124">DVC Pipeline</text>
+  <text x="86" y="364" font-size="9" fill="#5f6368">Versioned data and model artifacts</text>
 
-  <!-- arrow down -->
-  <line x1="170" y1="310" x2="170" y2="330" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
-
-  <!-- Training section label -->
-  <text x="170" y="348" text-anchor="middle" font-size="9" font-weight="700" fill="#94a3b8" letter-spacing="2">TRAIN</text>
-  <line x1="80" y1="354" x2="260" y2="354" stroke="#e2e8f0" stroke-width="1"/>
-
-  <!-- Local Training -->
-  <g filter="url(#s)">
-    <rect x="30" y="364" width="280" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="30" y="364" width="4" height="52" rx="2" fill="#64748b"/>
+  <!-- 3 Training modes -->
+  <g filter="url(#s1)">
+    <rect x="38" y="384" width="332" height="48" rx="8" fill="#fff"/>
+    <rect x="38" y="384" width="5" height="48" rx="2" fill="#ea4335"/>
   </g>
-  <text x="48" y="385" font-size="11" font-weight="700" fill="#1e293b">Local Training</text>
-  <text x="48" y="400" font-size="9" fill="#64748b">Docker-based, CPU/GPU development</text>
+  <rect x="52" y="392" width="24" height="24" rx="5" fill="#fce8e6"/>
+  <text x="64" y="409" text-anchor="middle" font-size="12" fill="#ea4335">L</text>
+  <text x="86" y="407" font-size="11" font-weight="600" fill="#202124">Local Training</text>
+  <text x="86" y="422" font-size="9" fill="#5f6368">Docker-based, CPU/GPU development and testing</text>
 
-  <!-- Google Colab -->
-  <g filter="url(#s)">
-    <rect x="30" y="424" width="280" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="30" y="424" width="4" height="52" rx="2" fill="#64748b"/>
+  <g filter="url(#s1)">
+    <rect x="38" y="442" width="332" height="48" rx="8" fill="#fff"/>
+    <rect x="38" y="442" width="5" height="48" rx="2" fill="#ea4335"/>
   </g>
-  <text x="48" y="445" font-size="11" font-weight="700" fill="#1e293b">Google Colab</text>
-  <text x="48" y="460" font-size="9" fill="#64748b">Free T4 GPU, interactive notebook</text>
+  <rect x="52" y="450" width="24" height="24" rx="5" fill="#fce8e6"/>
+  <text x="64" y="467" text-anchor="middle" font-size="12" fill="#ea4335">C</text>
+  <text x="86" y="465" font-size="11" font-weight="600" fill="#202124">Google Colab</text>
+  <text x="86" y="480" font-size="9" fill="#5f6368">Free T4 GPU, interactive notebook training</text>
 
-  <!-- Vertex AI -->
-  <g filter="url(#s)">
-    <rect x="30" y="484" width="280" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="30" y="484" width="4" height="52" rx="2" fill="#64748b"/>
+  <g filter="url(#s1)">
+    <rect x="38" y="500" width="332" height="48" rx="8" fill="#fff"/>
+    <rect x="38" y="500" width="5" height="48" rx="2" fill="#ea4335"/>
   </g>
-  <text x="48" y="505" font-size="11" font-weight="700" fill="#1e293b">Vertex AI Pipeline</text>
-  <text x="48" y="520" font-size="9" fill="#64748b">Production managed GPU training</text>
+  <rect x="52" y="508" width="24" height="24" rx="5" fill="#fce8e6"/>
+  <text x="64" y="525" text-anchor="middle" font-size="12" fill="#ea4335">G</text>
+  <text x="86" y="523" font-size="11" font-weight="600" fill="#202124">Vertex AI Pipeline</text>
+  <text x="86" y="538" font-size="9" fill="#5f6368">Production managed GPU, scalable training jobs</text>
 
-  <!-- MLflow + GCS row -->
-  <g filter="url(#s)">
-    <rect x="30" y="548" width="135" height="44" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="30" y="548" width="4" height="44" rx="2" fill="#64748b"/>
+  <!-- MLflow + GCS -->
+  <g filter="url(#s1)">
+    <rect x="38" y="558" width="160" height="44" rx="8" fill="#fff"/>
+    <rect x="38" y="558" width="5" height="44" rx="2" fill="#ea4335"/>
   </g>
-  <text x="48" y="569" font-size="10" font-weight="700" fill="#1e293b">MLflow</text>
-  <text x="48" y="582" font-size="8" fill="#64748b">Experiment tracking</text>
+  <text x="56" y="578" font-size="10" font-weight="600" fill="#202124">MLflow Tracking</text>
+  <text x="56" y="592" font-size="8" fill="#5f6368">Experiment metrics</text>
 
-  <g filter="url(#s)">
-    <rect x="175" y="548" width="135" height="44" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="175" y="548" width="4" height="44" rx="2" fill="#64748b"/>
+  <g filter="url(#s1)">
+    <rect x="210" y="558" width="160" height="44" rx="8" fill="#fff"/>
+    <rect x="210" y="558" width="5" height="44" rx="2" fill="#ea4335"/>
   </g>
-  <text x="193" y="569" font-size="10" font-weight="700" fill="#1e293b">GCS Registry</text>
-  <text x="193" y="582" font-size="8" fill="#64748b">Model storage</text>
+  <text x="228" y="578" font-size="10" font-weight="600" fill="#202124">GCS Registry</text>
+  <text x="228" y="592" font-size="8" fill="#5f6368">Model artifact storage</text>
 
-  <!-- ============================================================= -->
-  <!-- BIG ARROW: Column 1 -> Column 2                                -->
-  <!-- ============================================================= -->
-  <path d="M310 390 C340 390, 350 340, 380 340" stroke="#7c3aed" stroke-width="2.5" fill="none" marker-end="url(#arH)"/>
-  <path d="M310 450 C340 450, 350 340, 380 348" stroke="#7c3aed" stroke-width="2" fill="none" stroke-opacity="0.4"/>
-  <path d="M310 510 C340 510, 355 360, 380 356" stroke="#7c3aed" stroke-width="2" fill="none" stroke-opacity="0.4"/>
+  <!-- ================================================================ -->
+  <!-- MAIN ARROW: Training -> Model (horizontal)                       -->
+  <!-- ================================================================ -->
+  <path d="M384 460 L420 460 C430 460, 434 460, 434 450 L434 400" stroke="#7c3aed" stroke-width="2.5" fill="none" marker-end="url(#aP)"/>
 
-  <!-- ============================================================= -->
-  <!-- COLUMN 2: MODEL + API (x: 385-685)                            -->
-  <!-- ============================================================= -->
-
-  <text x="535" y="74" text-anchor="middle" font-size="9" font-weight="700" fill="#94a3b8" letter-spacing="2">SERVE</text>
-  <line x1="430" y1="80" x2="640" y2="80" stroke="#e2e8f0" stroke-width="1"/>
-
-  <!-- MODEL - the main card, purple accent -->
-  <g filter="url(#s)">
-    <rect x="385" y="290" width="300" height="120" rx="10" fill="#faf5ff" stroke="#c4b5fd" stroke-width="1.5"/>
-    <rect x="385" y="290" width="300" height="5" rx="10" ry="2" fill="#7c3aed"/>
+  <!-- ================================================================ -->
+  <!-- SECTION: TRAINED MODEL (center, prominent)                       -->
+  <!-- ================================================================ -->
+  <rect x="406" y="290" width="348" height="108" rx="14" fill="#f3e8ff" opacity="0.6"/>
+  <g filter="url(#s2)">
+    <rect x="418" y="300" width="324" height="88" rx="12" fill="url(#gModel)"/>
   </g>
-  <text x="535" y="316" text-anchor="middle" font-size="9" font-weight="600" fill="#7c3aed" letter-spacing="1">TRAINED MODEL</text>
-  <text x="535" y="340" text-anchor="middle" font-size="18" font-weight="800" fill="#4c1d95">EfficientNet-B0</text>
-  <text x="535" y="360" text-anchor="middle" font-size="10" fill="#7c3aed">Binary classifier - Real vs AI-generated</text>
-  <rect x="493" y="372" width="84" height="20" rx="5" fill="#7c3aed"/>
-  <text x="535" y="386" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">95%+ Accuracy</text>
+  <text x="580" y="326" text-anchor="middle" font-size="10" font-weight="600" fill="#e9d5ff" letter-spacing="1">TRAINED MODEL</text>
+  <text x="580" y="350" text-anchor="middle" font-size="20" font-weight="800" fill="#fff">EfficientNet-B0</text>
+  <text x="580" y="368" text-anchor="middle" font-size="10" fill="#e9d5ff">Binary classifier - Real vs AI-generated images</text>
+  <rect x="540" y="374" width="80" height="18" rx="9" fill="rgba(255,255,255,0.2)"/>
+  <text x="580" y="387" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">95%+ Accuracy</text>
 
-  <!-- arrow down from model -->
-  <line x1="535" y1="410" x2="535" y2="434" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
+  <!-- Arrow: Model -> API -->
+  <line x1="580" y1="398" x2="580" y2="430" stroke="#4285f4" stroke-width="2.2" marker-end="url(#aB)"/>
 
-  <!-- FastAPI Server -->
-  <g filter="url(#s)">
-    <rect x="385" y="438" width="300" height="72" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="385" y="438" width="4" height="72" rx="2" fill="#3b82f6"/>
+  <!-- ================================================================ -->
+  <!-- SECTION: INFERENCE API (center-bottom, blue region)              -->
+  <!-- ================================================================ -->
+  <rect x="406" y="434" width="348" height="230" rx="12" fill="#e8f0fe" opacity="0.4"/>
+  <text x="426" y="454" font-size="10" font-weight="700" fill="#1967d2" letter-spacing="1.2">INFERENCE API</text>
+
+  <!-- FastAPI -->
+  <g filter="url(#s1)">
+    <rect x="420" y="464" width="320" height="60" rx="8" fill="#fff"/>
+    <rect x="420" y="464" width="5" height="60" rx="2" fill="#4285f4"/>
   </g>
-  <text x="403" y="460" font-size="12" font-weight="700" fill="#1e293b">FastAPI Server</text>
-  <text x="403" y="477" font-size="9" fill="#64748b">REST API with auth, rate limiting, CORS</text>
-  <text x="403" y="492" font-size="9" fill="#64748b">Single, batch, and explain endpoints</text>
-  <text x="403" y="504" font-size="8" fill="#94a3b8" font-family="monospace">src/inference/api.py</text>
+  <rect x="434" y="474" width="28" height="28" rx="6" fill="#e8f0fe"/>
+  <text x="448" y="493" text-anchor="middle" font-size="14" fill="#4285f4">A</text>
+  <text x="472" y="488" font-size="12" font-weight="600" fill="#202124">FastAPI Server</text>
+  <text x="472" y="504" font-size="9.5" fill="#5f6368">REST API with auth, rate limiting, batch + explain endpoints</text>
+  <text x="472" y="518" font-size="8" fill="#9aa0a6" font-family="'Roboto Mono', monospace">src/inference/api.py</text>
 
-  <!-- Predictor + Explainer side by side -->
-  <!-- arrow down -->
-  <line x1="460" y1="510" x2="460" y2="530" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
-  <line x1="610" y1="510" x2="610" y2="530" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
-
-  <g filter="url(#s)">
-    <rect x="385" y="534" width="145" height="58" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="385" y="534" width="4" height="58" rx="2" fill="#3b82f6"/>
+  <!-- Predictor + Explainer -->
+  <g filter="url(#s1)">
+    <rect x="420" y="536" width="154" height="56" rx="8" fill="#fff"/>
+    <rect x="420" y="536" width="5" height="56" rx="2" fill="#4285f4"/>
   </g>
-  <text x="403" y="555" font-size="10" font-weight="700" fill="#1e293b">Predictor</text>
-  <text x="403" y="569" font-size="8.5" fill="#64748b">Real-time classification</text>
-  <text x="403" y="583" font-size="7.5" fill="#94a3b8" font-family="monospace">src/inference/predictor.py</text>
+  <rect x="434" y="545" width="22" height="22" rx="5" fill="#e8f0fe"/>
+  <text x="445" y="561" text-anchor="middle" font-size="11" fill="#4285f4">P</text>
+  <text x="464" y="558" font-size="10.5" font-weight="600" fill="#202124">Predictor</text>
+  <text x="464" y="573" font-size="8.5" fill="#5f6368">Real-time classification</text>
+  <text x="434" y="586" font-size="7.5" fill="#9aa0a6" font-family="'Roboto Mono', monospace">predictor.py</text>
 
-  <g filter="url(#s)">
-    <rect x="540" y="534" width="145" height="58" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="540" y="534" width="4" height="58" rx="2" fill="#3b82f6"/>
+  <g filter="url(#s1)">
+    <rect x="586" y="536" width="154" height="56" rx="8" fill="#fff"/>
+    <rect x="586" y="536" width="5" height="56" rx="2" fill="#4285f4"/>
   </g>
-  <text x="558" y="555" font-size="10" font-weight="700" fill="#1e293b">Grad-CAM</text>
-  <text x="558" y="569" font-size="8.5" fill="#64748b">Heatmap explanations</text>
-  <text x="558" y="583" font-size="7.5" fill="#94a3b8" font-family="monospace">src/inference/explainer.py</text>
+  <rect x="600" y="545" width="22" height="22" rx="5" fill="#e8f0fe"/>
+  <text x="611" y="561" text-anchor="middle" font-size="11" fill="#4285f4">E</text>
+  <text x="630" y="558" font-size="10.5" font-weight="600" fill="#202124">Grad-CAM</text>
+  <text x="630" y="573" font-size="8.5" fill="#5f6368">Heatmap explanations</text>
+  <text x="600" y="586" font-size="7.5" fill="#9aa0a6" font-family="'Roboto Mono', monospace">explainer.py</text>
 
   <!-- Streamlit UI -->
-  <!-- arrow down -->
-  <line x1="535" y1="592" x2="535" y2="612" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
-
-  <g filter="url(#s)">
-    <rect x="430" y="616" width="210" height="44" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="430" y="616" width="4" height="44" rx="2" fill="#3b82f6"/>
+  <g filter="url(#s1)">
+    <rect x="420" y="604" width="320" height="48" rx="8" fill="#fff"/>
+    <rect x="420" y="604" width="5" height="48" rx="2" fill="#4285f4"/>
   </g>
-  <text x="448" y="637" font-size="10" font-weight="700" fill="#1e293b">Streamlit UI</text>
-  <text x="448" y="651" font-size="8.5" fill="#64748b">Web interface, Grad-CAM viewer</text>
+  <rect x="434" y="612" width="24" height="24" rx="5" fill="#e8f0fe"/>
+  <text x="446" y="629" text-anchor="middle" font-size="12" fill="#4285f4">U</text>
+  <text x="468" y="627" font-size="11" font-weight="600" fill="#202124">Streamlit UI</text>
+  <text x="468" y="642" font-size="9" fill="#5f6368">Web interface with upload, results, Grad-CAM viewer</text>
 
-  <!-- ============================================================= -->
-  <!-- BIG ARROW: Column 2 -> Column 3                                -->
-  <!-- ============================================================= -->
-  <path d="M685 474 C720 474, 740 340, 770 340" stroke="#94a3b8" stroke-width="1.8" fill="none" marker-end="url(#ar)"/>
-  <path d="M685 474 C720 474, 740 530, 770 530" stroke="#94a3b8" stroke-width="1.8" fill="none" marker-end="url(#ar)"/>
+  <!-- ================================================================ -->
+  <!-- ARROWS: API -> Deploy and API -> Monitor                         -->
+  <!-- ================================================================ -->
+  <path d="M754 494 L800 494 C810 494, 814 494, 814 480 L814 260" stroke="#5f6368" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+  <path d="M754 494 L800 494 C810 494, 814 494, 814 510 L814 530" stroke="#fbbc04" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
 
-  <!-- ============================================================= -->
-  <!-- COLUMN 3: DEPLOY + MONITOR (x: 770-1070)                      -->
-  <!-- ============================================================= -->
+  <!-- ================================================================ -->
+  <!-- SECTION: CLOUD DEPLOYMENT (right-top)                            -->
+  <!-- ================================================================ -->
+  <rect x="776" y="68" width="360" height="188" rx="12" fill="#e8f0fe" opacity="0.35"/>
+  <text x="796" y="88" font-size="10" font-weight="700" fill="#1967d2" letter-spacing="1.2">CLOUD DEPLOYMENT</text>
 
-  <text x="920" y="74" text-anchor="middle" font-size="9" font-weight="700" fill="#94a3b8" letter-spacing="2">OPERATE</text>
-  <line x1="820" y1="80" x2="1020" y2="80" stroke="#e2e8f0" stroke-width="1"/>
-
-  <!-- Deploy section label -->
-  <text x="920" y="106" text-anchor="middle" font-size="9" font-weight="600" fill="#64748b" letter-spacing="1">DEPLOYMENT</text>
-
-  <!-- Docker -->
-  <g filter="url(#s)">
-    <rect x="770" y="118" width="280" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="770" y="118" width="4" height="52" rx="2" fill="#64748b"/>
+  <g filter="url(#s1)">
+    <rect x="790" y="98" width="332" height="48" rx="8" fill="#fff"/>
+    <rect x="790" y="98" width="5" height="48" rx="2" fill="#4285f4"/>
   </g>
-  <text x="788" y="139" font-size="11" font-weight="700" fill="#1e293b">Docker</text>
-  <text x="788" y="154" font-size="9" fill="#64748b">Multi-stage optimized builds</text>
-  <text x="788" y="164" font-size="8" fill="#94a3b8" font-family="monospace">docker/Dockerfile</text>
+  <rect x="804" y="106" width="24" height="24" rx="5" fill="#e8f0fe"/>
+  <text x="816" y="123" text-anchor="middle" font-size="12" fill="#4285f4">D</text>
+  <text x="838" y="121" font-size="11" font-weight="600" fill="#202124">Docker</text>
+  <text x="838" y="136" font-size="9" fill="#5f6368">Multi-stage optimized builds, minimal images</text>
 
-  <!-- arrow down -->
-  <line x1="910" y1="170" x2="910" y2="182" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
-
-  <!-- Cloud Run -->
-  <g filter="url(#s)">
-    <rect x="770" y="186" width="280" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="770" y="186" width="4" height="52" rx="2" fill="#64748b"/>
+  <g filter="url(#s1)">
+    <rect x="790" y="154" width="332" height="48" rx="8" fill="#fff"/>
+    <rect x="790" y="154" width="5" height="48" rx="2" fill="#4285f4"/>
   </g>
-  <text x="788" y="207" font-size="11" font-weight="700" fill="#1e293b">Cloud Run</text>
-  <text x="788" y="222" font-size="9" fill="#64748b">Serverless, auto-scaling, zero to N</text>
+  <rect x="804" y="162" width="24" height="24" rx="5" fill="#e8f0fe"/>
+  <text x="816" y="179" text-anchor="middle" font-size="12" fill="#4285f4">R</text>
+  <text x="838" y="177" font-size="11" font-weight="600" fill="#202124">Cloud Run</text>
+  <text x="838" y="192" font-size="9" fill="#5f6368">Serverless, auto-scaling from zero to N instances</text>
 
-  <!-- Terraform -->
-  <g filter="url(#s)">
-    <rect x="770" y="250" width="280" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="770" y="250" width="4" height="52" rx="2" fill="#64748b"/>
+  <g filter="url(#s1)">
+    <rect x="790" y="210" width="332" height="48" rx="8" fill="#fff"/>
+    <rect x="790" y="210" width="5" height="48" rx="2" fill="#4285f4"/>
   </g>
-  <text x="788" y="271" font-size="11" font-weight="700" fill="#1e293b">Terraform IaC</text>
-  <text x="788" y="286" font-size="9" fill="#64748b">Modular infrastructure, reproducible</text>
-  <text x="788" y="296" font-size="8" fill="#94a3b8" font-family="monospace">terraform/</text>
+  <rect x="804" y="218" width="24" height="24" rx="5" fill="#e8f0fe"/>
+  <text x="816" y="235" text-anchor="middle" font-size="12" fill="#4285f4">T</text>
+  <text x="838" y="233" font-size="11" font-weight="600" fill="#202124">Terraform IaC</text>
+  <text x="838" y="248" font-size="9" fill="#5f6368">Modular infrastructure, reproducible deployments</text>
 
-  <!-- Divider -->
-  <line x1="790" y1="320" x2="1030" y2="320" stroke="#e2e8f0" stroke-width="1"/>
+  <!-- Internal deploy arrows -->
+  <line x1="956" y1="146" x2="956" y2="154" stroke="#5f6368" stroke-width="1.2" marker-end="url(#a)"/>
+  <line x1="956" y1="202" x2="956" y2="210" stroke="#5f6368" stroke-width="1.2" marker-end="url(#a)"/>
 
-  <!-- Monitor section label -->
-  <text x="920" y="340" text-anchor="middle" font-size="9" font-weight="600" fill="#64748b" letter-spacing="1">MONITORING</text>
+  <!-- ================================================================ -->
+  <!-- SECTION: MONITORING (right-bottom, yellow/orange region)         -->
+  <!-- ================================================================ -->
+  <rect x="776" y="534" width="360" height="218" rx="12" fill="#fef7e0" opacity="0.45"/>
+  <text x="796" y="554" font-size="10" font-weight="700" fill="#e37400" letter-spacing="1.2">MONITORING</text>
 
-  <!-- Prometheus -->
-  <g filter="url(#s)">
-    <rect x="770" y="352" width="280" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="770" y="352" width="4" height="52" rx="2" fill="#64748b"/>
+  <g filter="url(#s1)">
+    <rect x="790" y="564" width="332" height="56" rx="8" fill="#fff"/>
+    <rect x="790" y="564" width="5" height="56" rx="2" fill="#fbbc04"/>
   </g>
-  <text x="788" y="373" font-size="11" font-weight="700" fill="#1e293b">Prometheus</text>
-  <text x="788" y="388" font-size="9" fill="#64748b">12+ custom metrics, latency, accuracy</text>
-  <text x="788" y="398" font-size="8" fill="#94a3b8" font-family="monospace">configs/prometheus.yml</text>
+  <rect x="804" y="573" width="24" height="24" rx="5" fill="#fef7e0"/>
+  <text x="816" y="590" text-anchor="middle" font-size="12" fill="#e37400">P</text>
+  <text x="838" y="588" font-size="11" font-weight="600" fill="#202124">Prometheus</text>
+  <text x="838" y="603" font-size="9.5" fill="#5f6368">12+ custom metrics - latency, accuracy, throughput</text>
+  <text x="838" y="615" font-size="8" fill="#9aa0a6" font-family="'Roboto Mono', monospace">configs/prometheus.yml</text>
 
-  <!-- arrow down -->
-  <line x1="910" y1="404" x2="910" y2="416" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
-
-  <!-- Grafana -->
-  <g filter="url(#s)">
-    <rect x="770" y="420" width="280" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="770" y="420" width="4" height="52" rx="2" fill="#64748b"/>
+  <g filter="url(#s1)">
+    <rect x="790" y="630" width="332" height="56" rx="8" fill="#fff"/>
+    <rect x="790" y="630" width="5" height="56" rx="2" fill="#fbbc04"/>
   </g>
-  <text x="788" y="441" font-size="11" font-weight="700" fill="#1e293b">Grafana Dashboards</text>
-  <text x="788" y="456" font-size="9" fill="#64748b">Real-time dashboards, alerting rules</text>
-  <text x="788" y="466" font-size="8" fill="#94a3b8" font-family="monospace">configs/grafana/</text>
+  <rect x="804" y="639" width="24" height="24" rx="5" fill="#fef7e0"/>
+  <text x="816" y="656" text-anchor="middle" font-size="12" fill="#e37400">G</text>
+  <text x="838" y="654" font-size="11" font-weight="600" fill="#202124">Grafana Dashboards</text>
+  <text x="838" y="669" font-size="9.5" fill="#5f6368">Real-time visualization, alerting rules, SLO tracking</text>
+  <text x="838" y="681" font-size="8" fill="#9aa0a6" font-family="'Roboto Mono', monospace">configs/grafana/</text>
 
-  <!-- arrow down -->
-  <line x1="910" y1="472" x2="910" y2="484" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
-
-  <!-- Drift Detection -->
-  <g filter="url(#s)">
-    <rect x="770" y="488" width="280" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="770" y="488" width="4" height="52" rx="2" fill="#64748b"/>
+  <g filter="url(#s1)">
+    <rect x="790" y="696" width="332" height="48" rx="8" fill="#fff"/>
+    <rect x="790" y="696" width="5" height="48" rx="2" fill="#fbbc04"/>
   </g>
-  <text x="788" y="509" font-size="11" font-weight="700" fill="#1e293b">Drift Detection</text>
-  <text x="788" y="524" font-size="9" fill="#64748b">Data quality, shadow predictions</text>
-  <text x="788" y="534" font-size="8" fill="#94a3b8" font-family="monospace">src/inference/shadow.py</text>
+  <rect x="804" y="704" width="24" height="24" rx="5" fill="#fef7e0"/>
+  <text x="816" y="721" text-anchor="middle" font-size="12" fill="#e37400">S</text>
+  <text x="838" y="719" font-size="11" font-weight="600" fill="#202124">Drift Detection</text>
+  <text x="838" y="734" font-size="9" fill="#5f6368">Data quality monitoring, shadow predictions</text>
 
-  <!-- ============================================================= -->
-  <!-- CI/CD - thin bottom bar                                        -->
-  <!-- ============================================================= -->
-  <line x1="30" y1="670" x2="1070" y2="670" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="550" y="688" text-anchor="middle" font-size="9" font-weight="700" fill="#94a3b8" letter-spacing="2">CI/CD - GITHUB ACTIONS</text>
+  <!-- Internal monitor arrows -->
+  <line x1="956" y1="620" x2="956" y2="630" stroke="#5f6368" stroke-width="1.2" marker-end="url(#a)"/>
+  <line x1="956" y1="686" x2="956" y2="696" stroke="#5f6368" stroke-width="1.2" marker-end="url(#a)"/>
 
-  <g filter="url(#s)">
-    <rect x="100" y="696" width="260" height="18" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.8"/>
-  </g>
-  <text x="230" y="709" text-anchor="middle" font-size="8" font-weight="600" fill="#64748b">CI: Lint, Test, Type-check, Security</text>
+  <!-- ================================================================ -->
+  <!-- CI/CD BAR (bottom)                                               -->
+  <!-- ================================================================ -->
+  <rect x="24" y="630" width="360" height="50" rx="10" fill="#f1f3f4"/>
+  <text x="44" y="650" font-size="9" font-weight="700" fill="#5f6368" letter-spacing="1">CI/CD</text>
+  <text x="44" y="664" font-size="8.5" fill="#5f6368">GitHub Actions - lint, test, build, deploy, model training pipeline</text>
+  <text x="44" y="676" font-size="7.5" fill="#9aa0a6" font-family="'Roboto Mono', monospace">.github/workflows/ (ci.yml, cd.yml, model-training.yml)</text>
 
-  <g filter="url(#s)">
-    <rect x="390" y="696" width="320" height="18" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.8"/>
-  </g>
-  <text x="550" y="709" text-anchor="middle" font-size="8" font-weight="600" fill="#64748b">CD: Build, Push to Registry, Deploy, Smoke test</text>
+  <!-- CI/CD dotted lines to Training and Deployment -->
+  <path d="M384 655 L400 655 C410 655, 414 655, 414 640 L414 614" stroke="#5f6368" stroke-width="1" fill="none" stroke-dasharray="4,3" opacity="0.4"/>
+  <path d="M384 655 L780 655 C786 655, 790 650, 790 640 L790 258" stroke="#5f6368" stroke-width="1" fill="none" stroke-dasharray="4,3" opacity="0.4"/>
 
-  <g filter="url(#s)">
-    <rect x="740" y="696" width="260" height="18" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.8"/>
-  </g>
-  <text x="870" y="709" text-anchor="middle" font-size="8" font-weight="600" fill="#64748b">Training: Vertex AI trigger, Validation gate</text>
+  <!-- ================================================================ -->
+  <!-- FLOW LABELS on arrows                                            -->
+  <!-- ================================================================ -->
+  <!-- Data -> Training label -->
+  <rect x="178" y="274" width="52" height="14" rx="3" fill="#fff" stroke="#e0e0e0" stroke-width="0.5"/>
+  <text x="204" y="284" text-anchor="middle" font-size="7" fill="#5f6368" font-weight="600">data</text>
 
-  <!-- ============================================================= -->
-  <!-- Column labels (vertical text accents)                          -->
-  <!-- ============================================================= -->
+  <!-- Training -> Model label -->
+  <rect x="387" y="432" width="52" height="14" rx="3" fill="#fff" stroke="#e0e0e0" stroke-width="0.5"/>
+  <text x="413" y="442" text-anchor="middle" font-size="7" fill="#7c3aed" font-weight="600">model</text>
 
-  <!-- Thin vertical accent lines for columns -->
-  <line x1="340" y1="90" x2="340" y2="660" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4,6"/>
-  <line x1="730" y1="90" x2="730" y2="660" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4,6"/>
+  <!-- Model -> API label -->
+  <rect x="554" y="408" width="52" height="14" rx="3" fill="#fff" stroke="#e0e0e0" stroke-width="0.5"/>
+  <text x="580" y="418" text-anchor="middle" font-size="7" fill="#4285f4" font-weight="600">serve</text>
 
-  <!-- Numbers for reading order -->
-  <circle cx="18" cy="94" r="8" fill="#f1f5f9"/>
-  <text x="18" y="98" text-anchor="middle" font-size="8" font-weight="700" fill="#94a3b8">1</text>
+  <!-- API -> Deploy label -->
+  <rect x="788" y="268" width="52" height="14" rx="3" fill="#fff" stroke="#e0e0e0" stroke-width="0.5"/>
+  <text x="814" y="278" text-anchor="middle" font-size="7" fill="#5f6368" font-weight="600">deploy</text>
 
-  <circle cx="18" cy="364" r="8" fill="#f1f5f9"/>
-  <text x="18" y="368" text-anchor="middle" font-size="8" font-weight="700" fill="#94a3b8">2</text>
+  <!-- API -> Monitor label -->
+  <rect x="788" y="510" width="56" height="14" rx="3" fill="#fff" stroke="#e0e0e0" stroke-width="0.5"/>
+  <text x="816" y="520" text-anchor="middle" font-size="7" fill="#e37400" font-weight="600">metrics</text>
 
-  <circle cx="375" cy="290" r="8" fill="#ede9fe"/>
-  <text x="375" y="294" text-anchor="middle" font-size="8" font-weight="700" fill="#7c3aed">3</text>
+  <!-- ================================================================ -->
+  <!-- TECH STACK FOOTER                                                -->
+  <!-- ================================================================ -->
+  <line x1="30" y1="752" x2="1130" y2="752" stroke="#e0e0e0" stroke-width="0.8"/>
 
-  <circle cx="375" cy="438" r="8" fill="#f1f5f9"/>
-  <text x="375" y="442" text-anchor="middle" font-size="8" font-weight="700" fill="#94a3b8">4</text>
+  <rect x="30" y="760" width="56" height="18" rx="9" fill="#4285f4"/>
+  <text x="58" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">Python</text>
 
-  <circle cx="760" cy="118" r="8" fill="#f1f5f9"/>
-  <text x="760" y="122" text-anchor="middle" font-size="8" font-weight="700" fill="#94a3b8">5</text>
+  <rect x="92" y="760" width="58" height="18" rx="9" fill="#ea4335"/>
+  <text x="121" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">PyTorch</text>
 
-  <circle cx="760" cy="352" r="8" fill="#f1f5f9"/>
-  <text x="760" y="356" text-anchor="middle" font-size="8" font-weight="700" fill="#94a3b8">6</text>
+  <rect x="156" y="760" width="56" height="18" rx="9" fill="#34a853"/>
+  <text x="184" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">FastAPI</text>
+
+  <rect x="218" y="760" width="52" height="18" rx="9" fill="#4285f4"/>
+  <text x="244" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">Docker</text>
+
+  <rect x="276" y="760" width="66" height="18" rx="9" fill="#7c3aed"/>
+  <text x="309" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">Terraform</text>
+
+  <rect x="348" y="760" width="40" height="18" rx="9" fill="#4285f4"/>
+  <text x="368" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">GCP</text>
+
+  <rect x="394" y="760" width="76" height="18" rx="9" fill="#e37400"/>
+  <text x="432" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">Prometheus</text>
+
+  <rect x="476" y="760" width="56" height="18" rx="9" fill="#fbbc04"/>
+  <text x="504" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">Grafana</text>
+
+  <rect x="538" y="760" width="40" height="18" rx="9" fill="#34a853"/>
+  <text x="558" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">DVC</text>
+
+  <rect x="584" y="760" width="52" height="18" rx="9" fill="#4285f4"/>
+  <text x="610" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">MLflow</text>
+
+  <rect x="642" y="760" width="90" height="18" rx="9" fill="#202124"/>
+  <text x="687" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">GitHub Actions</text>
+
+  <rect x="738" y="760" width="72" height="18" rx="9" fill="#6d28d9"/>
+  <text x="774" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">EfficientNet</text>
+
+  <rect x="816" y="760" width="60" height="18" rx="9" fill="#ea4335"/>
+  <text x="846" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">Streamlit</text>
+
+  <rect x="882" y="760" width="60" height="18" rx="9" fill="#4285f4"/>
+  <text x="912" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">Vertex AI</text>
+
+  <rect x="948" y="760" width="66" height="18" rx="9" fill="#34a853"/>
+  <text x="981" y="773" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">Streamlit</text>
 </svg>
