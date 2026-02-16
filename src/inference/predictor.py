@@ -8,7 +8,9 @@ import torch
 from PIL import Image
 from torchvision import transforms
 
+from src.inference.confidence import classify_confidence
 from src.inference.schemas import ConfidenceLevel, PredictionResult, PredictResponse
+from src.training.augmentation import IMAGENET_MEAN, IMAGENET_STD
 from src.training.model import AIImageDetector
 from src.utils.logger import get_logger
 from src.utils.model_loader import load_model
@@ -62,10 +64,7 @@ class Predictor:
             [
                 transforms.Resize((224, 224)),
                 transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225],
-                ),
+                transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
             ]
         )
 
@@ -107,14 +106,11 @@ class Predictor:
         Returns:
             Confidence level.
         """
-        # Distance from decision boundary (0.5)
-        distance = abs(probability - 0.5)
-
-        if distance > (self.high_confidence_threshold - 0.5):
-            return ConfidenceLevel.HIGH
-        elif distance < (0.5 - self.low_confidence_threshold):
-            return ConfidenceLevel.LOW
-        return ConfidenceLevel.MEDIUM
+        return classify_confidence(
+            probability,
+            high_threshold=self.high_confidence_threshold,
+            low_threshold=self.low_confidence_threshold,
+        )
 
     def predict_from_bytes(self, image_bytes: bytes) -> PredictResponse:
         """Predict from image bytes.

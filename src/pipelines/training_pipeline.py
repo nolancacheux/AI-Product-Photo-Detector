@@ -23,17 +23,17 @@ from typing import Any
 from kfp import compiler, dsl
 
 from src.utils.config import load_yaml_config
+from src.utils.constants import (
+    ARTIFACT_REGISTRY,
+    GCS_BUCKET_URI,
+    PIPELINE_ROOT,
+    PROJECT_ID,
+    REGION,
+    SERVICE_NAME,
+    TRAINING_IMAGE,
+)
 
 logger = logging.getLogger(__name__)
-
-# -- GCP constants (overridable via pipeline_config.yaml) ---------------------
-PROJECT_ID = "ai-product-detector-487013"
-REGION = "europe-west1"
-GCS_BUCKET = "gs://ai-product-detector-487013"
-PIPELINE_ROOT = f"{GCS_BUCKET}/pipeline_root"
-ARTIFACT_REGISTRY = "europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector"
-TRAINING_IMAGE = f"{ARTIFACT_REGISTRY}/train:latest"
-SERVICE_NAME = "ai-product-detector"
 
 
 # =============================================================================
@@ -54,6 +54,13 @@ def validate_data(
     max_class_imbalance_ratio: float,
 ) -> dsl.Artifact:
     """Validate the training dataset on GCS.
+
+    .. note:: KFP Sync Warning
+       This component contains inline validation logic that partially overlaps
+       with ``src/data/validate.py``. KFP components execute in isolated
+       containers with no access to the project source tree, so we must
+       redefine the validation logic here. **Keep in sync with
+       src/data/validate.validate_dataset()**.
 
     Checks:
         - Both class directories exist (real/, ai_generated/)
@@ -77,6 +84,9 @@ def validate_data(
     from PIL import Image
 
     client = storage.Client()
+
+    # GCS path parsing (duplicated because KFP components are self-contained;
+    # see src/training/gcs.parse_gcs_path for the canonical implementation)
     bucket_name = data_gcs_path.replace("gs://", "").split("/")[0]
     prefix = "/".join(data_gcs_path.replace("gs://", "").split("/")[1:])
     bucket = client.bucket(bucket_name)
@@ -281,6 +291,8 @@ def evaluate_model(
     tmpdir = Path(tempfile.mkdtemp())
     model_local = tmpdir / "best_model.pt"
 
+    # GCS path parsing (duplicated because KFP components are self-contained;
+    # see src/training/gcs.parse_gcs_path for the canonical implementation)
     bucket_name = model_gcs_path.replace("gs://", "").split("/")[0]
     blob_path = "/".join(model_gcs_path.replace("gs://", "").split("/")[1:])
     bucket = client.bucket(bucket_name)
@@ -296,6 +308,13 @@ def evaluate_model(
     import timm
     import torch.nn as nn
 
+    # -------------------------------------------------------------------------
+    # KFP Sync Warning — Duplicated Model Architecture
+    # KFP components execute in isolated containers with their own Python
+    # environment and no access to the project source tree. We MUST redefine
+    # the model architecture here so the checkpoint can be loaded at evaluation
+    # time. **Keep this class in sync with src/training/model.AIImageDetector**.
+    # -------------------------------------------------------------------------
     class _Detector(nn.Module):
         def __init__(self, backbone_name: str, dropout: float) -> None:
             super().__init__()
@@ -322,6 +341,7 @@ def evaluate_model(
     model.eval()
 
     # Download test images
+    # GCS path parsing (see src/training/gcs.parse_gcs_path)
     test_prefix = "/".join(data_gcs_path.replace("gs://", "").split("/")[1:]) + "/test"
     test_dir = tmpdir / "test"
     valid_ext = {".jpg", ".jpeg", ".png", ".webp"}
@@ -348,6 +368,12 @@ def evaluate_model(
         ]
     )
 
+    # -----------------------------------------------------------------
+    # KFP Sync Warning — Duplicated Dataset Class
+    # KFP components execute in isolated containers. We must redefine a
+    # minimal dataset loader here. **Keep in sync with
+    # src/training/dataset.AIProductDataset**.
+    # -----------------------------------------------------------------
     class _TestDataset(Dataset):
         def __init__(self, root: Path) -> None:
             self.samples: list[tuple[Path, int]] = []
@@ -404,6 +430,7 @@ def evaluate_model(
 
     # Upload metrics JSON to GCS
     metrics_json = json.dumps(metrics, indent=2)
+    # GCS path parsing (see src/training/gcs.parse_gcs_path)
     out_bucket_name = output_gcs_path.replace("gs://", "").split("/")[0]
     out_prefix = "/".join(output_gcs_path.replace("gs://", "").split("/")[1:])
     out_bucket = client.bucket(out_bucket_name)
@@ -444,6 +471,7 @@ def compare_models(
     production_metrics = None
     try:
         client = storage.Client()
+        # GCS path parsing (see src/training/gcs.parse_gcs_path)
         bucket_name = production_metrics_gcs_path.replace("gs://", "").split("/")[0]
         blob_path = "/".join(production_metrics_gcs_path.replace("gs://", "").split("/")[1:])
         bucket = client.bucket(bucket_name)
@@ -643,13 +671,14 @@ def training_pipeline(
     min_accuracy: float = 0.85,
     min_f1: float = 0.80,
     auto_deploy: bool = False,
-    data_gcs_path: str = f"{GCS_BUCKET}/data/processed",
-    output_gcs_path: str = f"{GCS_BUCKET}/pipeline_runs",
-    production_metrics_gcs_path: str = f"{GCS_BUCKET}/production/metrics.json",
+    data_gcs_path: str = f"{GCS_BUCKET_URI}/data/processed",
+    output_gcs_path: str = f"{GCS_BUCKET_URI}/pipeline_runs",
+    production_metrics_gcs_path: str = f"{GCS_BUCKET_URI}/production/metrics.json",
     project_id: str = PROJECT_ID,
     region: str = REGION,
     training_image: str = TRAINING_IMAGE,
     serving_image: str = f"{ARTIFACT_REGISTRY}/serve:latest",
+
     model_display_name: str = "ai-product-detector",
     service_name: str = SERVICE_NAME,
     min_samples_per_class: int = 100,
@@ -790,15 +819,17 @@ def submit_pipeline(
         "min_accuracy": min_accuracy or evaluation_cfg.get("min_accuracy", 0.85),
         "min_f1": evaluation_cfg.get("min_f1", 0.80),
         "auto_deploy": auto_deploy or deployment_cfg.get("auto_deploy", False),
-        "data_gcs_path": pipeline_cfg.get("data_gcs_path", f"{GCS_BUCKET}/data/processed"),
-        "output_gcs_path": pipeline_cfg.get("output_gcs_path", f"{GCS_BUCKET}/pipeline_runs"),
+        "data_gcs_path": pipeline_cfg.get("data_gcs_path", f"{GCS_BUCKET_URI}/data/processed"),
+        "output_gcs_path": pipeline_cfg.get("output_gcs_path", f"{GCS_BUCKET_URI}/pipeline_runs"),
         "production_metrics_gcs_path": pipeline_cfg.get(
-            "production_metrics_gcs_path", f"{GCS_BUCKET}/production/metrics.json"
+            "production_metrics_gcs_path", f"{GCS_BUCKET_URI}/production/metrics.json"
         ),
         "project_id": project_id,
         "region": region,
         "training_image": pipeline_cfg.get("training_image", TRAINING_IMAGE),
-        "serving_image": pipeline_cfg.get("serving_image", f"{ARTIFACT_REGISTRY}/serve:latest"),
+        "serving_image": pipeline_cfg.get(
+            "serving_image", f"{ARTIFACT_REGISTRY}/serve:latest"
+        ),
         "model_display_name": pipeline_cfg.get("model_display_name", "ai-product-detector"),
         "service_name": deployment_cfg.get("service_name", SERVICE_NAME),
         "min_samples_per_class": evaluation_cfg.get("min_samples_per_class", 100),

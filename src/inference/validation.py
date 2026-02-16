@@ -1,3 +1,4 @@
+# NOTE: This module is currently unused. Route handlers perform inline validation.
 """Input validation utilities for API security."""
 
 import hashlib

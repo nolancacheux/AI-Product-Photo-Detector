@@ -25,7 +25,7 @@ from src.inference.schemas import (
     HealthStatus,
     LivenessResponse,
 )
-from src.monitoring.metrics import ACTIVE_REQUESTS
+from src.monitoring.metrics import get_active_request_count
 
 router = APIRouter()
 
@@ -109,7 +109,7 @@ async def detailed_health() -> DetailedHealthResponse:
         model_loaded=model_loaded,
         model_version=predictor.model_version if predictor else "unknown",
         uptime_seconds=round(uptime, 2),
-        active_requests=int(ACTIVE_REQUESTS._value.get()),
+        active_requests=get_active_request_count(),
         drift_detected=drift_detected,
         predictions_total=state.get_total_predictions(),
         memory_usage_mb=round(_get_memory_usage_mb(), 2),

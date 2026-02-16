@@ -13,15 +13,11 @@ from pathlib import Path
 from google.cloud import aiplatform
 
 from src.training.gcs import download_file, upload_directory
+from src.utils.constants import ARTIFACT_REGISTRY, GCS_BUCKET, PROJECT_ID, REGION
 from src.utils.logger import get_logger, setup_logging
 
 logger = get_logger(__name__)
 
-# GCP constants
-PROJECT_ID = "ai-product-detector-487013"
-REGION = "europe-west1"
-GCS_BUCKET = "ai-product-detector-487013"
-ARTIFACT_REGISTRY = f"{REGION}-docker.pkg.dev/{PROJECT_ID}/ai-product-detector"
 IMAGE_NAME = "ai-product-detector-train"
 IMAGE_TAG = "latest"
 IMAGE_URI = f"{ARTIFACT_REGISTRY}/{IMAGE_NAME}:{IMAGE_TAG}"

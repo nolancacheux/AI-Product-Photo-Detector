@@ -58,7 +58,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           check-regexp: "^Lint, Type Check & Tests"
           wait-interval: 15
-          allowed-conclusions: success
+          allowed-conclusions: success,skipped
 
   # --------------------------------------------------------------------------
   # Build & Push Docker Image

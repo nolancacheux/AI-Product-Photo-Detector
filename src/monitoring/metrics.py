@@ -15,7 +15,7 @@ MODEL_INFO = Info(
     "aidetect_model",
     "Model information",
 )
-MODEL_LOAD_TIME = Gauge(
+MODEL_LOAD_TIME = Gauge(  # TODO: Wire up this metric
     "aidetect_model_load_seconds",
     "Time taken to load the model",
 )
@@ -59,12 +59,12 @@ BATCH_LATENCY = Histogram(
 )
 
 # Image validation metrics
-IMAGE_SIZE_BYTES = Histogram(
+IMAGE_SIZE_BYTES = Histogram(  # TODO: Wire up this metric
     "aidetect_image_size_bytes",
     "Size of uploaded images in bytes",
     buckets=[10000, 50000, 100000, 500000, 1000000, 5000000, 10000000],
 )
-IMAGE_DIMENSIONS = Histogram(
+IMAGE_DIMENSIONS = Histogram(  # TODO: Wire up this metric
     "aidetect_image_dimension_pixels",
     "Image dimensions (max of width/height)",
     buckets=[100, 224, 512, 1024, 2048, 4096, 8192],
@@ -98,7 +98,7 @@ CONCURRENT_REQUESTS_MAX = Gauge(
 )
 
 # Rate limiting metrics
-RATE_LIMIT_EXCEEDED = Counter(
+RATE_LIMIT_EXCEEDED = Counter(  # TODO: Wire up this metric
     "aidetect_rate_limit_exceeded_total",
     "Total number of rate limit exceeded responses",
     ["endpoint"],
@@ -128,6 +128,12 @@ HTTP_REQUEST_DURATION = Histogram(
 _active_lock = threading.Lock()
 _current_active: int = 0
 _max_active: int = 0
+
+
+def get_active_request_count() -> int:
+    """Return the current number of active in-flight requests (thread-safe)."""
+    with _active_lock:
+        return _current_active
 
 
 def track_request_start() -> None:
@@ -216,7 +222,7 @@ def record_prediction(
         PREDICTION_PROBABILITY.observe(probability)
 
 
-def record_batch_prediction(
+def record_batch_prediction(  # TODO: Wire up this metric
     batch_size: int,
     failed: int,
     latency_seconds: float,

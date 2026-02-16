@@ -115,7 +115,7 @@ mlflow:
 
 docker-build:
 	docker build -f docker/Dockerfile -t ai-product-detector:1.0.0 .
-	docker build -f docker/train.Dockerfile -t ai-product-detector-train:1.0.0 .
+	docker build -f docker/Dockerfile.training -t ai-product-detector-train:1.0.0 .
 
 docker-run:
 	docker run --rm -p 8080:8080 -v $(PWD)/models:/app/models:ro ai-product-detector:1.0.0
@@ -178,7 +178,7 @@ load-test-k6:
 # ─── Deploy ───────────────────────────────────────────────────────────────────
 
 deploy:
-	gh workflow run deploy.yml -f image_tag=latest
+	gh workflow run cd.yml -f image_tag=latest
 
 # ─── Cleanup ──────────────────────────────────────────────────────────────────
 

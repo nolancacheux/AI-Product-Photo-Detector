@@ -46,7 +46,6 @@ dependencies = [
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "pyyaml>=6.0.0",
-    "pandas>=2.0.0",
     "numpy>=1.24.0",
     
     # Explainability
@@ -55,7 +54,6 @@ dependencies = [
     # Utils
     "httpx>=0.24.0",
     "tqdm>=4.65.0",
-    "rich>=13.0.0",
     
     # Data
     "datasets>=2.14.0",

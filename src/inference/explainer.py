@@ -12,6 +12,8 @@ from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from torchvision import transforms
 
+from src.inference.confidence import classify_confidence
+from src.training.augmentation import IMAGENET_MEAN, IMAGENET_STD
 from src.training.model import AIImageDetector
 from src.utils.logger import get_logger
 from src.utils.model_loader import load_model
@@ -32,7 +34,7 @@ class GradCAMExplainer:
             [
                 transforms.Resize((224, 224)),
                 transforms.ToTensor(),
-                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+                transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
             ]
         )
         self._load_model()
@@ -101,13 +103,7 @@ class GradCAMExplainer:
         elapsed = (time.monotonic() - start) * 1000
 
         prediction = "ai_generated" if probability > 0.5 else "real"
-        distance = abs(probability - 0.5)
-        if distance > 0.3:
-            confidence = "high"
-        elif distance > 0.1:
-            confidence = "medium"
-        else:
-            confidence = "low"
+        confidence = classify_confidence(probability).value
 
         return {
             "prediction": prediction,

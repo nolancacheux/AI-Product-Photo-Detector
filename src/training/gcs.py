@@ -8,11 +8,33 @@ callers gate on whether a GCS bucket was provided.
 from pathlib import Path
 from typing import Any
 
+from src.utils.constants import PROJECT_ID
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-DEFAULT_PROJECT = "ai-product-detector-487013"
+DEFAULT_PROJECT = PROJECT_ID
+
+
+def parse_gcs_path(gcs_uri: str) -> tuple[str, str]:
+    """Parse a ``gs://bucket/prefix`` URI into (bucket_name, prefix).
+
+    Args:
+        gcs_uri: Full GCS URI starting with ``gs://``.
+
+    Returns:
+        Tuple of (bucket_name, object_prefix).
+
+    Raises:
+        ValueError: If *gcs_uri* does not start with ``gs://``.
+    """
+    if not gcs_uri.startswith("gs://"):
+        raise ValueError(f"Expected a gs:// URI, got: {gcs_uri}")
+    without_scheme = gcs_uri[len("gs://"):]
+    parts = without_scheme.split("/", 1)
+    bucket_name = parts[0]
+    prefix = parts[1] if len(parts) > 1 else ""
+    return bucket_name, prefix
 
 
 def _get_client(project: str = DEFAULT_PROJECT) -> Any:

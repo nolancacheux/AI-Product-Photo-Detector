@@ -46,9 +46,9 @@ End-to-end machine learning system that classifies product photos as real or AI-
 | ML Model | EfficientNet-B0 + Grad-CAM | Transfer learning with ImageNet weights via `timm`, visual heatmap explainability |
 | API | FastAPI with auth & rate limiting | Single, batch (up to 10), and explain endpoints with Pydantic v2 schemas |
 | Training | 3 training modes | Local (Docker/CPU), Google Colab (free T4 GPU), Vertex AI (production T4 GPU) |
-| Monitoring | Prometheus + Grafana + drift | 12+ custom metrics, auto-provisioned dashboards, real-time drift detection |
+| Monitoring | Prometheus + Grafana + drift | 18+ custom metrics, auto-provisioned dashboards, real-time drift detection |
 | Infrastructure | Terraform + Docker + Cloud Run | Modular IaC, full Docker Compose stack, serverless deployment |
-| CI/CD | GitHub Actions (4 workflows) | Lint, test, build, deploy with quality gates (accuracy ≥ 0.85, F1 ≥ 0.80) |
+| CI/CD | GitHub Actions (5 workflows) | Lint, test, build, deploy with quality gates (accuracy ≥ 0.85, F1 ≥ 0.80) |
 
 ## Training Options
 
@@ -141,12 +141,15 @@ make dev  # Install dependencies + pre-commit hooks
 **Run locally:**
 
 ```bash
-docker compose up -d  # API + UI + MLflow + Prometheus + Grafana
+make serve             # Local dev server → http://localhost:8000
+docker compose up -d   # Full stack (production) → ports below
 ```
+
+> **Note:** `make serve` runs Uvicorn on port **8000** (local development). Docker Compose exposes the API on port **8080** (container/production).
 
 | Service | URL |
 |---------|-----|
-| API | `http://localhost:8080` |
+| API (Docker) | `http://localhost:8080` |
 | Streamlit UI | `http://localhost:8501` |
 | MLflow | `http://localhost:5000` |
 | Prometheus | `http://localhost:9090` |
@@ -241,7 +244,7 @@ Real-time monitoring of prediction distribution shifts using a sliding window ov
 | MLOps | DVC (pipelines + versioning), MLflow (experiment tracking), HuggingFace Datasets |
 | Monitoring | Prometheus, Grafana, structlog (JSON logging), custom drift detection |
 | Infrastructure | Docker, Docker Compose, Terraform (modular), Cloud Run, Artifact Registry |
-| CI/CD | GitHub Actions (CI, CD, Model Training, PR Preview) |
+| CI/CD | GitHub Actions (CI, CD, Model Training, PR Preview, Request Quota) |
 | Cloud | Google Cloud Platform (Vertex AI, Cloud Run, GCS, Artifact Registry, Secret Manager) |
 
 <details>
@@ -253,7 +256,8 @@ AI-Product-Photo-Detector/
 │   ├── ci.yml                        # Lint + type-check + test (3.11, 3.12) + security
 │   ├── cd.yml                        # Build → push → deploy → smoke test
 │   ├── model-training.yml            # Vertex AI GPU training pipeline
-│   └── pr-preview.yml                # PR preview deployments
+│   ├── pr-preview.yml                # PR preview deployments
+│   └── request-quota.yml             # GCP quota increase requests
 ├── configs/
 │   ├── grafana/                      # Dashboard definitions + provisioning
 │   ├── prometheus/                   # Alerting rules
@@ -287,7 +291,8 @@ AI-Product-Photo-Detector/
 │   │   ├── explainer.py              # Grad-CAM heatmap generation
 │   │   ├── predictor.py              # Model inference engine
 │   │   ├── rate_limit.py             # Rate limiting configuration
-│   │   ├── routes/                   # Modular API routes
+│   │   ├── routes/
+│   │   │   ├── v1/                   # Versioned API endpoints
 │   │   ├── schemas.py                # Pydantic request/response models
 │   │   ├── shadow.py                 # Shadow model A/B testing
 │   │   ├── state.py                  # Application state management
@@ -326,7 +331,7 @@ AI-Product-Photo-Detector/
 ├── tests/
 │   ├── load/                         # Locust + k6 load tests
 │   ├── conftest.py                   # Shared test fixtures
-│   └── test_*.py                     # 20+ test modules (API, auth, model, training, ...)
+│   └── test_*.py                     # 28+ test modules (API, auth, model, training, ...)
 ├── docker-compose.yml                # Full stack: API + UI + MLflow + Prometheus + Grafana
 ├── dvc.yaml                          # DVC pipeline: download → validate → train
 ├── Makefile                          # Development commands

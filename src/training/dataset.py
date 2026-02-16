@@ -8,7 +8,7 @@ from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
-from src.training.augmentation import get_train_transforms, get_val_transforms
+from src.training.augmentation import IMAGENET_MEAN, IMAGENET_STD, get_train_transforms, get_val_transforms
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +69,7 @@ class AIProductDataset(Dataset):
             [
                 transforms.Resize((self.image_size, self.image_size)),
                 transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225],
-                ),
+                transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
             ]
         )
 
@@ -96,11 +93,12 @@ class AIProductDataset(Dataset):
         """Get dataset length."""
         return len(self.samples)
 
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int]:
+    def __getitem__(self, idx: int, _retry_count: int = 0) -> tuple[torch.Tensor, int]:
         """Get a sample.
 
         Args:
             idx: Sample index.
+            _retry_count: Internal recursion guard (do not set manually).
 
         Returns:
             Tuple of (image tensor, label).
@@ -117,10 +115,13 @@ class AIProductDataset(Dataset):
 
             return image, label  # type: ignore[return-value]
         except OSError as e:
-            logger.warning(f"Failed to load image {img_path}: {e}, returning random replacement")
-            # Return a random valid sample instead of crashing
+            if _retry_count >= 5:
+                raise RuntimeError(
+                    f"Failed to load any image after {_retry_count} retries"
+                ) from e
+            logger.warning(f"Failed to load image {img_path}: {e}, trying next sample")
             replacement_idx = (idx + 1) % len(self.samples)
-            return self.__getitem__(replacement_idx)
+            return self.__getitem__(replacement_idx, _retry_count + 1)
 
 
 def create_dataloaders(

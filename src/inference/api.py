@@ -51,6 +51,7 @@ from src.monitoring.metrics import (
     RESPONSE_SIZE_BYTES,
     set_app_info,
     set_model_info,
+    get_active_request_count,
     track_request_end,
     track_request_start,
 )
@@ -164,11 +165,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Initiating graceful shutdown — draining active requests")
 
     # Wait for in-flight requests to complete (max 30s)
-    from src.monitoring.metrics import ACTIVE_REQUESTS
-
     drain_deadline = time.monotonic() + 30.0
     while time.monotonic() < drain_deadline:
-        active = int(ACTIVE_REQUESTS._value.get())
+        active = get_active_request_count()
         if active <= 0:
             break
         logger.info("Draining requests", active_requests=active)
