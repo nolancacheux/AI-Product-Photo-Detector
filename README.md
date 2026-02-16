@@ -27,6 +27,10 @@
 ## Live Demo
 
 <p align="center">
+  <img src="images/streamlit-ui-prod.png" alt="Streamlit Web UI (Production)" width="80%">
+</p>
+
+<p align="center">
   <img src="images/ui-upload.jpg" alt="Upload Interface" width="48%">
   <img src="images/ui-result.jpg" alt="Prediction Result" width="48%">
 </p>
@@ -153,7 +157,7 @@ docker compose up -d   # Full stack (production) → ports below
 | Streamlit UI | `http://localhost:8501` |
 | MLflow | `http://localhost:5000` |
 | Prometheus | `http://localhost:9090` |
-| Grafana | `http://localhost:3000` |
+| Grafana | `http://localhost:3000` (default credentials: `admin` / `admin`) |
 
 **Test:**
 
@@ -161,6 +165,26 @@ docker compose up -d   # Full stack (production) → ports below
 make test  # pytest with coverage
 make lint  # ruff + mypy
 ```
+
+## Production Deployment
+
+The application is deployed on Google Cloud Run (serverless). Both the API and Web UI are publicly accessible:
+
+| Service | URL |
+|---------|-----|
+| API (Production) | https://ai-product-detector-714127049161.europe-west1.run.app |
+| Web UI (Production) | https://ai-product-detector-ui-714127049161.europe-west1.run.app |
+| API Documentation | https://ai-product-detector-714127049161.europe-west1.run.app/docs |
+| Health Check | https://ai-product-detector-714127049161.europe-west1.run.app/health |
+| Metrics (Prometheus) | https://ai-product-detector-714127049161.europe-west1.run.app/metrics |
+
+<p align="center">
+  <img src="images/api-health-screenshot.png" alt="API Health Check" width="80%">
+</p>
+
+<p align="center">
+  <img src="images/swagger-api-docs.png" alt="Swagger API Documentation" width="80%">
+</p>
 
 <details>
 <summary><strong>API Reference</strong></summary>
@@ -203,6 +227,14 @@ Pass the key via header: `X-API-Key: YOUR_KEY`
 <details>
 <summary><strong>Monitoring</strong></summary>
 
+### Monitoring Flow
+
+```
+/metrics (raw text) → Prometheus (collection & storage) → Grafana (dashboards & alerts)
+```
+
+The API exposes raw Prometheus metrics at `/metrics`. Prometheus scrapes this endpoint at regular intervals and stores the time-series data. Grafana connects to Prometheus as a datasource to render real-time dashboards and trigger alerts.
+
 ### Prometheus Metrics
 
 All exposed at `GET /metrics` in Prometheus text format:
@@ -222,12 +254,23 @@ All exposed at `GET /metrics` in Prometheus text format:
 
 Pre-configured and auto-provisioned via `configs/grafana/provisioning/`:
 
+<p align="center">
+  <img src="images/grafana-dashboard.png" alt="Grafana Monitoring Dashboard" width="90%">
+</p>
+
 - **Request throughput** - Requests/sec by endpoint
 - **Latency percentiles** - p50, p90, p99 per endpoint
 - **Prediction distribution** - Real vs AI-generated ratio over time
 - **Model health** - Load status, drift alerts, error rates
 
 Default credentials: `admin` / `admin`
+
+### Prometheus
+
+<p align="center">
+  <img src="images/prometheus-ui.png" alt="Prometheus Query UI" width="45%">
+  <img src="images/prometheus-metrics-prod.jpg" alt="Prometheus Metrics (Production)" width="45%">
+</p>
 
 ### Drift Detection
 
@@ -340,6 +383,26 @@ AI-Product-Photo-Detector/
 ```
 
 </details>
+
+## Screenshots
+
+### CI/CD Pipeline
+
+<p align="center">
+  <img src="images/github-actions-ci-cd.png" alt="GitHub Actions CI/CD Workflows" width="90%">
+</p>
+
+### Cloud Infrastructure
+
+<p align="center">
+  <img src="images/gcs-bucket-structure.jpg" alt="GCS Bucket Structure" width="90%">
+</p>
+
+### GitHub Repository
+
+<p align="center">
+  <img src="images/github-repo-overview.png" alt="GitHub Repository Overview" width="90%">
+</p>
 
 ## Documentation
 

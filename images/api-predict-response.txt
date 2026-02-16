@@ -1,0 +1,10 @@
+$ curl -s -X POST -F "file=@sample-product.jpg" \
+    https://ai-product-detector-714127049161.europe-west1.run.app/v1/predict | python3 -m json.tool
+
+{
+    "prediction": "real",
+    "probability": 0.2146,
+    "confidence": "medium",
+    "inference_time_ms": 164.01,
+    "model_version": "1.0.2"
+}

@@ -1,0 +1,22 @@
+$ curl -s https://ai-product-detector-714127049161.europe-west1.run.app/health | python3 -m json.tool
+
+{
+    "status": "healthy",
+    "model_loaded": true,
+    "model_version": "1.0.2",
+    "uptime_seconds": 130.66,
+    "active_requests": 1,
+    "drift_detected": false,
+    "predictions_total": 0,
+    "memory_usage_mb": 739.88,
+    "drift_status": {
+        "window_size": 0,
+        "window_capacity": 1000,
+        "mean_probability": 0.5,
+        "low_confidence_ratio": 0.0,
+        "drift_detected": false,
+        "drift_score": 0.0,
+        "has_baseline": false
+    },
+    "pid": 1
+}
