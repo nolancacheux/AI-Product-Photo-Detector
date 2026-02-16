@@ -24,6 +24,17 @@
 
 <p align="center"><img src="docs/architecture.svg" alt="Architecture" width="100%"></p>
 
+## Live Demo
+
+<p align="center">
+  <img src="images/ui-upload.jpg" alt="Upload Interface" width="48%">
+  <img src="images/ui-result.jpg" alt="Prediction Result" width="48%">
+</p>
+<p align="center">
+  <img src="images/ui-gradcam-heatmap.jpg" alt="Grad-CAM Heatmap" width="48%">
+  <img src="images/ui-gradcam-title.jpg" alt="Grad-CAM Details" width="48%">
+</p>
+
 ## Overview
 
 End-to-end machine learning system that classifies product photos as real or AI-generated using an EfficientNet-B0 model with Grad-CAM explainability. The project covers the full MLOps lifecycle: from DVC-managed data pipelines and GPU training (local, Colab, or Vertex AI) to a FastAPI serving layer with authentication, rate limiting, and Prometheus monitoring. Infrastructure is provisioned with Terraform and deployed serverlessly via Docker and GitHub Actions CI/CD.
