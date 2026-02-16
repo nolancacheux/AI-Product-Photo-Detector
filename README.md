@@ -178,13 +178,15 @@ The application is deployed on Google Cloud Run (serverless). Both the API and W
 | Health Check | https://ai-product-detector-714127049161.europe-west1.run.app/health |
 | Metrics (Prometheus) | https://ai-product-detector-714127049161.europe-west1.run.app/metrics |
 
+<details>
+<summary><strong>Production Screenshots</strong></summary>
 <p align="center">
-  <img src="images/api-health-screenshot.png" alt="API Health Check" width="80%">
+  <img src="images/swagger-api-docs.png" alt="Swagger API Documentation" width="100%">
 </p>
-
 <p align="center">
-  <img src="images/swagger-api-docs.png" alt="Swagger API Documentation" width="80%">
+  <img src="images/api-health-screenshot.png" alt="API Health Check" width="100%">
 </p>
+</details>
 
 <details>
 <summary><strong>API Reference</strong></summary>
@@ -254,10 +256,6 @@ All exposed at `GET /metrics` in Prometheus text format:
 
 Pre-configured and auto-provisioned via `configs/grafana/provisioning/`:
 
-<p align="center">
-  <img src="images/grafana-dashboard.png" alt="Grafana Monitoring Dashboard" width="90%">
-</p>
-
 - **Request throughput** - Requests/sec by endpoint
 - **Latency percentiles** - p50, p90, p99 per endpoint
 - **Prediction distribution** - Real vs AI-generated ratio over time
@@ -265,12 +263,18 @@ Pre-configured and auto-provisioned via `configs/grafana/provisioning/`:
 
 Default credentials: `admin` / `admin`
 
-### Prometheus
-
+<details>
+<summary><strong>Dashboard Screenshots</strong></summary>
 <p align="center">
-  <img src="images/prometheus-ui.png" alt="Prometheus Query UI" width="45%">
-  <img src="images/prometheus-metrics-prod.jpg" alt="Prometheus Metrics (Production)" width="45%">
+  <img src="images/grafana-dashboard.jpg" alt="Grafana Monitoring Dashboard" width="100%">
 </p>
+<p align="center">
+  <img src="images/prometheus-ui.jpg" alt="Prometheus Query UI" width="100%">
+</p>
+<p align="center">
+  <img src="images/prometheus-metrics-prod.jpg" alt="Prometheus Metrics Endpoint (Production)" width="100%">
+</p>
+</details>
 
 ### Drift Detection
 
@@ -289,6 +293,20 @@ Real-time monitoring of prediction distribution shifts using a sliding window ov
 | Infrastructure | Docker, Docker Compose, Terraform (modular), Cloud Run, Artifact Registry |
 | CI/CD | GitHub Actions (CI, CD, Model Training, PR Preview, Request Quota) |
 | Cloud | Google Cloud Platform (Vertex AI, Cloud Run, GCS, Artifact Registry, Secret Manager) |
+
+<details>
+<summary><strong>CI/CD Pipeline</strong></summary>
+<p align="center">
+  <img src="images/github-actions-ci-cd.png" alt="GitHub Actions CI/CD Workflows" width="100%">
+</p>
+</details>
+
+<details>
+<summary><strong>Cloud Infrastructure</strong></summary>
+<p align="center">
+  <img src="images/gcs-bucket-structure.jpg" alt="GCS Bucket Structure" width="100%">
+</p>
+</details>
 
 <details>
 <summary><strong>Project Structure</strong></summary>
@@ -383,26 +401,6 @@ AI-Product-Photo-Detector/
 ```
 
 </details>
-
-## Screenshots
-
-### CI/CD Pipeline
-
-<p align="center">
-  <img src="images/github-actions-ci-cd.png" alt="GitHub Actions CI/CD Workflows" width="90%">
-</p>
-
-### Cloud Infrastructure
-
-<p align="center">
-  <img src="images/gcs-bucket-structure.jpg" alt="GCS Bucket Structure" width="90%">
-</p>
-
-### GitHub Repository
-
-<p align="center">
-  <img src="images/github-repo-overview.png" alt="GitHub Repository Overview" width="90%">
-</p>
 
 ## Documentation
 
