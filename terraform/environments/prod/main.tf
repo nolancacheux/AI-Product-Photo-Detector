@@ -2,16 +2,12 @@
 # PROD environment — Always-on, higher resources, custom domain ready
 # ---------------------------------------------------------------------------
 
-# Uncomment after creating the GCS bucket for remote state:
-#   gsutil mb -l europe-west1 gs://<PROJECT_ID>-tfstate
-#   gsutil versioning set on gs://<PROJECT_ID>-tfstate
-#
-# terraform {
-#   backend "gcs" {
-#     bucket = "<PROJECT_ID>-tfstate"
-#     prefix = "terraform/state/prod"
-#   }
-# }
+terraform {
+  backend "gcs" {
+    bucket = "ai-product-detector-487013-tfstate"
+    prefix = "terraform/state/prod"
+  }
+}
 
 terraform {
   required_version = ">= 1.5.0"
@@ -65,9 +61,10 @@ resource "google_project_service" "required_apis" {
 module "iam" {
   source = "../../modules/iam"
 
-  project_id  = var.project_id
-  app_name    = var.app_name
-  environment = local.environment
+  project_id             = var.project_id
+  app_name               = var.app_name
+  environment            = local.environment
+  sa_account_id_override = "mlops-deployer"
 
   # Prod may need additional roles (e.g., for custom domain mapping)
   additional_roles = var.additional_iam_roles
@@ -78,16 +75,20 @@ module "iam" {
 module "storage" {
   source = "../../modules/storage"
 
-  project_id    = var.project_id
-  region        = var.region
-  app_name      = var.app_name
-  environment   = local.environment
-  labels        = local.labels
-  force_destroy = false # Never allow accidental data loss in prod
+  project_id           = var.project_id
+  region               = var.region
+  app_name             = var.app_name
+  environment          = local.environment
+  labels               = local.labels
+  bucket_name_override = "${var.project_id}-mlops-data"
+  force_destroy        = false # Never allow accidental data loss in prod
 
-  # Keep more versions in prod
-  versioning_max_versions = 10
-  archive_retention_days  = 180
+  # Match existing bucket configuration
+  versioning_enabled                = false
+  public_access_prevention          = "inherited"
+  temp_file_retention_days          = 90
+  temp_file_prefixes                = ["tmp/", "temp/", "cache/"]
+  noncurrent_version_retention_days = 30
 
   depends_on = [google_project_service.required_apis]
 }
@@ -115,16 +116,26 @@ module "cloud_run" {
   app_name               = var.app_name
   environment            = local.environment
   labels                 = local.labels
+  service_name_override  = "ai-product-detector"
   container_image        = var.cloud_run_container_image
+  container_image_name   = "api"
   registry_repository_id = module.registry.repository_id
-  service_account_email  = module.iam.service_account_email
-  gcs_bucket_name        = module.storage.bucket_name
+  service_account_email  = "714127049161-compute@developer.gserviceaccount.com"
 
-  # Prod: always-on, higher resources
-  cpu           = "1000m"
+  # Match existing Cloud Run configuration
+  cpu           = "1"
   memory        = "1Gi"
-  min_instances = 1
-  max_instances = 10
+  min_instances = 0
+  max_instances = 3
+
+  # Startup probe: TCP on port 8080, 240s timeout (model loading takes time)
+  startup_probe_timeout = 240
+
+  # Environment variables matching existing deployment
+  extra_env_vars = {
+    REQUIRE_AUTH = "false"
+    ENVIRONMENT  = "production"
+  }
 
   allow_unauthenticated = true
 

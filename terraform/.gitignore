@@ -19,3 +19,5 @@ override.tf.json
 
 # Environment-specific tfvars with real values
 # (terraform.tfvars in environments/ are checked in as templates)
+*.tfplan
+tfplan

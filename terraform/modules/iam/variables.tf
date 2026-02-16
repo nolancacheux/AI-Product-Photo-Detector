@@ -17,6 +17,12 @@ variable "environment" {
   type        = string
 }
 
+variable "sa_account_id_override" {
+  description = "Override the service account ID (default: app_name-environment)"
+  type        = string
+  default     = ""
+}
+
 variable "additional_roles" {
   description = "Additional IAM roles to grant to the service account"
   type        = list(string)

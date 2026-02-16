@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 
 locals {
-  sa_account_id = "${var.app_name}-${var.environment}"
+  sa_account_id = var.sa_account_id_override != "" ? var.sa_account_id_override : "${var.app_name}-${var.environment}"
 
   # Base roles required by Cloud Run service
   base_roles = [

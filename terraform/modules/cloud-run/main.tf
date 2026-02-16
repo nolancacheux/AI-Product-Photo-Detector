@@ -3,19 +3,16 @@
 # ---------------------------------------------------------------------------
 
 locals {
-  default_image = "${var.region}-docker.pkg.dev/${var.project_id}/${var.registry_repository_id}/${var.app_name}:latest"
+  service_name  = var.service_name_override != "" ? var.service_name_override : "${var.app_name}-${var.environment}"
+  image_name    = var.container_image_name != "" ? var.container_image_name : var.app_name
+  default_image = "${var.region}-docker.pkg.dev/${var.project_id}/${var.registry_repository_id}/${local.image_name}:latest"
   image         = var.container_image != "" ? var.container_image : local.default_image
 
-  # Merge base env vars with extra env vars
-  base_env = {
-    ENVIRONMENT = var.environment
-    GCS_BUCKET  = var.gcs_bucket_name
-  }
-  all_env = merge(local.base_env, var.extra_env_vars)
+  all_env = var.extra_env_vars
 }
 
 resource "google_cloud_run_v2_service" "api" {
-  name     = "${var.app_name}-${var.environment}"
+  name     = local.service_name
   location = var.region
   labels   = var.labels
 
@@ -51,19 +48,12 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       startup_probe {
-        http_get {
-          path = "/health"
+        tcp_socket {
+          port = var.container_port
         }
-        initial_delay_seconds = 5
-        period_seconds        = 10
-        failure_threshold     = 3
-      }
-
-      liveness_probe {
-        http_get {
-          path = "/health"
-        }
-        period_seconds = 30
+        timeout_seconds   = var.startup_probe_timeout
+        period_seconds    = var.startup_probe_timeout
+        failure_threshold = 1
       }
     }
   }

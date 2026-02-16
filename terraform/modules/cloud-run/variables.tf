@@ -28,10 +28,24 @@ variable "labels" {
   default     = {}
 }
 
+# --- Name override ---
+
+variable "service_name_override" {
+  description = "Override the Cloud Run service name (default: app_name-environment)"
+  type        = string
+  default     = ""
+}
+
 # --- Container configuration ---
 
 variable "container_image" {
   description = "Full container image URL. If empty, defaults to Artifact Registry latest."
+  type        = string
+  default     = ""
+}
+
+variable "container_image_name" {
+  description = "Override the image name part in the default image URL (default: app_name)"
   type        = string
   default     = ""
 }
@@ -82,15 +96,18 @@ variable "service_account_email" {
 
 # --- Environment variables ---
 
-variable "gcs_bucket_name" {
-  description = "GCS bucket name to inject as GCS_BUCKET env var"
-  type        = string
-}
-
 variable "extra_env_vars" {
   description = "Additional environment variables for the container"
   type        = map(string)
   default     = {}
+}
+
+# --- Health checks ---
+
+variable "startup_probe_timeout" {
+  description = "Startup probe timeout in seconds (model loading can take time)"
+  type        = number
+  default     = 240
 }
 
 # --- Access ---

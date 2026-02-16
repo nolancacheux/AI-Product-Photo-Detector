@@ -22,6 +22,12 @@ variable "environment" {
   type        = string
 }
 
+variable "bucket_name_override" {
+  description = "Override the bucket name (default: project_id-app_name-environment)"
+  type        = string
+  default     = ""
+}
+
 variable "labels" {
   description = "Labels to apply to all resources"
   type        = map(string)
@@ -34,14 +40,32 @@ variable "force_destroy" {
   default     = false
 }
 
-variable "versioning_max_versions" {
-  description = "Number of newer object versions to keep before deleting old ones"
-  type        = number
-  default     = 5
+variable "versioning_enabled" {
+  description = "Enable object versioning on the bucket"
+  type        = bool
+  default     = false
 }
 
-variable "archive_retention_days" {
-  description = "Days to retain archived objects before deletion"
+variable "public_access_prevention" {
+  description = "Public access prevention mode (enforced or inherited)"
+  type        = string
+  default     = "inherited"
+}
+
+variable "temp_file_retention_days" {
+  description = "Days to retain temporary files before deletion"
   type        = number
   default     = 90
+}
+
+variable "temp_file_prefixes" {
+  description = "Object prefixes considered temporary (for lifecycle cleanup)"
+  type        = list(string)
+  default     = ["tmp/", "temp/", "cache/"]
+}
+
+variable "noncurrent_version_retention_days" {
+  description = "Days to retain noncurrent object versions before deletion"
+  type        = number
+  default     = 30
 }

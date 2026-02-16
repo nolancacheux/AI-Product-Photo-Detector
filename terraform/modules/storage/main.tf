@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 
 locals {
-  bucket_name = "${var.project_id}-${var.app_name}-${var.environment}"
+  bucket_name = var.bucket_name_override != "" ? var.bucket_name_override : "${var.project_id}-${var.app_name}-${var.environment}"
 }
 
 resource "google_storage_bucket" "mlops_data" {
@@ -13,30 +13,31 @@ resource "google_storage_bucket" "mlops_data" {
 
   uniform_bucket_level_access = true
   force_destroy               = var.force_destroy
-  public_access_prevention    = "enforced"
+  public_access_prevention    = var.public_access_prevention
 
   versioning {
-    enabled = true
+    enabled = var.versioning_enabled
   }
 
-  # Keep only N most recent versions of each object
+  # Delete temporary files after retention period
   lifecycle_rule {
     action {
       type = "Delete"
     }
     condition {
-      num_newer_versions = var.versioning_max_versions
+      age            = var.temp_file_retention_days
+      matches_prefix = var.temp_file_prefixes
     }
   }
 
-  # Delete archived objects after retention period
+  # Delete noncurrent versions after retention period
   lifecycle_rule {
     action {
       type = "Delete"
     }
     condition {
-      age        = var.archive_retention_days
-      with_state = "ARCHIVED"
+      days_since_noncurrent_time = var.noncurrent_version_retention_days
+      with_state                 = "ARCHIVED"
     }
   }
 }
