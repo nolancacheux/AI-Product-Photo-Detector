@@ -181,6 +181,12 @@ The application is deployed on Google Cloud Run (serverless). Both the API and W
 <details>
 <summary><strong>Production Screenshots</strong></summary>
 <p align="center">
+  <img src="images/cloud-run-services.jpg" alt="Cloud Run Services" width="100%">
+</p>
+<p align="center">
+  <img src="images/cloud-run-metrics.jpg" alt="Cloud Run Metrics" width="100%">
+</p>
+<p align="center">
   <img src="images/swagger-api-docs.jpg" alt="Swagger API Documentation" width="100%">
 </p>
 <p align="center">
