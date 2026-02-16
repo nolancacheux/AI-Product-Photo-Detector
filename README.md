@@ -27,7 +27,7 @@
 ## Live Demo
 
 <p align="center">
-  <img src="images/streamlit-ui-prod.png" alt="Streamlit Web UI (Production)" width="80%">
+  <img src="images/streamlit-ui-prod.jpg" alt="Streamlit Web UI (Production)" width="80%">
 </p>
 
 <p align="center">
@@ -181,10 +181,10 @@ The application is deployed on Google Cloud Run (serverless). Both the API and W
 <details>
 <summary><strong>Production Screenshots</strong></summary>
 <p align="center">
-  <img src="images/swagger-api-docs.png" alt="Swagger API Documentation" width="100%">
+  <img src="images/swagger-api-docs.jpg" alt="Swagger API Documentation" width="100%">
 </p>
 <p align="center">
-  <img src="images/api-health-screenshot.png" alt="API Health Check" width="100%">
+  <img src="images/api-health-screenshot.jpg" alt="API Health Check" width="100%">
 </p>
 </details>
 
@@ -293,13 +293,6 @@ Real-time monitoring of prediction distribution shifts using a sliding window ov
 | Infrastructure | Docker, Docker Compose, Terraform (modular), Cloud Run, Artifact Registry |
 | CI/CD | GitHub Actions (CI, CD, Model Training, PR Preview, Request Quota) |
 | Cloud | Google Cloud Platform (Vertex AI, Cloud Run, GCS, Artifact Registry, Secret Manager) |
-
-<details>
-<summary><strong>CI/CD Pipeline</strong></summary>
-<p align="center">
-  <img src="images/github-actions-ci-cd.png" alt="GitHub Actions CI/CD Workflows" width="100%">
-</p>
-</details>
 
 <details>
 <summary><strong>Cloud Infrastructure</strong></summary>
