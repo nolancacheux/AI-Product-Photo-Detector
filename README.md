@@ -305,6 +305,9 @@ Real-time monitoring of prediction distribution shifts using a sliding window ov
 <p align="center">
   <img src="images/gcs-bucket-structure.jpg" alt="GCS Bucket Structure" width="100%">
 </p>
+<p align="center">
+  <img src="images/gcs-tfstate-bucket.jpg" alt="GCS Terraform State Backend" width="100%">
+</p>
 </details>
 
 <details>
