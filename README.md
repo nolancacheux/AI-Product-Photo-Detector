@@ -116,6 +116,8 @@ python -m src.training.vertex_submit --epochs 15 --batch-size 64 --sync
 
 Pipeline stages: Verify Data → Build Image → GPU Training (T4) → Evaluate → Quality Gate → Deploy
 
+The pipeline DAG is defined using [KFP (Kubeflow Pipelines SDK)](https://www.kubeflow.org/docs/components/pipelines/), which is the standard Python SDK for orchestrating workflows on Google Vertex AI Pipelines.
+
 Training takes ~25 minutes. The quality gate blocks deployment if accuracy < 0.85 or F1 < 0.80.
 
 </details>
