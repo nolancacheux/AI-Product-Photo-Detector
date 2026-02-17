@@ -30,10 +30,11 @@
   <img src="images/ai-product-photo-detector.gif" alt="Demo — Upload, Predict & Grad-CAM Explainability" width="80%">
 </p>
 
+<details>
+<summary><strong>Demo Screenshots</strong></summary>
 <p align="center">
   <img src="images/streamlit-ui-prod.jpg" alt="Streamlit Web UI (Production)" width="80%">
 </p>
-
 <p align="center">
   <img src="images/ui-upload.jpg" alt="Upload Interface" width="48%">
   <img src="images/ui-result.jpg" alt="Prediction Result" width="48%">
@@ -42,6 +43,7 @@
   <img src="images/ui-gradcam-title.jpg" alt="Grad-CAM Details" width="48%">
   <img src="images/ui-gradcam-heatmap.jpg" alt="Grad-CAM Heatmap" width="48%">
 </p>
+</details>
 
 ## Overview
 
