@@ -66,7 +66,25 @@ jobs:
       checks: read
 
     steps:
+      - name: Check if CI workflow was triggered
+        id: ci-exists
+        run: |
+          # Wait a bit for CI to register
+          sleep 10
+          # Check if CI workflow run exists for this commit
+          CI_RUN=$(gh run list --workflow=ci.yml --commit=${{ github.sha }} --limit=1 --json status --jq '.[0].status // empty' 2>/dev/null || echo "")
+          if [ -z "$CI_RUN" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "CI was not triggered (docs-only change) — skipping wait"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "CI is running — will wait for it"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Wait for CI workflow
+        if: steps.ci-exists.outputs.skip != 'true'
         uses: lewagon/wait-on-check-action@v1.3.4
         with:
           ref: ${{ github.sha }}
