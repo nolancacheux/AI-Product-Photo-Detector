@@ -8,7 +8,12 @@ from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
-from src.training.augmentation import IMAGENET_MEAN, IMAGENET_STD, get_train_transforms, get_val_transforms
+from src.training.augmentation import (
+    IMAGENET_MEAN,
+    IMAGENET_STD,
+    get_train_transforms,
+    get_val_transforms,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -116,9 +121,7 @@ class AIProductDataset(Dataset):
             return image, label  # type: ignore[return-value]
         except OSError as e:
             if _retry_count >= 5:
-                raise RuntimeError(
-                    f"Failed to load any image after {_retry_count} retries"
-                ) from e
+                raise RuntimeError(f"Failed to load any image after {_retry_count} retries") from e
             logger.warning(f"Failed to load image {img_path}: {e}, trying next sample")
             replacement_idx = (idx + 1) % len(self.samples)
             return self.__getitem__(replacement_idx, _retry_count + 1)

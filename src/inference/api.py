@@ -49,9 +49,9 @@ from src.monitoring.metrics import (
     MODEL_LOADED,
     REQUEST_SIZE_BYTES,
     RESPONSE_SIZE_BYTES,
+    get_active_request_count,
     set_app_info,
     set_model_info,
-    get_active_request_count,
     track_request_end,
     track_request_start,
 )
