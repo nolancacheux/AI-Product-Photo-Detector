@@ -10,6 +10,22 @@ name: CD
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '*.md'
+      - '**/*.md'
+      - '**/*.gif'
+      - '**/*.mp4'
+      - '**/*.png'
+      - '**/*.jpg'
+      - '**/*.jpeg'
+      - '**/*.svg'
+      - '**/*.pptx'
+      - '**/*.docx'
+      - '**/*.pdf'
+      - '**/*.txt'
+      - 'docs/**'
+      - 'images/**'
+      - 'LICENSE'
 
   workflow_dispatch:
     inputs:

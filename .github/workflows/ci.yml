@@ -8,8 +8,40 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '*.md'
+      - '**/*.md'
+      - '**/*.gif'
+      - '**/*.mp4'
+      - '**/*.png'
+      - '**/*.jpg'
+      - '**/*.jpeg'
+      - '**/*.svg'
+      - '**/*.pptx'
+      - '**/*.docx'
+      - '**/*.pdf'
+      - '**/*.txt'
+      - 'docs/**'
+      - 'images/**'
+      - 'LICENSE'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '*.md'
+      - '**/*.md'
+      - '**/*.gif'
+      - '**/*.mp4'
+      - '**/*.png'
+      - '**/*.jpg'
+      - '**/*.jpeg'
+      - '**/*.svg'
+      - '**/*.pptx'
+      - '**/*.docx'
+      - '**/*.pdf'
+      - '**/*.txt'
+      - 'docs/**'
+      - 'images/**'
+      - 'LICENSE'
 
 concurrency:
   group: ci-${{ github.ref }}
