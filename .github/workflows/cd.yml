@@ -85,7 +85,7 @@ jobs:
 
       - name: Wait for CI workflow
         if: steps.ci-exists.outputs.skip != 'true'
-        uses: lewagon/wait-on-check-action@v1.3.4
+        uses: lewagon/wait-on-check-action@v1.5.0
         with:
           ref: ${{ github.sha }}
           running-workflow-name: "Wait for CI"
