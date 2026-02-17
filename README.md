@@ -27,6 +27,10 @@
 ## Live Demo
 
 <p align="center">
+  <img src="images/ai-product-photo-detector.gif" alt="Demo — Upload, Predict & Grad-CAM Explainability" width="80%">
+</p>
+
+<p align="center">
   <img src="images/streamlit-ui-prod.jpg" alt="Streamlit Web UI (Production)" width="80%">
 </p>
 
@@ -169,6 +173,8 @@ make lint  # ruff + mypy
 ## Production Deployment
 
 The application is deployed on Google Cloud Run (serverless). Both the API and Web UI are publicly accessible:
+
+> ⚠️ **Note:** These services may be turned off to avoid unnecessary costs. This is a university project and keeping them running permanently is not required. If a link doesn't work, the service has simply been shut down.
 
 | Service | URL |
 |---------|-----|
