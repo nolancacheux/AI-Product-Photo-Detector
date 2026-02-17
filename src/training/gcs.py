@@ -30,7 +30,7 @@ def parse_gcs_path(gcs_uri: str) -> tuple[str, str]:
     """
     if not gcs_uri.startswith("gs://"):
         raise ValueError(f"Expected a gs:// URI, got: {gcs_uri}")
-    without_scheme = gcs_uri[len("gs://"):]
+    without_scheme = gcs_uri[len("gs://") :]
     parts = without_scheme.split("/", 1)
     bucket_name = parts[0]
     prefix = parts[1] if len(parts) > 1 else ""

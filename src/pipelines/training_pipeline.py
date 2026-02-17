@@ -678,7 +678,6 @@ def training_pipeline(
     region: str = REGION,
     training_image: str = TRAINING_IMAGE,
     serving_image: str = f"{ARTIFACT_REGISTRY}/serve:latest",
-
     model_display_name: str = "ai-product-detector",
     service_name: str = SERVICE_NAME,
     min_samples_per_class: int = 100,
@@ -827,9 +826,7 @@ def submit_pipeline(
         "project_id": project_id,
         "region": region,
         "training_image": pipeline_cfg.get("training_image", TRAINING_IMAGE),
-        "serving_image": pipeline_cfg.get(
-            "serving_image", f"{ARTIFACT_REGISTRY}/serve:latest"
-        ),
+        "serving_image": pipeline_cfg.get("serving_image", f"{ARTIFACT_REGISTRY}/serve:latest"),
         "model_display_name": pipeline_cfg.get("model_display_name", "ai-product-detector"),
         "service_name": deployment_cfg.get("service_name", SERVICE_NAME),
         "min_samples_per_class": evaluation_cfg.get("min_samples_per_class", 100),
