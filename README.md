@@ -45,6 +45,23 @@
 </p>
 </details>
 
+## 📊 Presentation
+
+Explore the full project walkthrough, architecture decisions, and results in the presentation slides:
+
+<p align="center">
+  <a href="https://docs.google.com/presentation/d/1VTpcJLzm1i0KtHaENf_4D4NghHXnVI5WJHDNhDf3xTA"><strong>View Presentation on Google Slides</strong></a>
+</p>
+
+<p align="center">
+  <img src="images/slides/01-title.png" alt="Title Slide" width="48%">
+  <img src="images/slides/02-architecture.png" alt="Architecture" width="48%">
+</p>
+<p align="center">
+  <img src="images/slides/04-results.png" alt="Training Results" width="48%">
+  <img src="images/slides/06-conclusion.png" alt="Conclusion" width="48%">
+</p>
+
 ## Overview
 
 End-to-end machine learning system that classifies product photos as real or AI-generated using an EfficientNet-B0 model with Grad-CAM explainability. The project covers the full MLOps lifecycle: from DVC-managed data pipelines and GPU training (local, Colab, or Vertex AI) to a FastAPI serving layer with authentication, rate limiting, and Prometheus monitoring. Infrastructure is provisioned with Terraform and deployed serverlessly via Docker and GitHub Actions CI/CD.
@@ -177,6 +194,8 @@ make lint  # ruff + mypy
 The application is deployed on Google Cloud Run (serverless). Both the API and Web UI are publicly accessible:
 
 > ⚠️ **Note:** These services may be turned off to avoid unnecessary costs. This is a university project and keeping them running permanently is not required. If a link doesn't work, the service has simply been shut down.
+>
+> 📊 See the full project walkthrough in our [presentation slides](https://docs.google.com/presentation/d/1VTpcJLzm1i0KtHaENf_4D4NghHXnVI5WJHDNhDf3xTA).
 
 | Service | URL |
 |---------|-----|
