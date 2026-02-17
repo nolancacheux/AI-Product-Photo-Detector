@@ -135,14 +135,20 @@ test(api): add tests for health endpoint
 
 ```
 AI-Product-Photo-Detector/
-├── .github/workflows/      # CI/CD pipelines
+├── .github/workflows/      # CI/CD pipelines (ci, cd, model-training, pr-preview)
 ├── src/
 │   ├── data/               # Data download and validation
+│   │   └── validate.py     # Dataset validation
 │   ├── inference/          # API server
 │   │   ├── routes/         # API route handlers
+│   │   │   ├── v1/         # Versioned API routes
+│   │   │   ├── info.py     # Info/health endpoints
+│   │   │   ├── monitoring.py # Monitoring endpoints
+│   │   │   └── predict.py  # Prediction endpoints
 │   │   ├── api.py          # FastAPI application
 │   │   ├── predictor.py    # Model loading and inference
 │   │   ├── explainer.py    # Grad-CAM heatmap generation
+│   │   ├── confidence.py   # Confidence calibration
 │   │   ├── auth.py         # API key authentication
 │   │   ├── validation.py   # Input validation
 │   │   ├── schemas.py      # Pydantic models
@@ -157,17 +163,40 @@ AI-Product-Photo-Detector/
 │   │   ├── gcs.py          # GCS integration
 │   │   └── vertex_submit.py # Vertex AI job submission
 │   ├── pipelines/          # Pipeline orchestration
+│   │   ├── training_pipeline.py # End-to-end training pipeline
+│   │   └── evaluate.py     # Model evaluation pipeline
 │   ├── monitoring/         # Observability
+│   │   ├── drift.py        # Data/model drift detection
+│   │   └── metrics.py      # Prometheus metrics
 │   ├── ui/                 # Streamlit web interface
+│   │   └── app.py          # Streamlit application
 │   └── utils/              # Shared utilities
+│       ├── config.py       # Configuration management
+│       ├── constants.py    # Project constants
+│       ├── logger.py       # Structured logging
+│       └── model_loader.py # Model loading utilities
 ├── tests/                  # Unit and integration tests
 ├── configs/                # Configuration files
-├── docker/                 # Dockerfiles
+│   ├── train_config.yaml   # Training hyperparameters
+│   ├── inference_config.yaml # Inference settings
+│   ├── pipeline_config.yaml  # Pipeline configuration
+│   ├── prometheus.yml      # Prometheus scrape config
+│   └── grafana/            # Grafana dashboards
+├── docker/                 # Dockerfiles (API, training, UI)
 ├── terraform/              # Infrastructure as Code
+│   ├── modules/            # Reusable Terraform modules
+│   │   ├── cloud-run/      # Cloud Run service
+│   │   ├── storage/        # GCS buckets
+│   │   ├── registry/       # Artifact Registry
+│   │   ├── iam/            # Service accounts and roles
+│   │   └── monitoring/     # Uptime checks and alerts
+│   └── environments/       # Environment-specific configs (dev, prod)
 ├── scripts/                # Data download utilities
 ├── notebooks/              # Jupyter notebooks (Colab training)
 ├── dvc.yaml                # DVC pipeline definition
 ├── docker-compose.yml      # Local development stack
+├── docker-compose.dev.yml  # Dev-specific overrides
+├── docker-compose.prod.yml # Prod-specific overrides
 ├── Makefile                # Development commands
 └── pyproject.toml          # Python dependencies
 ```

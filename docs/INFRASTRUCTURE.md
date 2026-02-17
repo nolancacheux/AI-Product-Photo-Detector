@@ -66,12 +66,12 @@ The Terraform configuration follows a modular architecture with per-environment 
 ```
 terraform/
 ├── environments/          # Per-environment configurations
-│   ├── dev/               # Development (scale-to-zero, 512Mi, 10€ budget)
+│   ├── dev/               # Development (scale-to-zero, 512Mi, 10 EUR budget)
 │   │   ├── main.tf
 │   │   ├── variables.tf
 │   │   ├── outputs.tf
 │   │   └── terraform.tfvars
-│   └── prod/              # Production (min 1 instance, 1Gi, 50€ budget)
+│   └── prod/              # Production (scale-to-zero, 1Gi, 50 EUR budget)
 │       ├── main.tf
 │       ├── variables.tf
 │       ├── outputs.tf
@@ -82,8 +82,9 @@ terraform/
 │   ├── registry/
 │   ├── monitoring/
 │   └── iam/
-├── backend.tf
-├── versions.tf
+├── backend.tf             # Remote state documentation
+├── versions.tf            # Required providers (google ~> 5.0)
+├── .gitignore
 └── README.md
 ```
 
@@ -91,10 +92,10 @@ terraform/
 
 | Module | Purpose |
 |--------|---------|
-| `cloud-run` | Cloud Run v2 service with configurable scaling, resources, and health probes |
-| `storage` | GCS bucket with versioning, lifecycle rules, and enforced public access prevention |
+| `cloud-run` | Cloud Run v2 service with configurable scaling, resources, and TCP startup probe |
+| `storage` | GCS bucket with optional versioning, lifecycle rules for temp files and noncurrent versions |
 | `registry` | Artifact Registry Docker repository with automatic cleanup policies |
-| `monitoring` | Uptime checks on `/health`, alert policies for downtime and error rate |
+| `monitoring` | Uptime checks on `/health`, alert policies for downtime and 5xx error rate |
 | `iam` | Service account with least-privilege roles for Cloud Run |
 
 ---
@@ -103,14 +104,21 @@ terraform/
 
 | Setting               | Dev                    | Prod                        |
 |-----------------------|------------------------|-----------------------------|
-| Min instances         | 0 (scale-to-zero)      | 1 (always-on)               |
-| Max instances         | 2                      | 10                          |
+| Min instances         | 0 (scale-to-zero)      | 0 (scale-to-zero)           |
+| Max instances         | 2                      | 3                           |
+| CPU                   | 1000m (1 vCPU)         | 1 (1 vCPU)                  |
 | Memory                | 512Mi                  | 1Gi                         |
-| Budget                | 10€/month              | 50€/month                   |
-| Monitoring            | Optional (off)         | Always enabled              |
+| Budget                | 10 EUR/month           | 50 EUR/month                |
+| Monitoring            | Optional (off by default) | Always enabled            |
 | Bucket force_destroy  | true                   | false                       |
+| Bucket versioning     | Default (false)        | false (explicit)            |
 | Image retention       | 5 recent / 3d untagged | 20 recent / 14d untagged    |
-| Custom domain         | N/A                    | Supported                   |
+| Custom domain         | N/A                    | Supported (optional)        |
+| Service name          | `ai-product-detector-dev` (default) | `ai-product-detector` (overridden) |
+| Remote state          | Local (GCS commented out) | GCS (`ai-product-detector-487013-tfstate`) |
+| SA account ID         | `ai-product-detector-dev` (default) | `mlops-deployer` (overridden) |
+| Service account used  | IAM module SA          | Default Compute SA (hardcoded) |
+| Env vars              | (via extra_env_vars)   | `REQUIRE_AUTH=false`, `ENVIRONMENT=production` |
 
 ---
 
@@ -118,7 +126,7 @@ terraform/
 
 ### Enabled APIs
 
-Terraform enables the following GCP APIs automatically:
+Terraform enables the following GCP APIs automatically (via `google_project_service`):
 
 | API | Purpose |
 |-----|---------|
@@ -130,16 +138,22 @@ Terraform enables the following GCP APIs automatically:
 | `billingbudgets.googleapis.com` | Budget alerts |
 | `monitoring.googleapis.com` | Uptime checks and alerting |
 
+All APIs are set with `disable_on_destroy = false` to avoid disrupting other project resources during teardown.
+
 ### Google Cloud Storage Bucket
 
-| Property | Value |
-|----------|-------|
-| Module | `modules/storage` |
-| Name | `<PROJECT_ID>-mlops-data` |
-| Location | Same as `var.region` (default: `europe-west1`) |
-| Access | Uniform bucket-level, public access prevented |
-| Versioning | Enabled |
-| Lifecycle | Configurable version retention and archive cleanup |
+| Property | Dev | Prod |
+|----------|-----|------|
+| Module | `modules/storage` | `modules/storage` |
+| Name | `<project_id>-ai-product-detector-dev` (default) | `<project_id>-mlops-data` (overridden) |
+| Location | `var.region` (default: `europe-west1`) | `var.region` (default: `europe-west1`) |
+| Access | Uniform bucket-level | Uniform bucket-level |
+| Public access prevention | `inherited` (default) | `inherited` (explicit) |
+| Versioning | false (default) | false (explicit) |
+| force_destroy | true | false |
+| Temp file retention | 90 days (default) | 90 days |
+| Temp file prefixes | `tmp/`, `temp/`, `cache/` (default) | `tmp/`, `temp/`, `cache/` |
+| Noncurrent version retention | 30 days (default) | 30 days |
 
 **Purpose:** Stores DVC-tracked training data, model checkpoints, and MLflow artifacts.
 
@@ -148,45 +162,53 @@ Terraform enables the following GCP APIs automatically:
 | Property | Value |
 |----------|-------|
 | Module | `modules/registry` |
-| Name | `ai-product-detector` |
+| Repository ID | `ai-product-detector` (from `var.app_name`) |
 | Format | Docker |
-| Cleanup | Configurable retention for recent and untagged images |
+| Cleanup dry run | Disabled (policies are enforced) |
+| Keep recent (dev) | 5 images |
+| Keep recent (prod) | 20 images |
+| Untagged max age (dev) | 259,200s (3 days) |
+| Untagged max age (prod) | 1,209,600s (14 days) |
 
-**Purpose:** Stores Docker images for both the inference API and the training container.
+**Purpose:** Stores Docker images for the inference API and training containers.
 
 ### Cloud Run Service
 
-| Property | Value |
+| Property | Dev | Prod |
+|----------|-----|------|
+| Module | `modules/cloud-run` | `modules/cloud-run` |
+| Service name | `ai-product-detector-dev` (default) | `ai-product-detector` (overridden) |
+| Container port | 8080 | 8080 |
+| CPU | `1000m` (1 vCPU) | `1` (1 vCPU) |
+| Memory | `512Mi` | `1Gi` |
+| Min instances | 0 (scale-to-zero) | 0 (scale-to-zero) |
+| Max instances | 2 | 3 |
+| Service account | IAM module SA | `714127049161-compute@developer.gserviceaccount.com` |
+| Public access | Unauthenticated (allUsers) | Unauthenticated (allUsers) |
+| Startup probe timeout | 240s (default) | 240s |
+
+**Container image resolution:** If `container_image` is empty, defaults to `<region>-docker.pkg.dev/<project_id>/<registry_repo_id>/<image_name>:latest`.
+
+**Startup probe:** TCP socket check on the container port. No HTTP liveness or readiness probes are configured; only the startup probe ensures the container is listening before receiving traffic.
+
+**Environment variables (prod):**
+
+| Variable | Value |
 |----------|-------|
-| Module | `modules/cloud-run` |
-| Name | `ai-product-detector` |
-| Container port | 8080 |
-| CPU | Configurable (default: `1000m` = 1 vCPU) |
-| Memory | Configurable (default: `512Mi` in dev, `1Gi` in prod) |
-| Min instances | Configurable (default: `0` in dev, `1` in prod) |
-| Max instances | Configurable (default: `2` in dev, `10` in prod) |
-| Service account | Dedicated least-privilege SA |
-| Public access | Configurable (default: unauthenticated) |
+| `REQUIRE_AUTH` | `false` |
+| `ENVIRONMENT` | `production` |
 
-**Health Probes:**
-
-| Probe | Path | Config |
-|-------|------|--------|
-| Startup | `/startup` | Initial delay, failure threshold configurable |
-| Liveness | `/healthz` | Periodic check that process is alive |
-| Readiness | `/readyz` | Checks model is loaded and ready |
-
-**Environment variables injected:**
-
-- `ENVIRONMENT` - deployment environment (dev/staging/prod)
-- `GCS_BUCKET` - bucket name for model/data access
+Environment variables are injected via the `extra_env_vars` map. Dev does not define any extra env vars by default.
 
 ### IAM Service Account
 
-| Property | Value |
-|----------|-------|
-| Module | `modules/iam` |
-| Account ID | `ai-product-detector-sa` |
+| Property | Dev | Prod |
+|----------|-----|------|
+| Module | `modules/iam` | `modules/iam` |
+| Account ID | `ai-product-detector-dev` (default) | `mlops-deployer` (overridden) |
+| Display name | Auto-generated from app_name and environment | Auto-generated |
+
+**Base IAM roles (applied to both environments):**
 
 | IAM Role | Purpose |
 |----------|---------|
@@ -195,22 +217,39 @@ Terraform enables the following GCP APIs automatically:
 | `roles/logging.logWriter` | Write application logs |
 | `roles/monitoring.metricWriter` | Write custom metrics |
 
+Additional roles can be added via the `additional_roles` variable (used in prod via `additional_iam_roles`).
+
+**Note:** In production, the Cloud Run service currently uses the default Compute Engine service account (`714127049161-compute@developer.gserviceaccount.com`) rather than the IAM module's service account. The IAM module still provisions the `mlops-deployer` SA with the roles listed above for use by CI/CD pipelines.
+
 ### Monitoring (Production)
 
 | Property | Value |
 |----------|-------|
 | Module | `modules/monitoring` |
-| Uptime check | HTTP GET `/health` every 60s |
-| Downtime alert | Fires after configurable duration |
-| Error rate alert | Fires when 5xx rate exceeds threshold |
-| Notifications | Email to configured recipients |
+| Uptime check | HTTPS GET on `/health`, port 443, SSL validated, every 60s |
+| Downtime alert | Fires after 60s of consecutive failures |
+| Error rate alert | Fires when 5xx request count exceeds threshold (default: 5) |
+| Notifications | Email to configured recipients (via `notification_email` variable) |
+| Auto-close | Alerts auto-close after 1800s (30 min) |
+| Alert documentation | Includes direct link to Cloud Run logs in GCP Console |
+
+In dev, monitoring is disabled by default (`enable_monitoring = false`). It can be enabled by setting `enable_monitoring = true` in `terraform.tfvars`.
 
 ### Billing Budget Alert
 
-| Property | Value |
-|----------|-------|
-| Budget amount | 10€ (dev) / 50€ (prod) |
-| Alert thresholds | 50%, 80%, 100% of budget |
+| Property | Dev | Prod |
+|----------|-----|------|
+| Budget amount | 10 EUR | 50 EUR |
+| Currency | EUR | EUR |
+| Alert thresholds | 50%, 80%, 100% of budget | 50%, 80%, 100% of budget |
+| Spend basis | CURRENT_SPEND | CURRENT_SPEND |
+| Condition | Requires `billing_account` variable to be set | Requires `billing_account` variable to be set |
+
+Budget alerts are only created if the `billing_account` variable is provided. Both dev and prod `terraform.tfvars` templates have it commented out by default.
+
+### Custom Domain Mapping (Prod Only)
+
+Production supports an optional Cloud Run domain mapping via the `custom_domain` variable. When set, Terraform creates a `google_cloud_run_domain_mapping` resource that routes the custom domain to the Cloud Run service. DNS verification is required. This is not available in the dev environment.
 
 ---
 
@@ -220,6 +259,7 @@ Terraform enables the following GCP APIs automatically:
 
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.5.0
 - [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) (`gcloud`)
+- Google provider `hashicorp/google` ~> 5.0
 - A GCP project with billing enabled
 - A service account key or `gcloud auth application-default login`
 
@@ -254,7 +294,7 @@ vim terraform.tfvars
 At minimum, set `project_id`:
 
 ```hcl
-project_id = "<YOUR-PROJECT-ID>"
+project_id = "your-gcp-project-id"
 ```
 
 #### 4. Initialize Terraform
@@ -291,35 +331,79 @@ terraform output
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
+| `project_id` | string | (required) | GCP project ID |
+| `region` | string | (required) | GCP region |
+| `app_name` | string | (required) | Application name |
+| `environment` | string | (required) | Deployment environment (dev, staging, prod) |
+| `labels` | map(string) | `{}` | Labels to apply to the service |
+| `service_name_override` | string | `""` | Override the service name (default: `app_name-environment`) |
+| `container_image` | string | `""` | Full image URL (empty = Artifact Registry default) |
+| `container_image_name` | string | `""` | Override image name in default URL (default: `app_name`) |
+| `registry_repository_id` | string | (required) | Artifact Registry repo ID for default image URL |
 | `cpu` | string | `1000m` | CPU allocation (1000m = 1 vCPU) |
 | `memory` | string | `512Mi` | Memory allocation |
+| `container_port` | number | `8080` | Port the container listens on |
 | `min_instances` | number | `0` | Min instances (0 = scale-to-zero) |
 | `max_instances` | number | `2` | Maximum instances |
-| `allow_unauthenticated` | bool | `true` | Public access |
+| `service_account_email` | string | (required) | Service account email for Cloud Run |
+| `extra_env_vars` | map(string) | `{}` | Additional environment variables |
+| `startup_probe_timeout` | number | `240` | Startup probe timeout in seconds |
+| `allow_unauthenticated` | bool | `true` | Public access via allUsers |
 
 ### Module: storage
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
+| `project_id` | string | (required) | GCP project ID |
+| `region` | string | (required) | GCP region |
+| `app_name` | string | (required) | Application name |
+| `environment` | string | (required) | Deployment environment |
+| `bucket_name_override` | string | `""` | Override bucket name (default: `project_id-app_name-environment`) |
+| `labels` | map(string) | `{}` | Labels to apply |
 | `force_destroy` | bool | `false` | Allow bucket deletion with objects |
-| `versioning_max_versions` | number | `5` | Versions to keep |
-| `archive_retention_days` | number | `90` | Archive retention |
+| `versioning_enabled` | bool | `false` | Enable object versioning |
+| `public_access_prevention` | string | `"inherited"` | Public access prevention mode |
+| `temp_file_retention_days` | number | `90` | Days to retain temp files before deletion |
+| `temp_file_prefixes` | list(string) | `["tmp/", "temp/", "cache/"]` | Prefixes considered temporary |
+| `noncurrent_version_retention_days` | number | `30` | Days to retain noncurrent versions |
 
 ### Module: registry
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `keep_count` | number | `10` | Recent images to keep |
-| `untagged_max_age_seconds` | number | `604800` | Max untagged image age (7d) |
+| `project_id` | string | (required) | GCP project ID |
+| `region` | string | (required) | GCP region |
+| `app_name` | string | (required) | Application name (used as repository ID) |
+| `labels` | map(string) | `{}` | Labels to apply |
+| `keep_count` | number | `10` | Recent tagged images to keep |
+| `untagged_max_age_seconds` | number | `604800` | Max untagged image age in seconds (7d) |
 
 ### Module: monitoring
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `enable_monitoring` | bool | `true` | Enable/disable all monitoring |
-| `health_check_path` | string | `/health` | HTTP path to check |
-| `alert_downtime_duration` | string | `60s` | Downtime before alert |
-| `error_rate_threshold` | number | `5` | 5xx error rate % threshold |
+| `project_id` | string | (required) | GCP project ID |
+| `app_name` | string | (required) | Application name |
+| `environment` | string | (required) | Deployment environment |
+| `cloud_run_service_name` | string | (required) | Cloud Run service name to monitor |
+| `cloud_run_service_url` | string | (required) | Cloud Run service URL for uptime checks |
+| `region` | string | (required) | GCP region |
+| `health_check_path` | string | `/health` | HTTP path for uptime checks |
+| `uptime_check_period` | string | `60s` | Period between uptime checks |
+| `alert_downtime_duration` | string | `60s` | Downtime duration before alerting |
+| `error_rate_threshold` | number | `5` | 5xx error rate threshold for alerting |
+| `notification_email` | string | `""` | Email for alert notifications |
+| `enable_monitoring` | bool | `true` | Enable/disable all monitoring resources |
+
+### Module: iam
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `project_id` | string | (required) | GCP project ID |
+| `app_name` | string | (required) | Application name |
+| `environment` | string | (required) | Deployment environment |
+| `sa_account_id_override` | string | `""` | Override SA account ID (default: `app_name-environment`) |
+| `additional_roles` | list(string) | `[]` | Additional IAM roles to grant |
 
 ---
 
@@ -353,7 +437,7 @@ The service account key stored in `GCP_SA_KEY` needs:
 
 ### Runtime Service Account (Cloud Run)
 
-Provisioned by Terraform with minimal permissions:
+Provisioned by the IAM module with these base roles:
 
 | Role | Purpose |
 |------|---------|
@@ -361,6 +445,8 @@ Provisioned by Terraform with minimal permissions:
 | `roles/artifactregistry.reader` | Pull container images |
 | `roles/logging.logWriter` | Application logging |
 | `roles/monitoring.metricWriter` | Metrics export |
+
+**Note:** Production currently uses the default Compute Engine service account rather than the Terraform-provisioned SA. See the [Cloud Run Service](#cloud-run-service) section for details.
 
 ---
 
@@ -377,7 +463,7 @@ These estimates assume a small-scale project with minimal traffic.
 | Memory (active) | ~$0.00000250/GiB-second | |
 | Free tier | 2M requests/month, 360K vCPU-seconds | Generous free tier covers most light usage |
 
-**Estimated monthly cost (low traffic):** $0 – $2
+**Estimated monthly cost (low traffic):** $0 - $2
 
 ### Google Cloud Storage
 
@@ -409,22 +495,28 @@ These estimates assume a small-scale project with minimal traffic.
 
 ### Budget Alert
 
-The Terraform configuration includes a budget alert (default: 10€/month for dev, 50€/month for prod) with notifications at 50%, 80%, and 100% thresholds.
+The Terraform configuration includes a budget alert (default: 10 EUR/month for dev, 50 EUR/month for prod) with notifications at 50%, 80%, and 100% thresholds. Budget resources are only created when the `billing_account` variable is provided.
 
 ### Total Estimated Monthly Cost
 
 | Scenario | Estimate |
 |----------|----------|
-| Development (occasional training, low traffic) | $1 – $5 |
-| Active development (weekly training, moderate traffic) | $5 – $15 |
+| Development (occasional training, low traffic) | $1 - $5 |
+| Active development (weekly training, moderate traffic) | $5 - $15 |
 
 ---
 
 ## Remote State
 
-By default, Terraform stores state locally. For team collaboration, enable GCS remote state.
+Terraform state can be stored locally or in a GCS bucket for team collaboration. Each environment manages its own backend configuration independently.
 
-### Setup (one-time)
+**Current status:**
+- **Prod:** Remote state is active, stored in `gs://ai-product-detector-487013-tfstate` with prefix `terraform/state/prod`.
+- **Dev:** Local state by default. GCS backend block is present but commented out.
+
+The GCS tfstate bucket is visible in the GCP Console (see `images/gcs-tfstate-bucket.jpg`).
+
+### Setup (one-time, for new environments)
 
 ```bash
 PROJECT_ID="<YOUR-PROJECT-ID>"
@@ -434,15 +526,15 @@ gsutil mb -l europe-west1 gs://${PROJECT_ID}-tfstate
 gsutil versioning set on gs://${PROJECT_ID}-tfstate
 ```
 
-### Enable
+### Enable for Dev
 
-Uncomment the `backend "gcs"` block in your environment's `main.tf`:
+Uncomment the `backend "gcs"` block in `environments/dev/main.tf`:
 
 ```hcl
 terraform {
   backend "gcs" {
     bucket = "<YOUR-PROJECT-ID>-tfstate"
-    prefix = "terraform/state/dev"  # or "terraform/state/prod"
+    prefix = "terraform/state/dev"
   }
 }
 ```
@@ -452,6 +544,15 @@ Then migrate:
 ```bash
 terraform init -migrate-state
 ```
+
+### State Isolation
+
+Each environment uses a separate prefix within the same bucket to prevent state conflicts:
+
+| Environment | Prefix |
+|-------------|--------|
+| dev | `terraform/state/dev` |
+| prod | `terraform/state/prod` |
 
 ---
 
@@ -465,13 +566,14 @@ terraform destroy
 ```
 
 Type `yes` when prompted. This removes:
-- Cloud Run service
+- Cloud Run service and IAM bindings
 - Artifact Registry repository (and all images)
 - IAM service account and role bindings
-- Monitoring resources (uptime checks, alerts)
-- Billing budget alert
+- Monitoring resources (uptime checks, alerts, notification channels)
+- Billing budget alert (if created)
+- Custom domain mapping (if created, prod only)
 
-**Note:** The GCS bucket has `force_destroy = false` by default in production, meaning Terraform will refuse to delete it if it contains objects. To force deletion:
+**Note:** The GCS bucket has `force_destroy = false` in production, meaning Terraform will refuse to delete it if it contains objects. To force deletion:
 
 ```bash
 # Empty the bucket first
@@ -498,7 +600,7 @@ gsutil rb gs://<YOUR-PROJECT-ID>-mlops-data
 
 # Delete service account
 gcloud iam service-accounts delete \
-  ai-product-detector-sa@<YOUR-PROJECT-ID>.iam.gserviceaccount.com
+  <SA-ACCOUNT-ID>@<YOUR-PROJECT-ID>.iam.gserviceaccount.com
 ```
 
 ### Disable APIs (optional)

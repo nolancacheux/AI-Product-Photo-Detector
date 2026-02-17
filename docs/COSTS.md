@@ -4,7 +4,7 @@
 
 | Setting | Value |
 |---------|-------|
-| **Monthly Budget** | 5.00 EUR |
+| **Monthly Budget** | 10 EUR (dev) / 50 EUR (prod) |
 | **Alert Thresholds** | 50%, 80%, 100% |
 | **Billing Account** | Configured via GCP Console |
 | **Budget ID** | Managed by Terraform |
@@ -22,7 +22,7 @@ If the `gcloud` budget command fails (permission issues):
 2. Click **Create Budget**
 3. Set **Name**: `ai-product-detector-monthly`
 4. **Scope** → Select your project
-5. **Amount** → 5.00 EUR, **Budget type**: Specified amount
+5. **Amount** → Set per environment (10 EUR dev, 50 EUR prod), **Budget type**: Specified amount
 6. **Thresholds** → Add rules at 50%, 80%, 100% of actual spend
 7. Under **Notifications**, add your email via a Monitoring Notification Channel
 8. Click **Finish**
@@ -36,11 +36,13 @@ If the `gcloud` budget command fails (permission issues):
 | **Max instances** | 3 | Caps parallel compute |
 | **Min instances** | 0 | Scale to zero = no idle cost |
 | **CPU** | 1 vCPU | Allocated per request |
-| **Memory** | 2 GiB | Per container instance |
-| **Concurrency** | 80 | Requests per instance |
-| **Timeout** | 300s | Max request duration |
-| **CPU throttling** | Disabled | CPU only during requests |
-| **Startup CPU boost** | Enabled | Faster cold starts |
+| **Memory** | 1 GiB | Per container instance |
+| **Concurrency** | 80 (default) | Requests per instance |
+| **Timeout** | 300s (default) | Max request duration |
+| **Startup probe** | TCP, 240s timeout | Allows time for model loading |
+
+> These values are defined in `terraform/environments/prod/main.tf`. The dev
+> environment uses smaller defaults (512 Mi memory, max 2 instances).
 
 ### Cloud Run Pricing (europe-west1)
 
@@ -52,7 +54,7 @@ If the `gcloud` budget command fails (permission issues):
 
 **Free tier translates to:**
 - ~50 hours of 1 vCPU compute
-- ~100 hours of 2 GiB memory (but only 50h if CPU-bound)
+- ~100 hours of 1 GiB memory
 - 2 million requests
 
 ---
@@ -115,14 +117,14 @@ If the `gcloud` budget command fails (permission issues):
 | Cloud Logging | 50 GB/month |
 | Cloud Monitoring | Basic (free) |
 
-> **For a project with light traffic, monthly costs should stay well under the 5€ budget.**
+> **For a project with light traffic, monthly costs should stay well under the configured budget.**
 > The main potential cost driver is Artifact Registry storage if many large images accumulate.
 
 ---
 
 ## Cost Optimization Applied
 
-1. **Budget alert** at 5€/month with 50%/80%/100% thresholds
+1. **Budget alerts** with 50%/80%/100% thresholds (10 EUR dev, 50 EUR prod)
 2. **Cloud Run** scale-to-zero (min-instances=0), max 3 instances
 3. **GCS lifecycle** auto-deletes temp files (90d) and old versions (30d)
 4. **Artifact Registry** cleanup: remove unused images periodically

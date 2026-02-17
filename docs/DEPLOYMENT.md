@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers all deployment methods for the AI Product Photo Detector: local Docker Compose for development, and Google Cloud Run for production.
+This guide covers all deployment methods for the AI Product Photo Detector: local Docker Compose for development and production, and Google Cloud Run for cloud deployment.
 
 ---
 
@@ -18,34 +18,51 @@ This guide covers all deployment methods for the AI Product Photo Detector: loca
 
 ## Local Deployment (Docker Compose)
 
-The `docker-compose.yml` at the project root defines a complete local development stack with five services.
+The project uses a **base + override** pattern with three Compose files:
+
+| File | Purpose |
+|---|---|
+| `docker-compose.yml` | Base service definitions (ports, networks, build context) |
+| `docker-compose.dev.yml` | Development override (hot reload, debug logging, named volumes) |
+| `docker-compose.prod.yml` | Production override (gunicorn, resource limits, strict health checks) |
 
 ### Services
 
-| Service | Image | Port | Description |
+| Service | Dockerfile / Image | Port | Description |
 |---|---|---|---|
-| `api` | `ai-product-detector:1.0.0` | 8080 | FastAPI inference API |
-| `ui` | `ai-product-detector:1.0.0` | 8501 | Streamlit web interface |
-| `mlflow` | `python:3.11-slim` | 5000 | MLflow tracking server |
-| `prometheus` | `prom/prometheus:v2.53.0` | 9090 | Metrics collection |
+| `api` | `docker/Dockerfile` | 8080 | FastAPI inference API (uvicorn in dev, gunicorn in prod) |
+| `ui` | `docker/ui.Dockerfile` | 8501 | Streamlit web interface |
+| `mlflow` | `python:3.11-slim` | 5000 | MLflow tracking server (installs mlflow 2.16.0 at runtime) |
+| `prometheus` | `prom/prometheus:v2.53.0` | 9090 | Metrics collection (15-day retention) |
 | `grafana` | `grafana/grafana:11.1.0` | 3000 | Dashboards and alerting |
+
+The API and UI are built from separate Dockerfiles. The API image does not include the Streamlit UI.
 
 ### Prerequisites
 
 - Docker and Docker Compose installed
 - A trained model checkpoint at `models/checkpoints/best_model.pt`
 
-### Quick Start
+### Quick Start (Development)
 
 ```bash
-# Build and start all services
-docker compose up -d
+# Build and start all services with dev overrides
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 # Verify services are healthy
 docker compose ps
 
 # View API logs
 docker compose logs -f api
+```
+
+### Quick Start (Production)
+
+```bash
+# Requires GF_ADMIN_PASSWORD to be set
+export GF_ADMIN_PASSWORD="your-secure-password"
+
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
 ### Access Points
@@ -57,7 +74,9 @@ docker compose logs -f api
 | Streamlit UI | http://localhost:8501 |
 | MLflow UI | http://localhost:5000 |
 | Prometheus | http://localhost:9090 |
-| Grafana | http://localhost:3000 (admin/admin) |
+| Grafana | http://localhost:3000 |
+
+All ports are configurable via environment variables (`API_PORT`, `UI_PORT`, `MLFLOW_PORT`, `PROMETHEUS_PORT`, `GRAFANA_PORT`).
 
 ### Service Dependencies
 
@@ -71,27 +90,65 @@ The `api` service includes a Docker health check. The `ui` and `prometheus` serv
 
 ### Volumes
 
+The base Compose file defines only bind mounts for configuration. Named volumes for data persistence are added by the override files.
+
+**Development override (`docker-compose.dev.yml`):**
+
 | Volume | Mount | Purpose |
 |---|---|---|
-| `./models` (bind) | `/app/models:ro` | Model checkpoint (read-only) |
-| `./configs` (bind) | `/app/configs:ro` | Configuration files (read-only) |
+| `./src` (bind) | `/app/src:ro` | Source code (hot reload) |
+| `./configs` (bind) | `/app/configs:ro` | Configuration files |
+| `./models` (bind) | `/app/models:ro` | Model checkpoint |
 | `mlflow-data` | `/mlflow` | MLflow database and artifacts |
-| `prometheus-data` | `/prometheus` | Prometheus time-series data (15-day retention) |
-| `grafana-data` | `/var/lib/grafana` | Grafana dashboards and configuration |
+| `prometheus-data` | `/prometheus` | Prometheus time-series data |
+| `grafana-data` | `/var/lib/grafana` | Grafana dashboards and state |
+
+**Production override (`docker-compose.prod.yml`):**
+
+| Volume | Mount | Purpose |
+|---|---|---|
+| `mlflow-data` | `/mlflow` | MLflow database and artifacts |
+| `prometheus-data` | `/prometheus` | Prometheus time-series data |
+| `grafana-data` | `/var/lib/grafana` | Grafana dashboards and state |
+
+Production images are self-contained (no source bind mounts). The model checkpoint is baked into the Docker image at build time.
+
+### Resource Limits (Production Override)
+
+| Service | CPU Limit | Memory Limit | CPU Reserved | Memory Reserved |
+|---|---|---|---|---|
+| `api` | 2.0 | 2 GB | 0.5 | 512 MB |
+| `ui` | 1.0 | 512 MB | 0.25 | 128 MB |
+| `mlflow` | 1.0 | 1 GB | 0.25 | 256 MB |
+| `prometheus` | 0.5 | 512 MB | 0.1 | 128 MB |
+| `grafana` | 0.5 | 512 MB | 0.1 | 128 MB |
 
 ### Stopping and Cleaning Up
 
 ```bash
 # Stop all services
-docker compose down
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down
 
 # Stop and remove volumes (deletes MLflow/Prometheus/Grafana data)
-docker compose down -v
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
 ```
 
 ---
 
 ## Cloud Run Deployment
+
+### Production URLs
+
+| Service | URL |
+|---|---|
+| API | https://ai-product-detector-714127049161.europe-west1.run.app |
+| UI | https://ai-product-detector-ui-714127049161.europe-west1.run.app |
+
+- **GCP Project:** `ai-product-detector-487013`
+- **Region:** `europe-west1`
+- **Artifact Registry:** `europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api`
+- **GCS Bucket:** `ai-product-detector-487013-mlops-data`
+- **Service Account:** `714127049161-compute@developer.gserviceaccount.com`
 
 ### Automated Deployment (via CD Pipeline)
 
@@ -99,10 +156,13 @@ The recommended approach is to let the CD workflow handle deployment automatical
 
 Every push to `main` that passes CI triggers:
 
-1. Docker image build with the latest model checkpoint.
-2. Push to Artifact Registry.
-3. Deployment to Cloud Run.
-4. Smoke test.
+1. Model checkpoint download from GCS (fallback to DVC pull).
+2. Docker image build and push to Artifact Registry.
+3. Deployment to Cloud Run with `REQUIRE_AUTH=false` and `ENVIRONMENT=production`.
+4. Smoke tests (health, docs, predict endpoints).
+5. Automatic rollback if smoke tests fail.
+
+The CD pipeline sets `REQUIRE_AUTH=false` for the production deployment. API key authentication is not currently enforced in production.
 
 ### Manual Deployment (via gcloud)
 
@@ -113,10 +173,10 @@ For cases where manual deployment is needed (debugging, hotfixes, custom configu
 ```bash
 # Authenticate
 gcloud auth login
-gcloud config set project <YOUR-PROJECT-ID>
+gcloud config set project ai-product-detector-487013
 
 # Configure Docker for Artifact Registry
-gcloud auth configure-docker <REGION>-docker.pkg.dev --quiet
+gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
 ```
 
 #### Build and Push
@@ -124,40 +184,34 @@ gcloud auth configure-docker <REGION>-docker.pkg.dev --quiet
 ```bash
 # Build the image
 docker build -f docker/Dockerfile \
-  -t <REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/<REPO>/api:manual \
+  -t europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api:manual \
   .
 
 # Push to Artifact Registry
-docker push <REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/<REPO>/api:manual
+docker push europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api:manual
 ```
 
 #### Deploy
 
 ```bash
-gcloud run deploy <SERVICE-NAME> \
-  --image=<REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/<REPO>/api:manual \
-  --region=<REGION> \
+gcloud run deploy ai-product-detector \
+  --image=europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api:manual \
+  --region=europe-west1 \
   --port=8080 \
   --memory=1Gi \
   --allow-unauthenticated \
-  --set-env-vars="API_KEYS=<your-api-key>,REQUIRE_AUTH=true" \
+  --set-env-vars="REQUIRE_AUTH=false,ENVIRONMENT=production" \
   --quiet
 ```
 
 #### Verify
 
 ```bash
-# Get the service URL
-URL=$(gcloud run services describe <SERVICE-NAME> \
-  --region=<REGION> \
-  --format='value(status.url)')
-
 # Health check
-curl "${URL}/health"
+curl "https://ai-product-detector-714127049161.europe-west1.run.app/health"
 
-# Test prediction (with API key)
-curl -X POST "${URL}/predict" \
-  -H "X-API-Key: <your-api-key>" \
+# Test prediction
+curl -X POST "https://ai-product-detector-714127049161.europe-west1.run.app/predict" \
   -F "file=@test_image.jpg"
 ```
 
@@ -167,7 +221,7 @@ Use the CD workflow dispatch to deploy a specific image tag or rebuild:
 
 1. Go to **Actions > CD > Run workflow**.
 2. Set `image_tag` to a previous commit SHA for rollback, or leave as `latest` to build fresh.
-3. Optionally adjust memory allocation.
+3. Optionally adjust memory allocation (512Mi, 1Gi, or 2Gi).
 
 ---
 
@@ -183,28 +237,29 @@ Use the CD workflow dispatch to deploy a specific image tag or rebuild:
 | `API_KEYS` | (none) | Comma-separated list of valid API keys |
 | `REQUIRE_AUTH` | `false` | Enable API key authentication |
 | `ENVIRONMENT` | (none) | Deployment environment label |
-| `GCS_BUCKET` | (none) | GCS bucket name (set by Terraform) |
+| `MLFLOW_TRACKING_URI` | (none) | MLflow server URL (set in Docker Compose overrides) |
 
-### Streamlit UI (Docker Compose)
+### Streamlit UI (Docker Compose / Cloud Run)
 
 | Variable | Default | Description |
 |---|---|---|
-| `API_URL` | `http://api:8080` | URL of the inference API |
+| `API_URL` | `http://api:8080` (Compose) / `http://localhost:8080` (Dockerfile default) | URL of the inference API |
 
 ### MLflow (Docker Compose)
 
 | Variable | Default | Description |
 |---|---|---|
-| Backend store | `sqlite:///mlflow.db` | Local SQLite database |
+| Backend store | `sqlite:///mlflow/mlflow.db` | Local SQLite database |
 | Artifact root | `/mlflow/artifacts` | Local artifact storage |
 
 ### Grafana (Docker Compose)
 
-| Variable | Default | Description |
-|---|---|---|
-| `GF_SECURITY_ADMIN_USER` | `admin` | Grafana admin username |
-| `GF_SECURITY_ADMIN_PASSWORD` | `admin` | Grafana admin password |
-| `GF_USERS_ALLOW_SIGN_UP` | `false` | Disable public sign-up |
+| Variable | Dev Default | Prod Default | Description |
+|---|---|---|---|
+| `GF_SECURITY_ADMIN_USER` | `admin` | `${GF_ADMIN_USER:-admin}` | Grafana admin username |
+| `GF_SECURITY_ADMIN_PASSWORD` | `admin` | Required (`GF_ADMIN_PASSWORD`) | Grafana admin password |
+| `GF_USERS_ALLOW_SIGN_UP` | `false` | `false` | Disable public sign-up |
+| `GF_AUTH_ANONYMOUS_ENABLED` | `true` | `false` | Anonymous access |
 
 ---
 
@@ -212,39 +267,41 @@ Use the CD workflow dispatch to deploy a specific image tag or rebuild:
 
 ### Cloud Run Scaling
 
-Managed by Terraform variables or `gcloud` flags:
+Managed by Terraform (in `terraform/environments/prod/main.tf`) or `gcloud` flags:
 
-| Parameter | Terraform Variable | gcloud Flag | Default | Recommendation |
-|---|---|---|---|---|
-| Min instances | `cloud_run_min_instances` | `--min-instances` | 0 | 0 for cost savings; 1 to avoid cold starts |
-| Max instances | `cloud_run_max_instances` | `--max-instances` | 2 | 2-5 for moderate traffic |
-| CPU | `cloud_run_cpu` | `--cpu` | 1000m | 1 vCPU is sufficient for inference |
-| Memory | `cloud_run_memory` | `--memory` | 512Mi | 1Gi recommended (model loading) |
+| Parameter | Terraform Variable | Prod Value | Module Default |
+|---|---|---|---|
+| Min instances | `min_instances` | 0 | 0 |
+| Max instances | `max_instances` | 3 | 2 |
+| CPU | `cpu` | 1 | 1000m |
+| Memory | `memory` | 1Gi | 512Mi |
+
+The Terraform Cloud Run module is at `terraform/modules/cloud-run/`.
 
 #### Cold Start Optimization
 
-With `min_instances = 0`, the first request after a period of inactivity incurs a cold start (5-15 seconds). The model must be loaded from disk into memory.
+With `min_instances = 0`, the first request after a period of inactivity incurs a cold start (model must be loaded from disk into memory).
 
 To reduce cold start latency:
-- Set `min_instances = 1` (keeps one instance warm; costs ~$10/month).
-- Optimize the Docker image size (CPU-only PyTorch is already used).
-- The startup probe allows 5s initial delay with 3 retries.
+- Set `min_instances = 1` (keeps one instance warm; incurs ongoing cost).
+- The Docker image already uses CPU-only PyTorch to minimize image size.
+- The startup probe allows up to 240 seconds for the container to become ready.
 
 #### Adjusting via gcloud
 
 ```bash
 # Scale up for a demo or load test
-gcloud run services update <SERVICE-NAME> \
-  --region=<REGION> \
+gcloud run services update ai-product-detector \
+  --region=europe-west1 \
   --min-instances=1 \
   --max-instances=5 \
   --memory=2Gi
 
 # Scale back down
-gcloud run services update <SERVICE-NAME> \
-  --region=<REGION> \
+gcloud run services update ai-product-detector \
+  --region=europe-west1 \
   --min-instances=0 \
-  --max-instances=2 \
+  --max-instances=3 \
   --memory=1Gi
 ```
 
@@ -252,7 +309,7 @@ gcloud run services update <SERVICE-NAME> \
 
 ## Health Checks and Monitoring
 
-### Endpoints
+### API Endpoints
 
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
@@ -260,25 +317,41 @@ gcloud run services update <SERVICE-NAME> \
 | `/healthz` | GET | No | Kubernetes-style health check |
 | `/metrics` | GET | No | Prometheus metrics endpoint |
 
-### Docker Health Check (local)
+### Docker Health Check (Local)
 
 Defined in `docker/Dockerfile`:
 
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/healthz || exit 1
 ```
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3
-    CMD curl -f http://localhost:${PORT}/healthz || exit 1
+
+The UI Dockerfile (`docker/ui.Dockerfile`) uses a Python-based health check:
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import httpx; httpx.get('http://localhost:8501/_stcore/health').raise_for_status()" || exit 1
 ```
 
 ### Cloud Run Probes
 
-Defined in Terraform (`terraform/main.tf`):
+Defined in the Terraform Cloud Run module (`terraform/modules/cloud-run/main.tf`):
 
-- **Startup probe:** `GET /health`, 5s initial delay, 10s period, 3 failures before marking unhealthy.
-- **Liveness probe:** `GET /health`, 30s period.
+- **Startup probe:** TCP socket on port 8080, 240-second timeout, 240-second period, 1 failure threshold. This generous timeout accommodates model loading time.
+- **No liveness probe** is configured in Terraform. Cloud Run uses its built-in health management.
 
-### Prometheus Metrics
+### Cloud Monitoring
 
-The API exposes Prometheus metrics at `/metrics`. The local Docker Compose stack includes a pre-configured Prometheus instance that scrapes these metrics every 10 seconds.
+The Terraform monitoring module (`terraform/modules/monitoring/`) provisions:
+
+- **Uptime check:** HTTPS GET on `/health` (port 443, SSL validated).
+- **Uptime alert:** Fires when the health check fails for more than 60 seconds.
+- **Error rate alert:** Fires when 5xx responses exceed the configured threshold.
+- **Notification channel:** Email (configured via `notification_email` variable in `terraform.tfvars`).
+
+### Prometheus Metrics (Local)
+
+The API exposes Prometheus metrics at `/metrics`. The local Docker Compose stack includes a pre-configured Prometheus instance that scrapes these metrics.
 
 **Prometheus configuration:** `configs/prometheus.yml`
 
@@ -286,17 +359,21 @@ Scraped targets:
 - `prometheus:9090` (self-monitoring)
 - `api:8080` (inference API)
 
-### Grafana Dashboards
+### Grafana Dashboards (Local)
 
-Access Grafana at http://localhost:3000 (admin/admin). Provisioning configuration is mounted from `configs/grafana/provisioning/`.
+Grafana is accessible at http://localhost:3000. In development mode, anonymous access is enabled. In production mode, authentication is required (`GF_ADMIN_PASSWORD` must be set).
+
+Provisioning configuration is mounted from `configs/grafana/provisioning/`.
 
 ---
 
 ## Rollback Procedures
 
-### Rollback via CD Workflow Dispatch
+### Automatic Rollback (CD Pipeline)
 
-The quickest rollback method:
+The CD pipeline includes automatic rollback. If production smoke tests fail after deployment, the pipeline routes 100% of traffic back to the previous revision.
+
+### Rollback via CD Workflow Dispatch
 
 1. Identify the commit SHA of the last known good deployment.
 2. Go to **Actions > CD > Run workflow**.
@@ -308,18 +385,18 @@ The quickest rollback method:
 ```bash
 # List recent revisions
 gcloud run revisions list \
-  --service=<SERVICE-NAME> \
-  --region=<REGION>
+  --service=ai-product-detector \
+  --region=europe-west1
 
 # Route traffic to a specific revision
-gcloud run services update-traffic <SERVICE-NAME> \
-  --region=<REGION> \
-  --to-revisions=<SERVICE-NAME>-<REVISION_SUFFIX>=100
+gcloud run services update-traffic ai-product-detector \
+  --region=europe-west1 \
+  --to-revisions=ai-product-detector-<REVISION_SUFFIX>=100
 
 # Alternatively, redeploy a previous image
-gcloud run deploy <SERVICE-NAME> \
-  --image=<REGION>-docker.pkg.dev/<YOUR-PROJECT-ID>/<REPO>/api:<PREVIOUS_SHA> \
-  --region=<REGION> \
+gcloud run deploy ai-product-detector \
+  --image=europe-west1-docker.pkg.dev/ai-product-detector-487013/ai-product-detector/api:<PREVIOUS_SHA> \
+  --region=europe-west1 \
   --quiet
 ```
 
@@ -329,12 +406,12 @@ If a newly trained model causes issues:
 
 1. Identify the previous model on GCS:
    ```bash
-   gsutil ls -l gs://<YOUR-GCS-BUCKET>/models/
+   gsutil ls -l gs://ai-product-detector-487013-mlops-data/models/
    ```
 2. Restore the previous model:
    ```bash
-   gsutil cp gs://<YOUR-GCS-BUCKET>/models/training-<OLD_SHA>/best_model.pt \
-     gs://<YOUR-GCS-BUCKET>/models/best_model.pt
+   gsutil cp gs://ai-product-detector-487013-mlops-data/models/training-<OLD_SHA>/best_model.pt \
+     gs://ai-product-detector-487013-mlops-data/models/best_model.pt
    ```
 3. Trigger a CD deployment to rebuild the image with the restored model.
 
@@ -349,8 +426,8 @@ If a newly trained model causes issues:
 **Checks:**
 ```bash
 # View Cloud Run logs
-gcloud run services logs read <SERVICE-NAME> \
-  --region=<REGION> \
+gcloud run services logs read ai-product-detector \
+  --region=europe-west1 \
   --limit=50
 
 # Check if the model file exists in the image
@@ -369,12 +446,12 @@ docker run --rm -it <IMAGE> ls -lh /app/models/checkpoints/
 **Checks:**
 ```bash
 # Test locally
-docker compose up api
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up api
 curl http://localhost:8080/health
 ```
 
 **Common causes:**
-- Model loading takes longer than the startup probe timeout. Increase `initial_delay_seconds` in `terraform/main.tf`.
+- Model loading takes longer than the startup probe timeout (240 seconds). Increase `startup_probe_timeout` in Terraform.
 - Application crash on startup (check logs for Python tracebacks).
 
 ### Docker build fails in CI
@@ -398,7 +475,7 @@ curl http://localhost:8080/health
 ```bash
 # Upload a model manually
 gsutil cp models/checkpoints/best_model.pt \
-  gs://<YOUR-GCS-BUCKET>/models/best_model.pt
+  gs://ai-product-detector-487013-mlops-data/models/best_model.pt
 ```
 
 ### Cloud Run cold start too slow

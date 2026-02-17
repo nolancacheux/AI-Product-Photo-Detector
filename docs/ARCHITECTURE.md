@@ -477,6 +477,7 @@ graph TB
 | **CD** | `cd.yml` | Push to `main` + CI pass | Build, push, deploy to Cloud Run |
 | **Model Training** | `model-training.yml` | Manual / data changes | Vertex AI GPU training pipeline |
 | **PR Preview** | `pr-preview.yml` | PR open/update | Deploy preview environment |
+| **Request Quota** | `request-quota.yml` | Manual | Request Vertex AI GPU quota increase |
 
 #### Vertex AI Training Pipeline
 
@@ -556,9 +557,11 @@ AI-Product-Photo-Detector/
 │   ├── ci.yml                  # Lint, type check, test, security scan
 │   ├── cd.yml                  # Build, push, deploy to Cloud Run
 │   ├── model-training.yml      # Vertex AI GPU training pipeline
-│   └── pr-preview.yml          # PR preview deployments
+│   ├── pr-preview.yml          # PR preview deployments
+│   └── request-quota.yml       # Request Vertex AI GPU quota
 ├── src/
 │   ├── data/                   # Data download and validation
+│   │   └── validate.py         # Automated data integrity checks
 │   ├── inference/              # API server
 │   │   ├── routes/             # API route handlers
 │   │   │   ├── predict.py      # /predict, /predict/batch, /predict/explain
@@ -569,6 +572,7 @@ AI-Product-Photo-Detector/
 │   │   ├── predictor.py        # Model loading and inference
 │   │   ├── explainer.py        # Grad-CAM heatmap generation
 │   │   ├── auth.py             # API key authentication
+│   │   ├── confidence.py       # Confidence level classification logic
 │   │   ├── validation.py       # Input validation
 │   │   ├── schemas.py          # Pydantic request/response models
 │   │   ├── shadow.py           # Shadow model comparison (A/B testing)
@@ -588,7 +592,12 @@ AI-Product-Photo-Detector/
 │   │   ├── metrics.py          # Prometheus metrics
 │   │   └── drift.py            # Drift detection
 │   ├── ui/                     # Streamlit web interface
+│   │   └── app.py              # Streamlit application
 │   └── utils/                  # Shared utilities
+│       ├── config.py           # Settings and YAML config loading
+│       ├── constants.py        # Project-wide constants
+│       ├── logger.py           # Structured logging setup
+│       └── model_loader.py     # Model loading utilities
 ├── tests/                      # Unit and integration tests
 ├── configs/                    # Configuration files
 │   ├── train_config.yaml       # Training hyperparameters
@@ -600,13 +609,15 @@ AI-Product-Photo-Detector/
 ├── docker/                     # Dockerfiles
 │   ├── Dockerfile              # Production API image
 │   ├── Dockerfile.training     # Vertex AI GPU training image
-│   ├── serve.Dockerfile        # Serving-optimized image
-│   ├── train.Dockerfile        # Local training environment
 │   └── ui.Dockerfile           # Streamlit UI image
 ├── terraform/                  # Infrastructure as Code
 │   ├── environments/           # Per-environment configs (dev/prod)
 │   └── modules/                # Reusable Terraform modules
-├── scripts/                    # Data download utilities
+├── scripts/                    # Data and utility scripts
+│   ├── create_sample_data.py   # Generate sample data for testing
+│   ├── download_cifake.py      # Download CIFAKE dataset
+│   ├── download_dataset.py     # Download production dataset
+│   └── download_utils.py       # Shared download helpers
 ├── notebooks/                  # Jupyter notebooks (Colab training)
 │   └── train_colab.ipynb       # Free T4/A100 GPU training
 ├── data/                       # Local data directory (DVC tracked)
@@ -689,6 +700,7 @@ Four GitHub Actions workflows automate quality, training, and deployment:
 | **CD** | `cd.yml` | Push to `main` / manual | Wait CI → build image → push to Artifact Registry → deploy Cloud Run → smoke test |
 | **Model Training** | `model-training.yml` | Manual / data changes | Verify data → build training image → Vertex AI GPU → evaluate → quality gate → deploy |
 | **PR Preview** | `pr-preview.yml` | PR open/update | Deploy preview environment for testing |
+| **Request Quota** | `request-quota.yml` | Manual | Request Vertex AI GPU quota increase via gcloud |
 
 ### 4. Inference / Serving
 
@@ -721,6 +733,7 @@ Client → FastAPI → Auth → Rate Limit → Validate Image → Preprocess (22
 | `/metrics` | GET | Prometheus metrics | - |
 | `/drift` | GET | Drift detection status | - |
 | `/privacy` | GET | Privacy policy | - |
+| `/` | GET | API root with service info and links | - |
 
 **API versioning:**
 - All endpoints are available at both root (`/predict`) and versioned (`/v1/predict`)
@@ -739,18 +752,27 @@ Client → FastAPI → Auth → Rate Limit → Validate Image → Preprocess (22
 
 | Metric | Type | Description |
 |--------|------|-------------|
+| `aidetect_app` | Info | Application version and metadata |
+| `aidetect_model` | Info | Model name, version, architecture |
+| `aidetect_model_loaded` | Gauge | Model load status (0/1) |
+| `aidetect_model_load_seconds` | Gauge | Time taken to load the model |
 | `aidetect_predictions_total` | Counter | Total predictions by status/class/confidence |
 | `aidetect_prediction_latency_seconds` | Histogram | Per-prediction latency distribution |
 | `aidetect_prediction_probability` | Histogram | Probability score distribution |
-| `aidetect_batch_predictions_total` | Counter | Batch request count |
+| `aidetect_batch_predictions_total` | Counter | Batch request count by status |
 | `aidetect_batch_size` | Histogram | Images per batch request |
 | `aidetect_batch_latency_seconds` | Histogram | Batch processing time |
+| `aidetect_image_size_bytes` | Histogram | Size of uploaded images in bytes |
+| `aidetect_image_dimension_pixels` | Histogram | Image dimensions (max of width/height) |
 | `aidetect_image_validation_errors_total` | Counter | Validation errors by type |
-| `aidetect_model_loaded` | Gauge | Model load status (0/1) |
 | `aidetect_request_size_bytes` | Histogram | Request payload size |
 | `aidetect_response_size_bytes` | Histogram | Response payload size |
-| `http_request_duration_seconds` | Histogram | HTTP latency by endpoint |
-| `http_requests_total` | Counter | HTTP requests by method/endpoint/status |
+| `aidetect_active_requests` | Gauge | Number of currently active requests |
+| `aidetect_concurrent_requests_max` | Gauge | High watermark of concurrent requests |
+| `aidetect_rate_limit_exceeded_total` | Counter | Rate limit exceeded responses by endpoint |
+| `aidetect_errors_total` | Counter | Errors by type and endpoint |
+| `aidetect_http_requests_total` | Counter | HTTP requests by method/endpoint/status |
+| `aidetect_http_request_duration_seconds` | Histogram | HTTP latency by method and endpoint |
 
 **Drift detection:**
 - Sliding window over the last 1,000 predictions
@@ -779,8 +801,6 @@ Client → FastAPI → Auth → Rate Limit → Validate Image → Preprocess (22
 docker/
 ├── Dockerfile           # Production API image (CPU PyTorch, non-root)
 ├── Dockerfile.training  # Vertex AI GPU training image
-├── serve.Dockerfile     # Serving-optimized image
-├── train.Dockerfile     # Local training environment
 └── ui.Dockerfile        # Streamlit UI image
 ```
 
