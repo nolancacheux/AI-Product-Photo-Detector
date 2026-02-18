@@ -165,6 +165,18 @@ cd AI-Product-Photo-Detector
 make dev  # Install dependencies + pre-commit hooks
 ```
 
+**Download the model (required before Docker):**
+
+The trained model weights (54 MB) are stored in GCS via DVC, not in the Git repository.
+
+```bash
+# Option 1: Using DVC (requires dvc-gs: pip install dvc-gs)
+dvc pull models/checkpoints/best_model.pt.dvc
+
+# Option 2: Using gcloud CLI
+gcloud storage cp gs://ai-product-detector-487013-mlops-data/dvc/files/md5/0b/b8844b5c1b11d212a306590671a645 models/checkpoints/best_model.pt
+```
+
 **Run locally:**
 
 ```bash
