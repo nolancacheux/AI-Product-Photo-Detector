@@ -156,6 +156,15 @@ Training takes ~25 minutes. The quality gate blocks deployment if accuracy < 0.8
 - Python 3.11+
 - Docker & Docker Compose
 - Make
+- [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) (`gcloud`)
+
+**First-time GCP setup:**
+
+```bash
+gcloud auth login
+gcloud config set project ai-product-detector-487013
+gcloud auth application-default login  # Required for DVC
+```
 
 **Installation:**
 
