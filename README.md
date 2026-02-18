@@ -45,7 +45,7 @@
 </p>
 </details>
 
-## 📊 Presentation
+## Presentation
 
 Explore the full project walkthrough, architecture decisions, and results in the presentation slides:
 
@@ -193,9 +193,9 @@ make lint  # ruff + mypy
 
 The application is deployed on Google Cloud Run (serverless). Both the API and Web UI are publicly accessible:
 
-> ⚠️ **Note:** These services may be turned off to avoid unnecessary costs. This is a university project and keeping them running permanently is not required. If a link doesn't work, the service has simply been shut down.
+>  **Note:** These services may be turned off to avoid unnecessary costs. This is a university project and keeping them running permanently is not required. If a link doesn't work, the service has simply been shut down.
 >
-> 📊 See the full project walkthrough in our [presentation slides](https://docs.google.com/presentation/d/1VTpcJLzm1i0KtHaENf_4D4NghHXnVI5WJHDNhDf3xTA).
+>  See the full project walkthrough in our [presentation slides](https://docs.google.com/presentation/d/1VTpcJLzm1i0KtHaENf_4D4NghHXnVI5WJHDNhDf3xTA).
 
 | Service | URL |
 |---------|-----|
