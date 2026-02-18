@@ -186,6 +186,26 @@ dvc pull models/checkpoints/best_model.pt.dvc
 gcloud storage cp gs://ai-product-detector-487013-mlops-data/dvc/files/md5/0b/b8844b5c1b11d212a306590671a645 models/checkpoints/best_model.pt
 ```
 
+**First time? Train the model from scratch:**
+
+If no model exists in GCS yet, you need to train it first. This downloads the CIFAKE dataset (120k images) and trains EfficientNet-B0:
+
+```bash
+make dev                # Install dependencies
+dvc repro               # Run full pipeline: download data → validate → train
+dvc push                # Upload the trained model to GCS for the team
+```
+
+Alternatively, run each step manually:
+
+```bash
+python scripts/download_cifake.py                           # Download dataset
+python -m src.data.validate --data-dir data/processed       # Validate data
+python -m src.training.train --config configs/train_config.yaml  # Train model
+```
+
+The trained model will be saved to `models/checkpoints/best_model.pt`.
+
 **Run locally:**
 
 ```bash
