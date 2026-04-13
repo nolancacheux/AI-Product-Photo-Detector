@@ -59,7 +59,7 @@ dependencies = [
     "datasets>=2.14.0",
     
     # GCP / Vertex AI
-    "google-cloud-aiplatform>=1.38.0",
+    "google-cloud-aiplatform>=1.147.0",
     "google-cloud-storage>=2.13.0",
 ]
 
