@@ -53,7 +53,7 @@ dependencies = [
     
     # Utils
     "httpx>=0.24.0",
-    "tqdm>=4.65.0",
+    "tqdm>=4.67.3",
     
     # Data
     "datasets>=2.14.0",
