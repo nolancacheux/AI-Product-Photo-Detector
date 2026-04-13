@@ -75,7 +75,7 @@ dev = [
 ]
 
 ui = [
-    "streamlit>=1.28.0",
+    "streamlit>=1.56.0",
 ]
 
 [project.urls]
