@@ -49,7 +49,7 @@ dependencies = [
     "numpy>=1.24.0",
     
     # Explainability
-    "grad-cam>=1.5.0",
+    "grad-cam>=1.5.5",
     
     # Utils
     "httpx>=0.24.0",
